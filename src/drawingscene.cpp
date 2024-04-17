@@ -4,10 +4,8 @@
 DrawingScene::DrawingScene(QObject *parent)
     : QGraphicsScene{parent}
 {
-
     KromitPath *k = new KromitPath;
     addItem(k);
-
 }
 
 void DrawingScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
