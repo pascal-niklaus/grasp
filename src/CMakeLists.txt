@@ -18,7 +18,9 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui)
 find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Widgets)
 
 qt_add_executable(kromit WIN32 MACOSX_BUNDLE
-    drawingscene.cpp drawingscene.h
+  drawingscene.cpp drawingscene.h
+  drawingview.cpp drawingscene.h
+  xy.cpp xy.h
     kromitpath.cpp kromitpath.h
     main.cpp
     mainwindow.cpp mainwindow.h

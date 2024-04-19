@@ -1,22 +1,38 @@
 #ifndef KROMITPATH_H
 #define KROMITPATH_H
 
+#include <qgraphicsitem.h>
+#include <qpainterpath.h>
+#include <qpoint.h>
+#include <qtmetamacros.h>
 #include <QGraphicsPathItem>
 #include <QPainterPath>
 #include <QPen>
 
-class KromitPath : public QGraphicsPathItem
-{
-//    Q_OBJECT
-public:
+// KromitPath
+//
+class KromitPath : public QGraphicsItem {
+  public:
+    enum { Type = UserType + 1 };
+
+  public:
     KromitPath();
 
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option=0, QWidget *widget=0);
+    virtual int type() const override { return Type; }
+    virtual QRectF boundingRect() const override;
 
-private:
-    QPainterPath original_path;
+    void start(const QPointF& p);
+    void stop(const QPointF& p);
+    void line_to(double x, double y);
+    void line_to(const QPointF& p);
 
+    virtual void paint(QPainter* painter,
+                       const QStyleOptionGraphicsItem* option,
+                       QWidget* widget = nullptr) override;
+
+  private:
     QPen pen;
+    QPainterPath path;
 };
 
 #endif // KROMITPATH_H

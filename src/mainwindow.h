@@ -2,14 +2,15 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "drawingscene.h"
+#include "drawingview.h"
 
 class QAction;
 class QGraphicsScene;
 class QGraphicsView;
 
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
@@ -20,8 +21,8 @@ private slots:
     void quit();
 
 private:
-    QGraphicsScene *scene = nullptr;
-    QGraphicsView *view = nullptr;
+    DrawingScene *scene = nullptr;
+    DrawingView *view = nullptr;
 };
 
 

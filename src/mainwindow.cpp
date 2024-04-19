@@ -6,13 +6,14 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 
+#include "drawingview.h"
 #include "drawingscene.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     scene = new DrawingScene;
-    view = new QGraphicsView(scene);
+    view = new DrawingView(scene);
 
     scene->addText("Hello world!");
     setCentralWidget(view);
