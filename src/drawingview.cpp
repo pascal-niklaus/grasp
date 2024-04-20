@@ -1,5 +1,6 @@
 #include "drawingview.h"
-
+#include <qgraphicsitem.h>
+#include "drawingscene.h"
 
 #include <QEvent>
 #include <QApplication>
@@ -21,4 +22,11 @@ bool DrawingView::event(QEvent *event) {
         default:
             return QGraphicsView::event(event);
     }
+}
+
+void DrawingView::set_background(QPixmap px) {
+    if (background_item) scene()->removeItem(background_item);
+    background_item = scene()->addPixmap(px);
+    background_item->setOffset(0, 0);
+    background_item->setZValue(-1000.0);
 }

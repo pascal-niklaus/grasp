@@ -8,21 +8,31 @@
 class QAction;
 class QGraphicsScene;
 class QGraphicsView;
-
+class QTimer;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
-public:
+  public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-private slots:
+  public slots:
+    void change_color(const QString &color);
+    void take_screenshot(const QString &geometry);
+    void toggle();
     void quit();
 
-private:
+  protected:
+    virtual void keyPressEvent(QKeyEvent *event) override;
+
+  private slots:
+    void screenshot_step1();
+
+  private:
     DrawingScene *scene = nullptr;
     DrawingView *view = nullptr;
+    QTimer *snapshot_timer = nullptr;
 };
 
 
