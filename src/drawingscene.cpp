@@ -67,6 +67,7 @@ bool DrawingScene::event(QEvent *event) {
             current_item = new KromitPath();
             KromitPath *path = static_cast<KromitPath *>(current_item);
             QPointF p = mapped(ev->scenePosition());
+            double pressure = ev->pressure();
             path->start(p);
             path->line_to(p);
             addItem(current_item);
@@ -76,6 +77,7 @@ bool DrawingScene::event(QEvent *event) {
 
         case QEvent::TabletMove: {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
+            double pressure = ev->pressure();
             if (current_item) {
                 KromitPath *path = static_cast<KromitPath *>(current_item);
                 path->line_to(mapped(ev->scenePosition()));
@@ -86,6 +88,7 @@ bool DrawingScene::event(QEvent *event) {
 
         case QEvent::TabletRelease: {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
+            double pressure = ev->pressure();
             if (current_item) {
                 KromitPath *path = static_cast<KromitPath *>(current_item);
                 path->line_to(mapped(ev->scenePosition()));

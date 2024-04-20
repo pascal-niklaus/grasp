@@ -8,7 +8,6 @@
 #include <QPainter>
 
 KromitPath::KromitPath() {
-    qDebug() << "KromitPath";
     prepareGeometryChange();
     pen = QPen(Qt::yellow, 8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
 }
