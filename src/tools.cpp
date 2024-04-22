@@ -1,0 +1,36 @@
+#include <qgraphicsitem.h>
+
+#include "kromit.h"
+#include "kromitpath.h"
+#include "kromitline.h"
+#include "tools.h"
+
+QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
+    switch (settings.tool) {
+        case TOOL_PEN: {
+            auto *pen = new KromitPath(nullptr,
+                                       settings.color,
+                                       settings.width,
+                                       settings.arrow_type,
+                                       settings.arrow_size);
+            return pen;
+        }
+
+        case TOOL_LINE: {
+            auto *line = new KromitLine(nullptr,
+                                        settings.color,
+                                        settings.width,
+                                        settings.arrow_type,
+                                        settings.arrow_size);
+            return line;
+        }
+
+            // case TOOL_LINE: {
+            //     auto *line = new KromitLine(parent);
+            //     return line;
+            // }
+
+        default:
+            return nullptr;
+    }
+}

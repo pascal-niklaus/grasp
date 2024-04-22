@@ -1,4 +1,5 @@
 #include "kromitpath.h"
+#include <qpoint.h>
 
 #include <QBrush>
 #include <QGraphicsItem>
@@ -29,20 +30,11 @@ KromitPath::KromitPath(QGraphicsItem* parent,
 
 KromitPath::~KromitPath() {}
 
-// KromitPath::setPen
-//
-// set pen for path and arrow heads
-//
-// void KromitPath::setPen(const QPen& pen) {
-//     _pen = pen;
-
-// }
-
 // KromitPath::start
 //
 // start a path
 //
-void KromitPath::start(const QPointF& p) {
+void KromitPath::start(const QPointF& p, double pressure) {
     prepareGeometryChange();
     _path.clear();
     _xy_path.clear();
@@ -55,7 +47,7 @@ void KromitPath::start(const QPointF& p) {
 //
 // stop a path
 //
-void KromitPath::stop(const QPointF& p) {
+void KromitPath::stop(const QPointF& p, double pressure) {
     prepareGeometryChange();
     _path.lineTo(p);
     _xy_path.append(p);
@@ -82,16 +74,7 @@ void KromitPath::stop(const QPointF& p) {
 //
 // extend the path
 //
-void KromitPath::line_to(double x, double y) {
-    if (XY(_path.currentPosition()).distance(XY(x, y)) > .5) {
-        prepareGeometryChange();
-        _path.lineTo(x, y);
-        _xy_path.append(x, y);
-        repos_arrows();
-    }
-}
-
-void KromitPath::line_to(const QPointF& p) {
+void KromitPath::move(const QPointF& p, double pressure) {
     if (XY(_path.currentPosition()).distance(XY(p)) > .5) {
         prepareGeometryChange();
         _path.lineTo(p);

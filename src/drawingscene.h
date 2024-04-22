@@ -3,7 +3,9 @@
 
 #include <QGraphicsScene>
 
+#include "kromit.h"
 #include "drawingview.h"
+#include "tools.h"
 
 class DrawingScene : public QGraphicsScene {
     Q_OBJECT
@@ -21,6 +23,8 @@ class DrawingScene : public QGraphicsScene {
     QPointF mapped(QPointF p) const;
 
   private:
+    Tools::Settings _settings;
+
     QGraphicsItem *current_item = nullptr;
 };
 

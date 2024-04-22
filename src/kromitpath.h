@@ -31,10 +31,9 @@ class KromitPath : public ArrowItem {
     virtual int type() const override { return Type; }
     virtual QRectF boundingRect() const override;
 
-    void start(const QPointF& p);
-    void stop(const QPointF& p);
-    void line_to(double x, double y);
-    void line_to(const QPointF& p);
+    virtual void start(const QPointF& p, double pressure = 1.0) override;
+    virtual void move(const QPointF& p, double pressure = 1.0) override;
+    virtual void stop(const QPointF& p, double pressure = 1.0) override;
 
     virtual void paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,

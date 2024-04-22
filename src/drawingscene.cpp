@@ -9,17 +9,31 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QScreen>
 #include <QTabletEvent>
+
 #include <iostream>
 
 #include "kromit.h"
 #include "kromitpath.h"
-
+#include "tools.h"
 
 // DrawingScene::DrawingScene
 //
 DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     // fix geometry, otherwise scene moves around when items are added
     setSceneRect(QGuiApplication::primaryScreen()->geometry());
+
+    // set default tool settings
+    _settings.tool = TOOL_LINE;
+    _settings.color = Qt::yellow;
+    _settings.width = 5;
+    _settings.arrow_type = ARROW_END;
+    _settings.arrow_size = 5;
+    _settings.minwidth = 1;
+    _settings.maxwidth = 4;
+    _settings.radius = 10;
+    _settings.minlen = 30;
+    _settings.simplify = 1;
+    _settings.snapdist = 0;
 }
 
 DrawingScene::~DrawingScene() {}
@@ -70,7 +84,7 @@ bool DrawingScene::event(QEvent *event) {
               new KromitPath(nullptr, Qt::yellow, pressure * 3.0, ARROW_DOUBLE, 10);
             KromitPath *path = static_cast<KromitPath *>(current_item);
             path->start(p);
-            path->line_to(p);
+            path->move(p);
             addItem(current_item);
             ev->accept();
             return true;
@@ -81,7 +95,7 @@ bool DrawingScene::event(QEvent *event) {
             double pressure = ev->pressure();
             if (current_item) {
                 KromitPath *path = static_cast<KromitPath *>(current_item);
-                path->line_to(mapped(ev->scenePosition()));
+                path->move(mapped(ev->scenePosition()));
             }
             ev->accept();
             return true;
@@ -110,11 +124,13 @@ bool DrawingScene::event(QEvent *event) {
         case QEvent::GraphicsSceneMousePress: {
             QGraphicsSceneMouseEvent *ev =
                 static_cast<QGraphicsSceneMouseEvent *>(event);
-            current_item = new KromitPath(nullptr, Qt::yellow, 5.0, ARROW_END, 5);
+            current_item = Tools::create_tool(_settings);
+            // new KromitPath(nullptr, Qt::yellow, 5.0,
+            //                ARROW_END, 5);
             KromitPath *path = static_cast<KromitPath *>(current_item);
             QPointF p = mapped(ev->scenePos());
             path->start(p);
-            path->line_to(p);
+            path->move(p);
             addItem(current_item);
             ev->accept();
             return true;
@@ -125,7 +141,7 @@ bool DrawingScene::event(QEvent *event) {
                 static_cast<QGraphicsSceneMouseEvent *>(event);
             if (current_item) {
                 KromitPath *path = static_cast<KromitPath *>(current_item);
-                path->line_to(mapped(ev->scenePos()));
+                path->move(mapped(ev->scenePos()));
             }
             ev->accept();
             return true;
@@ -136,7 +152,7 @@ bool DrawingScene::event(QEvent *event) {
                 static_cast<QGraphicsSceneMouseEvent *>(event);
             if (current_item) {
                 KromitPath *path = static_cast<KromitPath *>(current_item);
-                path->line_to(mapped(ev->scenePos()));
+                path->move(mapped(ev->scenePos()));
                 current_item = nullptr;
             }
             ev->accept();

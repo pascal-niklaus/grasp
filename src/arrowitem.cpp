@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "kromit.h"
+#include "kromititem.h"
 #include "xy.h"
 
 // ArrowItem::ArrowItem
@@ -18,7 +19,7 @@
 // create item with two arrow heads; the heads are not shown until
 // position is set
 //
-ArrowItem::ArrowItem(QGraphicsItem* parent) : QGraphicsItem(parent) {
+ArrowItem::ArrowItem(QGraphicsItem* parent) : KromitItem(parent) {
     prepareGeometryChange();
     _arrow_start = new KromitArrow(this);
     _arrow_start->hide();

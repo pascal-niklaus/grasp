@@ -30,8 +30,11 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   drawingview.cpp drawingscene.h
   xy.cpp xy.h
   path.cpp path.h
+  tools.cpp tools.h
   arrowitem.cpp arrowitem.h
+  kromititem.h
   kromitpath.cpp kromitpath.h
+  kromitline.cpp kromitline.h
   kromitarrow.cpp kromitarrow.h
 )
 

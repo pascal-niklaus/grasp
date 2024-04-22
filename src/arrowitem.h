@@ -9,10 +9,11 @@
 
 #include "kromit.h"
 #include "kromitarrow.h"
+#include "kromititem.h"
 
 // ArrowItem
 //
-class ArrowItem : public QGraphicsItem {
+class ArrowItem : public KromitItem {
   public:
     enum { Type = static_cast<int>(UserType) + GFX_ARROWITEM };
 
