@@ -16,7 +16,10 @@
 #include "dbus.h"
 
 
-bool send_dbus_command(QDBusConnection& bus, const QString& cmd, const QString& arg1=QString(), const QString& arg2 = QString()) {
+bool send_dbus_command(QDBusConnection& bus,
+                       const QString& cmd,
+                       const QString& arg1=QString(),
+                       const QString& arg2 = QString()) {
     QDBusMessage message = QDBusMessage::createMethodCall(
         Message::service_name(), "/config", "", cmd);
 
@@ -107,7 +110,7 @@ int main(int argc, char *argv[]) {
 
         w.setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
         w.setStyleSheet("background:transparent;");
-        w.setAttribute(Qt::WA_TranslucentBackground);
+        // w.setAttribute(Qt::WA_TranslucentBackground);
         w.setWindowFlags(Qt::FramelessWindowHint); // TODO: | Qt::WindowStaysOnTopHint);
         w.show();
         w.setWindowOpacity(0.5);

@@ -5,12 +5,11 @@
 
 #include "drawingview.h"
 
-
-class DrawingScene : public QGraphicsScene
-{
+class DrawingScene : public QGraphicsScene {
     Q_OBJECT
   public:
     explicit DrawingScene(QObject *parent = nullptr);
+    ~DrawingScene();
 
   protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);

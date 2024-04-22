@@ -114,9 +114,9 @@ XY XY::transformed2d(const QTransform& m) const {
 // ------------------------ stream operators -------------------------
 
 std::ostream & operator<<(std::ostream &os, const XY& p) {
-  return os << string_format("(%.1f,%,1f)", p.x(), p.y());
+  return os << string_format("(%.1f,%.1f)", p.x(), p.y());
 }
 
 std::ostream & operator<<(std::ostream &os, const XYW& p) {
-  return os << string_format("(%.1f,%,1f, w=%.1f)", p.x(), p.y(), p.w());
+  return os << string_format("(%.1f,%.1f, w=%.1f)", p.x(), p.y(), p.w());
 }

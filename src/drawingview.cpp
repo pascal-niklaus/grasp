@@ -1,16 +1,21 @@
-#include "drawingview.h"
-#include <qgraphicsitem.h>
-#include "drawingscene.h"
-
 #include <QEvent>
 #include <QApplication>
 #include <QGraphicsView>
+#include <QGraphicsItem>
+
+#include <iostream>
+
+#include "drawingview.h"
+#include "drawingscene.h"
+
 
 DrawingView::DrawingView(DrawingScene *scene, QWidget *parent) :
     QGraphicsView(scene, parent) {
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 }
+
+DrawingView::~DrawingView() {}
 
 bool DrawingView::event(QEvent *event) {
     switch (event->type()) {

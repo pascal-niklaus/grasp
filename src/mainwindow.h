@@ -30,6 +30,7 @@ class MainWindow : public QMainWindow {
     void screenshot_step1();
 
   private:
+    bool on_top = true;
     DrawingScene *scene = nullptr;
     DrawingView *view = nullptr;
     QTimer *snapshot_timer = nullptr;

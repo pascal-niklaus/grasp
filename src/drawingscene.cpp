@@ -1,11 +1,8 @@
 #include "drawingscene.h"
 
-#include <qevent.h>
-#include <qglobal.h>
-#include <qgraphicsscene.h>
-#include <qgraphicssceneevent.h>
-#include <qguiapplication.h>
-#include <qnamespace.h>
+#include <QEvent>
+#include <QGraphicsScene>
+#include <QGraphicsSceneEvent>
 
 #include <QApplication>
 #include <QEvent>
@@ -14,7 +11,9 @@
 #include <QTabletEvent>
 #include <iostream>
 
+#include "kromit.h"
 #include "kromitpath.h"
+
 
 // DrawingScene::DrawingScene
 //
@@ -23,6 +22,7 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     setSceneRect(QGuiApplication::primaryScreen()->geometry());
 }
 
+DrawingScene::~DrawingScene() {}
 
 // forward mouse events to the Scene...
 
@@ -64,10 +64,11 @@ bool DrawingScene::event(QEvent *event) {
 
         case QEvent::TabletPress: {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-            current_item = new KromitPath();
-            KromitPath *path = static_cast<KromitPath *>(current_item);
             QPointF p = mapped(ev->scenePosition());
             double pressure = ev->pressure();
+            current_item =
+              new KromitPath(nullptr, Qt::yellow, pressure * 3.0, ARROW_DOUBLE, 10);
+            KromitPath *path = static_cast<KromitPath *>(current_item);
             path->start(p);
             path->line_to(p);
             addItem(current_item);
@@ -83,7 +84,7 @@ bool DrawingScene::event(QEvent *event) {
                 path->line_to(mapped(ev->scenePosition()));
             }
             ev->accept();
-            return false;
+            return true;
         }
 
         case QEvent::TabletRelease: {
@@ -91,7 +92,7 @@ bool DrawingScene::event(QEvent *event) {
             double pressure = ev->pressure();
             if (current_item) {
                 KromitPath *path = static_cast<KromitPath *>(current_item);
-                path->line_to(mapped(ev->scenePosition()));
+                path->stop(mapped(ev->scenePosition()));
                 current_item = nullptr;
             }
             ev->accept();
@@ -109,7 +110,7 @@ bool DrawingScene::event(QEvent *event) {
         case QEvent::GraphicsSceneMousePress: {
             QGraphicsSceneMouseEvent *ev =
                 static_cast<QGraphicsSceneMouseEvent *>(event);
-            current_item = new KromitPath();
+            current_item = new KromitPath(nullptr, Qt::yellow, 5.0, ARROW_END, 5);
             KromitPath *path = static_cast<KromitPath *>(current_item);
             QPointF p = mapped(ev->scenePos());
             path->start(p);
@@ -127,7 +128,7 @@ bool DrawingScene::event(QEvent *event) {
                 path->line_to(mapped(ev->scenePos()));
             }
             ev->accept();
-            return false;
+            return true;
         }
 
         case QEvent::GraphicsSceneMouseRelease: {
@@ -139,7 +140,7 @@ bool DrawingScene::event(QEvent *event) {
                 current_item = nullptr;
             }
             ev->accept();
-            return false;
+            return true;
         }
         default:
             return QGraphicsScene::event(event);

@@ -1,12 +1,19 @@
-#include "path.hpp"
-#include <utility>
-#include "utility.hpp"
+#include "path.h"
+#include <math.h>
+#include "utility.h"
+#include <QPoint>
+#include <QTransform>
 
+#include <algorithm>
 #include <cmath>
 #include <numeric>
-#include <algorithm>
+#include <iostream>
 
 // ============================== Path ===============================
+
+Path::Path() {}
+
+Path::~Path() {}
 
 void Path::append(const XY& p) {
     _path.emplace_back(p);
@@ -14,6 +21,10 @@ void Path::append(const XY& p) {
 
 void Path::append(const double x, const double y) {
     _path.emplace_back(XY(x, y));
+}
+
+void Path::append(const QPointF& p) {
+    _path.emplace_back(XY(p));
 }
 
 void Path::clear() {
@@ -24,11 +35,36 @@ void Path::clear() {
 //
 // apply a 2d affine transformtion to the path
 //
-void Path::apply2D(const cairo_matrix_t& m) {
+void Path::apply2D(const QTransform& m) {
     for (auto& p : _path) {
-        auto tmp = m.xx * p.x() + m.xy * p.y() + m.x0;
-        p.set_y(m.xx * p.x() + m.xy * p.y() + m.x0);
-        p.set_x(tmp);
+        qreal tx, ty;
+        m.map(p.x(), p.y(), &tx, &ty);
+        p.setX(tx);
+        p.setY(ty);
+    }
+}
+
+double Path::end_angle(double radius, bool end_is_beginning) const {
+    const double r2 = square(radius);
+    if (end_is_beginning) {
+        const double x0 = _path.front().x();
+        const double y0 = _path.front().y();
+        auto last = _path.cbegin();
+        for (auto it = _path.cbegin(); it != _path.cend(); ++it) {
+            if (square(x0 - it->x()) + square(y0 - it->y()) > r2) break;
+            last = it;
+        }
+        return atan2(y0 - last->y(), x0 - last->x());
+        //
+    } else {
+        const double x0 = _path.back().x();
+        const double y0 = _path.back().y();
+        auto last = _path.crbegin();
+        for (auto it = _path.crbegin(); it != _path.crend(); ++it) {
+            if (square(x0 - it->x()) + square(y0 - it->y()) > r2) break;
+            last = it;
+        }
+        return atan2(last->y() - y0, last->x() - x0);
     }
 }
 
@@ -50,7 +86,6 @@ void Path::douglas_peucker(double epsilon) {
     ranges.emplace_back(std::pair<int, int>(first, last));
 
     while (!ranges.empty()) {
-
         first = ranges.back().first;
         last = ranges.back().second;
 
@@ -78,17 +113,17 @@ void Path::douglas_peucker(double epsilon) {
             ranges.emplace_back(std::pair<int, int>(first, max_element));
             ranges.emplace_back(std::pair<int, int>(max_element, last));
         } else {
-            for (int i = first + 1; i < last - 1; i++)
-                to_delete.emplace_back(i);
+            for (int i = first + 1; i < last; i++) to_delete.emplace_back(i);
         }
     }
+
     std::sort(to_delete.begin(), to_delete.end());
 
     auto index_it = to_delete.cbegin();
     int src_idx = 0;
     int trg_idx = 0;
     for (;;) {
-        if (src_idx == *index_it) {
+      if (src_idx == *index_it) {
             src_idx++;
             index_it++;
             if (index_it == to_delete.cend()) break;
@@ -98,9 +133,9 @@ void Path::douglas_peucker(double epsilon) {
         trg_idx++;
         src_idx++;
     }
+    while (src_idx < _path.size()) _path[trg_idx++] = _path[src_idx++];
     _path.resize(trg_idx);
 }
-
 
 std::ostream& operator<<(std::ostream& os, const Path& p) {
   os << "Path @ " << &p << ", len=" << p.size() << " :";
@@ -112,6 +147,10 @@ std::ostream& operator<<(std::ostream& os, const Path& p) {
 }
 
 // ============================== PathW ==============================
+
+PathW::PathW() {}
+
+PathW::~PathW() {}
 
 void PathW::append(const XYW& p) {
     _path.emplace_back(p);
@@ -129,11 +168,12 @@ void PathW::clear() {
 //
 // apply a 2d affine transformtion to the path
 //
-void PathW::apply2D(const cairo_matrix_t& m) {
+void PathW::apply2D(const QTransform& m) {
     for (auto& p : _path) {
-        auto tmp = m.xx * p.x() + m.xy * p.y() + m.x0;
-        p.set_y(m.xx * p.x() + m.xy * p.y() + m.x0);
-        p.set_x(tmp);
+        qreal tx, ty;
+        m.map(p.x(), p.y(), &tx, &ty);
+        p.setX(tx);
+        p.setY(ty);
     }
 }
 
@@ -192,6 +232,56 @@ double PathW::end_width(double radius, bool end_is_beginning) const {
         }
     }
     return sum_w / i;
+}
+
+// PathW::simplify
+//
+// remove intermediate points if (1) deviation from straight line <
+// max_dev, and (2) deviation from last width < max_width_dev.
+//
+void PathW::simplify(double max_dev, double max_width_dev) {
+    if (_path.size() < 4) return;
+    const int last = _path.size() - 1;
+
+    int i0 = 0;
+
+    while (i0 < last - 2) {
+        // first point
+        double w0 = _path[i0].w();
+        XY p0 = XY(_path[i0].x(), _path[i0].y());
+
+        // scan forward checking width -> imax is last possible
+        int imax = i0 + 1;
+        while (imax < last) {
+            if (fabs(_path[imax + 1].w() - w0) <= max_dev) break;
+            imax++;
+        }
+
+        // test possible ends
+        int i1 = i0 + 2;
+        while (i1 <= imax) {
+            XY p1 = XY(_path[i1].x(), _path[i1].y());
+            for (int i = i0 + 1; i < i1; i++) {
+                XY pi = XY(_path[i].x(), _path[i].y());
+                if (pi.distance_from_line(p0, p1) > max_dev) {
+                    i1--;
+                    goto end_found;
+                }
+            }
+        }
+    end_found:
+        // segment is [i0, i1]: mark intermediate points for deletion
+        for (int i = i0 + 1; i < i1 - 1; i++) _path[i].set_w(-1.0);
+        i0 = i1;
+    }
+
+    // remove all unnecessary points
+
+    int trg = 0;
+    for (int src = 0; src <= last; src++) {
+        if (_path[src].w() >= 0.0) { _path[trg++] = _path[src]; }
+    }
+    _path.resize(trg);
 }
 
 

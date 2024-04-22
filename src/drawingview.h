@@ -12,6 +12,7 @@ class DrawingView : public QGraphicsView {
   Q_OBJECT
   public:
     explicit DrawingView(DrawingScene *scene, QWidget *parent = nullptr);
+    ~DrawingView();
 
   public slots:
     void set_background(QPixmap px);
@@ -19,9 +20,8 @@ class DrawingView : public QGraphicsView {
   protected:
     virtual bool event(QEvent *event);
 
-private:
-  QGraphicsPixmapItem *background_item = nullptr;
-
+  private:
+    QGraphicsPixmapItem *background_item = nullptr;
 };
 
 #endif
