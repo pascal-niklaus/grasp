@@ -1,9 +1,15 @@
 #include <qgraphicsitem.h>
 
 #include "kromit.h"
+#include "kromititem.h"
 #include "kromitpath.h"
 #include "kromitline.h"
 #include "tools.h"
+
+int Tools::generate_ID(void) {
+  static int id = 0;
+  return ++id;
+}
 
 QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
     switch (settings.tool) {
@@ -13,6 +19,7 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
                                        settings.width,
                                        settings.arrow_type,
                                        settings.arrow_size);
+            pen->setData(KromitItem::KeyID, generate_ID());
             return pen;
         }
 
@@ -22,6 +29,7 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
                                         settings.width,
                                         settings.arrow_type,
                                         settings.arrow_size);
+            line->setData(KromitItem::KeyID, generate_ID());
             return line;
         }
 

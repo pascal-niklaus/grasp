@@ -16,6 +16,8 @@ class Path {
     bool is_empty() const { return _path.empty(); }
     int size() const { return _path.size(); }
     XY& operator[](int i) { return _path[i]; }
+    const std::vector<XY>& path() const { return _path; };
+    std::vector<XY>& path() { return _path; }
 
     void append(const QPointF& p);
     void append(const XY& p);

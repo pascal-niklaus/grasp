@@ -1,18 +1,13 @@
-#include "arrowitem.h"
-#include <qbrush.h>
-#include <qgraphicsitem.h>
-#include <qpen.h>
-#include <qpoint.h>
-
-#include <QBrush>
-#include <QDebug>
-#include <QGraphicsItem>
-#include <QPainter>
-#include <iostream>
-
 #include "kromit.h"
 #include "kromititem.h"
+#include "kromitarrow.h"
+#include "arrowitem.h"
+
 #include "xy.h"
+
+#include <QBrush>
+#include <QPainter>
+
 
 // ArrowItem::ArrowItem
 //
@@ -46,9 +41,7 @@ QRectF ArrowItem::boundingRect() const {
 //
 void ArrowItem::paint(QPainter *painter,
                       const QStyleOptionGraphicsItem *option,
-                      QWidget *widget) {
-    return;
-}
+                      QWidget *widget) {}
 
 // ArrowItem::setPen
 //

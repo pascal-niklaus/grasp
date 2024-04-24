@@ -22,9 +22,10 @@ class MainWindow : public QMainWindow {
     void take_screenshot(const QString &geometry);
     void toggle();
     void quit();
+    void cycle_opacity();
 
   protected:
-    virtual void keyPressEvent(QKeyEvent *event) override;
+  //    virtual void keyPressEvent(QKeyEvent *event) override;
 
   private slots:
     void screenshot_step1();

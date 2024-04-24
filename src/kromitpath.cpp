@@ -26,6 +26,8 @@ KromitPath::KromitPath(QGraphicsItem* parent,
     _arrow_width = arrowsize * width;
     _pen = QPen(color, width);
     ArrowItem::setPen(_pen);
+
+    setFlag(QGraphicsItem::ItemIsSelectable);
 }
 
 KromitPath::~KromitPath() {}
@@ -83,6 +85,21 @@ void KromitPath::move(const QPointF& p, double pressure) {
     }
 }
 
+QPainterPath KromitPath::outline(double dist) const {
+    QPainterPath p;
+    p.moveTo(_xy_path.first());
+    for (const auto& pt : _xy_path.path())
+        p.lineTo(pt);
+
+    QPainterPathStroker ps;
+    ps.setWidth(dist);
+    return ps.createStroke(p);
+}
+
+QPainterPath KromitPath::shape() const {
+    return outline(15);
+}
+
 // KromitPath::repos_arrows
 //
 // reposition arrow heads according to path
@@ -103,7 +120,7 @@ void KromitPath::repos_arrows() {
 // TODO: adjust for arrow heads !
 QRectF KromitPath::boundingRect() const {
     double delta = _pen.width() / 2.0 + 5;
-    QRectF rect = _path.boundingRect();
+    QRectF rect = _path.boundingRect().normalized();
     QDebug deb = qDebug();
     rect.adjust(-delta, -delta, delta, delta);
     return rect;
@@ -112,6 +129,10 @@ QRectF KromitPath::boundingRect() const {
 void KromitPath::paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget) {
+    if (isSelected()) {
+        painter->setPen(QPen(Qt::gray, 2, Qt::DashLine));
+        painter->drawPath(outline(10));
+    }
     painter->setPen(_pen);
     painter->drawPath(_path);
 }

@@ -29,12 +29,14 @@ class Settings {
     double snapdist;
 };
 
-// Tool::create_tool
-//
-// factory function
-//
-  QGraphicsItem* create_tool(const Tools::Settings& settings);
+    // Tool::create_tool
+    //
+    // factory function
+    //
+QGraphicsItem* create_tool(const Tools::Settings& settings);
 
-};
+int generate_ID(void);
+
+};  // namespace Tools
 
 #endif

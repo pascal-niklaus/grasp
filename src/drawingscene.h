@@ -3,8 +3,10 @@
 
 #include <QGraphicsScene>
 
-#include "kromit.h"
 #include "drawingview.h"
+#include "kromit.h"
+#include "kromitframe.h"
+#include "kromititem.h"
 #include "tools.h"
 
 class DrawingScene : public QGraphicsScene {
@@ -14,18 +16,26 @@ class DrawingScene : public QGraphicsScene {
     ~DrawingScene();
 
   protected:
-    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
-    virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *mouseEvent);
-    virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *mouseEvent);
-    virtual bool event(QEvent *event);
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *mouseEvent) override;
+    virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *mouseEvent) override;
+
+    virtual void mouseDoubleClickEvent(
+        QGraphicsSceneMouseEvent *mouseEvent) override;
+
+    virtual bool event(QEvent *event) override;
+    virtual void keyPressEvent(QKeyEvent *keyEvent) override;
 
   private:
-    QPointF mapped(QPointF p) const;
+    void update_selection_frame();
+    void delete_selection();
 
   private:
     Tools::Settings _settings;
-
-    QGraphicsItem *current_item = nullptr;
+    //    bool select = false;
+    QGraphicsItem *_current_item = nullptr;
+    KromitFrame *_selection_frame = nullptr;
+    QList<KromitItem *> _selected_items;
 };
 
 #endif // DRAWINGSCENE_H

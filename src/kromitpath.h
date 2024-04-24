@@ -1,24 +1,20 @@
 #ifndef KROMITPATH_H
 #define KROMITPATH_H
 
-#include <qnamespace.h>
-#include <QGraphicsItem>
-#include <QPointF>
-#include <QGraphicsPathItem>
+#include "kromit.h"
+#include "arrowitem.h"
+#include "path.h"
+
 #include <QPainterPath>
 #include <QPen>
 #include <QColor>
 
-#include "kromit.h"
-#include "kromitarrow.h"
-#include "arrowitem.h"
-#include "path.h"
 
 // KromitPath
 //
 class KromitPath : public ArrowItem {
   public:
-    enum { Type = static_cast<int>(UserType) + GFX_PATH };
+    enum { Type = GFX_PATH };
 
   public:
     KromitPath(QGraphicsItem* parent = nullptr,
@@ -31,6 +27,14 @@ class KromitPath : public ArrowItem {
     virtual int type() const override { return Type; }
     virtual QRectF boundingRect() const override;
 
+    virtual QRectF selectionBox() const override {
+        return QRectF(_path.boundingRect());
+    }
+    virtual TransformCaps caps() const override {
+        return (CAP_MOVE | CAP_ANISOSCALE | CAP_ISOSCALE | CAP_ROTATE |
+                CAP_DELETE);
+    }
+
     virtual void start(const QPointF& p, double pressure = 1.0) override;
     virtual void move(const QPointF& p, double pressure = 1.0) override;
     virtual void stop(const QPointF& p, double pressure = 1.0) override;
@@ -38,6 +42,9 @@ class KromitPath : public ArrowItem {
     virtual void paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget = nullptr) override;
+
+    QPainterPath outline(double dist) const;
+    virtual QPainterPath shape() const override;
 
   private:
     void repos_arrows();
@@ -59,7 +66,7 @@ class KromitPath : public ArrowItem {
 //
 class KromitPathW : public QGraphicsItem {
   public:
-    enum { Type = static_cast<int>(UserType) + GFX_PATHW };
+    enum { Type = GFX_PATHW };
 
   public:
     KromitPathW();

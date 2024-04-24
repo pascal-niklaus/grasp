@@ -16,7 +16,7 @@
 
 class KromitArrow : public QGraphicsPolygonItem {
   public:
-    enum { Type = static_cast<int>(UserType) + GFX_ARROW };
+    enum { Type = GFX_ARROW };
 
   public:
     KromitArrow(QGraphicsItem *parent = nullptr);

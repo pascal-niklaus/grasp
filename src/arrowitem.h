@@ -1,21 +1,16 @@
 #ifndef ARROWITEM_H
 #define ARROWITEM_H
 
-#include <QGraphicsItem>
-#include <QPointF>
-#include <QGraphicsPathItem>
-#include <QPainterPath>
-#include <QPen>
-
 #include "kromit.h"
-#include "kromitarrow.h"
 #include "kromititem.h"
+
+class KromitArrow;
 
 // ArrowItem
 //
 class ArrowItem : public KromitItem {
   public:
-    enum { Type = static_cast<int>(UserType) + GFX_ARROWITEM };
+    enum { Type = GFX_ARROWITEM };
 
   public:
     ArrowItem(QGraphicsItem* parent = nullptr);
@@ -27,13 +22,13 @@ class ArrowItem : public KromitItem {
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget = nullptr) override;
 
+    virtual QRectF selectionBox() const override { return QRectF(); }
+    virtual TransformCaps caps() const override { return CAP_NONE; }
+
     void setPen(const QPen& pen);
 
     void set_arrow_start(const QPointF& pos, double size, double rotation);
     void set_arrow_end(const QPointF& pos, double size, double rotation);
-
-  private:
-    //  void repos_arrows();
 
   private:
     KromitArrow* _arrow_start;

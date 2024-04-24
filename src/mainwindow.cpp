@@ -29,13 +29,31 @@ MainWindow::MainWindow(QWidget *parent)
     snapshot_timer = new QTimer(this);
     snapshot_timer->setSingleShot(true);
     snapshot_timer->setInterval(10);
-    connect(snapshot_timer, &QTimer::timeout, this, &MainWindow::screenshot_step1);
+    connect(snapshot_timer, &QTimer::timeout,
+            this, &MainWindow::screenshot_step1);
 
     // set up "quit" keyboard shortcut
     QAction *quitAction = new QAction(tr("Quit"), this);
     addAction(quitAction);
     quitAction->setShortcut(Qt::CTRL | Qt::Key_Q);
     connect(quitAction, &QAction::triggered,  this, &MainWindow::quit);
+
+    QAction *grabAction = new QAction(tr("Grab"), this);
+    addAction(grabAction);
+    grabAction->setShortcut(Qt::CTRL | Qt::Key_G);
+    connect(grabAction, &QAction::triggered, [this]() {
+        this->take_screenshot("");
+    });
+
+    QAction *toggleAction = new QAction(tr("Toggle"), this);
+    addAction(toggleAction);
+    toggleAction->setShortcut(Qt::CTRL | Qt::Key_T);
+    connect(toggleAction, &QAction::triggered, this, &MainWindow::toggle);
+
+    QAction *opaqAction = new QAction(tr("Opaq"), this);
+    addAction(opaqAction);
+    opaqAction->setShortcut(Qt::CTRL | Qt::Key_O);
+    connect(opaqAction, &QAction::triggered, this, &MainWindow::cycle_opacity);
 }
 
 MainWindow::~MainWindow() {
@@ -48,29 +66,12 @@ void MainWindow::quit() {
     close();
 }
 
-// ------------------------- keypress events -------------------------
-
-void MainWindow::keyPressEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_H) {
-        on_top = true;
-        toggle();
-    } else if (event->key() == Qt::Key_S) {
-        on_top = false;
-        toggle();
-    } else if (event->key() == Qt::Key_G) {
-        // -------------------- take a screenshot --------------------
-        take_screenshot("");
-    } else if (event->key() == Qt::Key_O) {
-        // --------------------- toggle opacity ----------------------
-        double o = windowOpacity();
-        if (o < 0.5)
-            setWindowOpacity(1);
-        else
-            setWindowOpacity(.3);
-    } else {
-      // -------------- key not grabbed, pass on event ---------------
-        QMainWindow::keyPressEvent(event);
-    }
+void MainWindow::cycle_opacity() {
+    double o = windowOpacity();
+    if (o < 0.5)
+        setWindowOpacity(1);
+    else
+        setWindowOpacity(.3);
 }
 
 // ------------------- commands received via dbus --------------------

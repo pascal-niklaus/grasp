@@ -21,7 +21,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS DBus)
 find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Widgets)
 
 qt_add_executable(kromit WIN32 MACOSX_BUNDLE
-  kromit.h
+  kromit.cpp kromit.h
   singletonapplication.h
   dbus.cpp dbus.h
   main.cpp
@@ -32,10 +32,14 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   path.cpp path.h
   tools.cpp tools.h
   arrowitem.cpp arrowitem.h
-  kromititem.h
+  kromititem.cpp kromititem.h
   kromitpath.cpp kromitpath.h
   kromitline.cpp kromitline.h
   kromitarrow.cpp kromitarrow.h
+  kromitframe.cpp kromitframe.h
+  kromithandle.cpp kromithandle.h
+  kromitrotate.cpp kromitrotate.h
+  kromitmove.cpp kromitmove.h
 )
 
 target_link_libraries(kromit PRIVATE
