@@ -9,6 +9,7 @@
 #include <QPen>
 #include <QColor>
 
+class KromitUndoPath;
 
 // KromitPath
 //
@@ -24,6 +25,8 @@ class KromitPath : public ArrowItem {
                double arrowsize = 0.0);
     ~KromitPath();
 
+    virtual KromitUndoItem* create_undo_item() const override;
+
     virtual int type() const override { return Type; }
     virtual QRectF boundingRect() const override;
 
@@ -37,11 +40,12 @@ class KromitPath : public ArrowItem {
 
     virtual void stash() override;
     virtual void apply(const QTransform& m) override;
-    virtual KromitItem* clone() override;
 
     virtual void start(const QPointF& p, double pressure = 1.0) override;
     virtual void move(const QPointF& p, double pressure = 1.0) override;
     virtual void stop(const QPointF& p, double pressure = 1.0) override;
+
+    virtual void dump(std::ostream& os) const override;
 
     virtual void paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,
@@ -50,13 +54,19 @@ class KromitPath : public ArrowItem {
     QPainterPath outline(double dist) const;
     virtual QPainterPath shape() const override;
 
+    QPen pen() const { return _pen; }
+    ArrowType arrow_type() const { return _arrow_type; }
+    double arrow_size() const { return _arrow_size; }
+    const Path& path() const { return _xy_path; }
+    void set_path(const Path& path);
+
   private:
     void repos_arrows();
 
   private:
     QPen _pen;
     ArrowType _arrow_type = ARROW_NONE;
-    double _arrow_width = 0.0;
+    double _arrow_size = 0.0;
     KromitArrow* _arrow_start = nullptr;
     KromitArrow* _arrow_end = nullptr;
 
@@ -65,6 +75,21 @@ class KromitPath : public ArrowItem {
 
     Path _stashed_xy_path;
 };
+
+// KromitUndoPath
+//
+class KromitUndoPath : public KromitUndoItem {
+  public:
+    explicit KromitUndoPath(const KromitPath* kpath);
+
+    virtual KromitItem* create_from_undo_item() const override;
+
+    QPen pen;
+    ArrowType arrow_type;
+    double arrow_size;
+    Path xy_path;
+};
+
 
 // KromitPathW
 //

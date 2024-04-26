@@ -104,6 +104,7 @@ QPointF KromitFrame::handle_pos(HandlePos pos) const {
                 assert(false);
         }
     }
+    return QPointF();
 }
 
 // KromitFrame::opposite_pos
@@ -140,6 +141,7 @@ QPointF KromitFrame::opposite_pos(HandlePos pos) const {
                 assert(false);
         }
     }
+    return QPointF();
 }
 
 // KromitFrame::start

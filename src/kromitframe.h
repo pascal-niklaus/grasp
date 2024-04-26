@@ -51,6 +51,8 @@ class KromitFrame : public KromitItem {
                 double width = 1);
     ~KromitFrame();
 
+    virtual KromitUndoItem* create_undo_item() const override { return nullptr; }
+
     virtual int type() const override { return Type; }
     virtual QRectF boundingRect() const override;
 
@@ -66,7 +68,6 @@ class KromitFrame : public KromitItem {
 
     virtual void stash() override{};
     virtual void apply(const QTransform& m) override{};
-    virtual KromitItem* clone() override { return nullptr; };
 
     virtual void start(const QPointF& p, double pressure = 1.0) override;
     virtual void move(const QPointF& p, double pressure = 1.0) override;

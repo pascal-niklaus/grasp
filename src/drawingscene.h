@@ -5,6 +5,7 @@
 #include <QGraphicsItem>
 #include <QTransform>
 #include <QGraphicsScene>
+#include <unordered_map>
 
 #include "drawingview.h"
 #include "kromit.h"
@@ -22,8 +23,6 @@ class Transformation {
     void clear() { handle = KromitFrame::POS_NONE; }
     // is any operation ongoing?
     bool is_ongoing() const { return handle != KromitFrame::POS_NONE; }
-    // type of operation:
-    //
     // which of the handles is dragged?
     KromitFrame::HandlePos handle;
     // where was cursor when it was clicked?
@@ -62,10 +61,10 @@ class DrawingScene : public QGraphicsScene {
   private:
     void update_selection_frame();
     void delete_selection();
+    void clear_selection();
+    void garbage_collect();
 
     KromitItem *find_item(int id) const;
-    KromitItem *find_undo_item(int id) const;
-    bool delete_undo_item(int id);
 
     void handle_selection_clicks(const QPointF &p, SelectType sel);
     bool handle_transformation_clicks(const QPointF &p);
@@ -81,7 +80,7 @@ class DrawingScene : public QGraphicsScene {
     QList<KromitItem *> _selected_items;
     Transformation trans;
 
-    std::vector<KromitItem *> undo_store;
+    std::unordered_map<int, KromitUndoItem *> undo_store;
     std::vector<UndoRecord> undo_records;
     std::vector<UndoRecord> redo_records;
 };

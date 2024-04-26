@@ -2,6 +2,8 @@
 #define UNDO_H
 
 #include <vector>
+#include <iostream>
+#include <unordered_set>
 
 // UndoRecord
 //
@@ -10,8 +12,13 @@
 
 class UndoRecord {
   public:
-    std::vector<int> ids_to_remove;
-    std::vector<int> ids_to_add;
+    std::unordered_set<int> ids_to_remove;
+    std::unordered_set<int> ids_to_add;
+
+    bool contains(int id) const;
+    bool all_ids_in(std::unordered_set<int> &ref) const;
+    std::unordered_set<int> all_ids() const;
+    friend std::ostream &operator<<(std::ostream &os, const UndoRecord &rec);
 };
 
 #endif

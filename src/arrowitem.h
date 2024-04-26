@@ -35,4 +35,7 @@ class ArrowItem : public KromitItem {
     KromitArrow* _arrow_end;
 };
 
+std::ostream& operator<<(std::ostream& os, const ArrowType& a);
+
+
 #endif  // ARROWITEM_H

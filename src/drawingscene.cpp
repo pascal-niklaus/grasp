@@ -1,4 +1,5 @@
 #include "drawingscene.h"
+
 #include <qbrush.h>
 #include <qdebug.h>
 #include <qevent.h>
@@ -18,7 +19,10 @@
 #include <QScreen>
 #include <QTabletEvent>
 
+#include <cassert>
 #include <iostream>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "kromit.h"
 #include "kromitframe.h"
@@ -36,6 +40,9 @@
 DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     // fix geometry, otherwise scene moves around when items are added
     setSceneRect(QGuiApplication::primaryScreen()->geometry());
+    // see here:
+    // https://forum.qt.io/topic/71316/qgraphicsscenefinditembsptreevisitor-visit-crashes-due-to-an-obsolete-paintevent-after-qgraphicsscene-removeitem/17
+    setItemIndexMethod(QGraphicsScene::ItemIndexMethod::NoIndex);
 
     // set default tool settings
     _settings.tool = TOOL_LINE;
@@ -67,31 +74,6 @@ KromitItem *DrawingScene::find_item(int ID) const {
         }
     }
     return nullptr;
-}
-
-KromitItem *DrawingScene::find_undo_item(int ID) const {
-    for (auto &item : undo_store) {
-        if (item->type() > GFX_SELECTABLE) {
-            bool ok;
-            auto id = item->data(KromitItem::KeyID).toInt(&ok);
-            if (ok && id == ID) return static_cast<KromitItem *>(item);
-        }
-    }
-    return nullptr;
-}
-
-bool DrawingScene::delete_undo_item(int ID)  {
-    for (auto it = undo_store.begin(); it != undo_store.end(); ++it) {
-      if ((*it)->type() > GFX_SELECTABLE) {
-            bool ok;
-            auto id = (*it)->data(KromitItem::KeyID).toInt(&ok);
-            if (ok && id == ID) {
-                undo_store.erase(it);
-                return true;
-            }
-      }
-    }
-    return false;
 }
 
 // forward mouse events to the Scene...
@@ -133,7 +115,7 @@ bool DrawingScene::event(QEvent *event) {
 
         case QEvent::TabletMove: {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-            double pressure = ev->pressure();
+            // double pressure = ev->pressure();
             if (_current_item) {
                 KromitPath *path = static_cast<KromitPath *>(_current_item);
                 path->move(ev->scenePosition());
@@ -144,7 +126,7 @@ bool DrawingScene::event(QEvent *event) {
 
         case QEvent::TabletRelease: {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-            double pressure = ev->pressure();
+            // double pressure = ev->pressure();
             if (_current_item) {
                 KromitPath *path = static_cast<KromitPath *>(_current_item);
                 path->stop(ev->scenePosition());
@@ -177,22 +159,23 @@ bool DrawingScene::event(QEvent *event) {
             QPointF p = ev->scenePos();
             if (_settings.tool == TOOL_SELECT) {
                 SelectType sel = SEL_SINGLE;
-                if (ev->modifiers() & Qt::ControlModifier) {
+                if (ev->modifiers() & Qt::ControlModifier)
                     sel = SEL_TOGGLE;
-                } else if (ev->modifiers() & Qt::ShiftModifier) {
+                else if (ev->modifiers() & Qt::ShiftModifier)
                     sel = SEL_ADD;
-                }
                 if (!handle_transformation_clicks(p))
                     handle_selection_clicks(p, sel);
             } else {
-                QGraphicsSceneMouseEvent *ev =
-                    static_cast<QGraphicsSceneMouseEvent *>(event);
+                // QGraphicsSceneMouseEvent *ev =
+                //     static_cast<QGraphicsSceneMouseEvent *>(event);
                 _current_item = Tools::create_tool(_settings);
                 KromitItem *kitem = static_cast<KromitItem *>(_current_item);
 
-                // add undo entry
+                redo_records.clear();
+                garbage_collect();
+
                 UndoRecord rec;
-                rec.ids_to_remove.emplace_back(
+                rec.ids_to_remove.insert(
                     kitem->data(KromitItem::KeyID).toInt());
                 undo_records.emplace_back(rec);
 
@@ -244,6 +227,9 @@ bool DrawingScene::event(QEvent *event) {
                 return true;
             }
         }
+
+            assert(0);
+
         default:
             return QGraphicsScene::event(event);
     }
@@ -257,24 +243,39 @@ void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
     switch (keyEvent->key()) {
         case Qt::Key_L: {
             _settings.tool = TOOL_LINE;
+            clear_selection();
         } break;
 
         case Qt::Key_P: {
             _settings.tool = TOOL_PEN;
+            clear_selection();
         } break;
 
         case Qt::Key_E: {
             _settings.tool = TOOL_SELECT;
+            clear_selection();
         } break;
 
         case Qt::Key_D: {
             qDebug() << "---------- items ----------";
             for (const auto &item : items()) {
-                qDebug().nospace() << KromitItem::type_txt(item->type())
-                                   << " id=" << item->data(KromitItem::KeyID)
-                                   << (item->isSelected() ? " selected " : "");
+                if (item->type() > GFX_SELECTABLE) {
+                    std::cerr << static_cast<KromitItem &>(*item) << "\n";
+                } else {
+                    qDebug() << "  " << KromitItem::type_txt(item->type())
+                             << item->isVisible() << item;
+                }
             }
+            qDebug() << "-------- undo_store -------";
+            for (const auto &it : undo_store) {
+                std::cerr << static_cast<KromitUndoItem &>(*it.second) << "\n";
+            }
+            qDebug() << "------ undo_records -------";
+            for (const auto &rec : undo_records) { std::cerr << rec; }
+            qDebug() << "------ redo_records -------";
+            for (const auto &rec : redo_records) { std::cerr << rec; }
             qDebug() << "---------------------------";
+
         } break;
 
         default:
@@ -318,14 +319,34 @@ void DrawingScene::update_selection_frame() {
     }
 }
 
+// DrawingScene::delete_selection
+//
+// delete all items selected (and create an undo record)
+//
 void DrawingScene::delete_selection() {
     if (_selection_frame) {
+        UndoRecord rec;
+
         for (auto &item : _selected_items) {
+            int id = item->data(KromitFrame::KeyID).toInt();
+            KromitUndoItem *undo_item = item->create_undo_item();
             removeItem(item);
-            delete (item);
+            rec.ids_to_add.insert(id);
+            item->setSelected(false);
+            undo_store.insert({id, undo_item});
         }
+        undo_records.emplace_back(rec);
         update_selection_frame();
     }
+}
+
+// DrawingScene::clear_selection
+//
+// make sure everything is unselected
+//
+void DrawingScene::clear_selection() {
+    for (auto &item : _selected_items) item->setSelected(false);
+    update_selection_frame();
 }
 
 // DrawingScene::handle_selection_clicks
@@ -358,7 +379,6 @@ void DrawingScene::handle_selection_clicks(const QPointF &p, SelectType sel) {
 // if yes, store cursor position and operation type and return true
 //
 bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
-    KromitFrame::HandlePos htype = KromitFrame::POS_NONE;
     for (auto &item : items()) {
         const auto itype = item->type();
         if (itype == GfxItemType::GFX_HANDLE ||
@@ -372,7 +392,19 @@ bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
                 trans.pos_cur = _selection_frame->handle_pos(trans.handle);
                 trans.pos_start = p;
                 trans.pos_frame_start = _selection_frame->pos();
-                for (auto &item : _selected_items) item->stash();
+
+                UndoRecord rec;
+                for (auto &item : _selected_items) {
+                    KromitUndoItem *undo_item = item->create_undo_item();
+                    const int old_id = item->data(KromitItem::KeyID).toInt();
+                    item->set_new_ID();
+                    const int new_id = item->data(KromitItem::KeyID).toInt();
+                    undo_store.insert({old_id, undo_item});
+                    rec.ids_to_add.insert(old_id);
+                    rec.ids_to_remove.insert(new_id);
+                    item->stash();
+                }
+                undo_records.emplace_back(rec);
                 return true;
             }
         }
@@ -392,9 +424,7 @@ void DrawingScene::handle_transformation_move(const QPointF &p,
         delta += (trans.pos_cur - trans.pos_ref);
         double kx = (delta.x() / (trans.pos_cur.x() - trans.pos_ref.x()));
         double ky = (delta.y() / (trans.pos_cur.y() - trans.pos_ref.y()));
-        if (mods & Qt::ShiftModifier) {
-          kx = ky = max<double>(kx, ky);
-        }
+        if (mods & Qt::ShiftModifier) { kx = ky = max<double>(kx, ky); }
         trans.m.scale(kx, ky);
     } else if (trans.handle & KromitFrame::POS_ANISOSCALE) {
         delta += (trans.pos_cur - trans.pos_ref);
@@ -419,48 +449,131 @@ void DrawingScene::handle_transformation_move(const QPointF &p,
     update_selection_frame();
 }
 
+// DrawingScene::handle_transformation_release
+//
 void DrawingScene::handle_transformation_release(const QPointF &p) {
+    trans.m.reset();  // not really required
     update_selection_frame();
 }
 
 // DrawingScene::undo
 //
 // execute last undo record and place it in redo
-
+//
 void DrawingScene::undo() {
     if (undo_records.empty()) return;
-    UndoRecord& rec = undo_records.back();
+    UndoRecord &rec = undo_records.back();
     for (auto id : rec.ids_to_remove) {
         KromitItem *ptr = find_item(id);
-        removeItem(ptr);
-        undo_store.emplace_back(ptr);
+        if (ptr) {
+            ptr->setSelected(false);
+            KromitUndoItem *undo_item = ptr->create_undo_item();
+            removeItem(ptr);
+            delete ptr;
+            undo_store.insert({id, undo_item});
+        } else {
+            qDebug() << "undo: Could not find item" << id << "ptr=" << ptr;
+        }
     }
     for (auto id : rec.ids_to_add) {
-        KromitItem *ptr = find_undo_item(id);
-        if (ptr) {
-            addItem(ptr);
-            delete_undo_item(id);
+        auto it = undo_store.find(id);
+        if (it != undo_store.end()) {
+            KromitItem *item = it->second->create_from_undo_item();
+            addItem(item);
+            undo_store.erase(it);
+        } else {
+            qDebug() << "undo: Could not find item" << id;
         }
     }
     redo_records.emplace_back(rec);
     undo_records.pop_back();
+    clearSelection();
+    update_selection_frame();
 }
 
+// DrawingScene::undo
+//
+// execute last redo record and place it in undo
+//
 void DrawingScene::redo() {
     if (redo_records.empty()) return;
-    UndoRecord& rec = redo_records.back();
+    UndoRecord &rec = redo_records.back();
     for (auto id : rec.ids_to_add) {
         KromitItem *ptr = find_item(id);
-        removeItem(ptr);
-        undo_store.emplace_back(ptr);
+        if (ptr) {
+            ptr->setSelected(false);
+            KromitUndoItem *redo_item = ptr->create_undo_item();
+            removeItem(ptr);
+            delete ptr;
+            undo_store.insert({id, redo_item});
+        } else {
+            qDebug() << "redo: Could not find item" << id << "ptr=" << ptr;
+        }
     }
     for (auto id : rec.ids_to_remove) {
-        KromitItem *ptr = find_undo_item(id);
-        if (ptr) {
-            addItem(ptr);
-            delete_undo_item(id);
+        auto it = undo_store.find(id);
+        if (it != undo_store.end()) {
+            KromitItem *item = it->second->create_from_undo_item();
+            addItem(item);
+            undo_store.erase(it);
+        } else {
+            qDebug() << "redo: Could not find item" << id;
         }
     }
     undo_records.emplace_back(rec);
     redo_records.pop_back();
+    update_selection_frame();
+}
+
+// DrawingScene::garbage_collect
+//
+// remove items from undo_store that are no longer references, and remove items
+// from undo/redo records that contain references to items that neither exist in
+// items() or in undo_store
+//
+// this is repeated until a consistent set remains
+//
+// the implementation is not really efficient, but this should not be important
+//
+void DrawingScene::garbage_collect() {
+    int last_n = 0;
+    return;
+    for (;;) {
+        int new_n =
+            undo_store.size() + undo_records.size() + redo_records.size();
+        if (new_n == last_n) break;
+        last_n = new_n;
+
+        // remove records from undo_store that are no longer references by
+        // any undo or redo operation
+        std::unordered_set<int> ids_in_undoredo;
+        for (const auto &rec : undo_records) {
+            for (auto v : rec.ids_to_add) ids_in_undoredo.insert(v);
+            for (auto v : rec.ids_to_remove) ids_in_undoredo.insert(v);
+        }
+        for (const auto &rec : redo_records) {
+            for (auto v : rec.ids_to_add) ids_in_undoredo.insert(v);
+            for (auto v : rec.ids_to_remove) ids_in_undoredo.insert(v);
+        }
+
+        std::erase_if(undo_store, [&](auto &v) -> bool {
+            return !ids_in_undoredo.contains(v.first);
+        });
+
+        // remove undo or redo operations that reference objects that no
+        // longer exist in items() or undo_store
+        std::unordered_set<int> ids_in_stores;
+        for (const auto &item : items())
+            ids_in_stores.insert(item->data(KromitItem::KeyID).toInt());
+
+        for (const auto &item : undo_store)
+            ids_in_stores.insert(item.second->id);
+
+        std::erase_if(undo_records, [&](auto &rec) -> bool {
+            return !rec.all_ids_in(ids_in_stores);
+        });
+        std::erase_if(redo_records, [&](auto &rec) -> bool {
+            return !rec.all_ids_in(ids_in_stores);
+        });
+    }
 }

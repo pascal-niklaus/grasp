@@ -85,3 +85,22 @@ void ArrowItem::set_arrow_end(const QPointF &pos,
         _arrow_end->hide();
     }
 }
+
+std::ostream& operator<<(std::ostream& os, const ArrowType& a) {
+    switch (a) {
+    case ARROW_START:
+        os << "<--";
+        break;
+    case ARROW_END:
+        os << "-->";
+        break;
+    case ARROW_DOUBLE:
+        os << "<->";
+        break;
+    case ARROW_NONE:
+      os << "---";
+        break;
+    }
+    return os;
+}
+

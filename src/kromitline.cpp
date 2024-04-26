@@ -5,12 +5,13 @@
 #include <QDebug>
 #include <QLineF>
 #include <QPainter>
-
 #include <cmath>
 #include <iostream>
 
 #include "arrowitem.h"
 #include "kromit.h"
+#include "kromititem.h"
+#include "string_format.h"
 #include "tools.h"
 #include "utility.h"
 
@@ -21,31 +22,24 @@ KromitLine::KromitLine(QGraphicsItem* parent,
                        double arrowsize) :
     ArrowItem(parent) {
     _arrow_type = arrowtype;
-    _arrow_width = arrowsize * width;
+    _arrow_size = arrowsize;
+    //    _arrow_width = arrowsize * width;
     _pen = QPen(color, width);
     ArrowItem::setPen(_pen);
     _line_item = new QGraphicsLineItem(this);
     _line_item->setPen(_pen);
-
     setFlag(QGraphicsItem::ItemIsSelectable);
 }
 
 KromitLine::~KromitLine() {}
 
-// KromitItem::clone
+// KromitLine::create_undo_item
 //
-// create a clone. The clone has the old ID, the original gets an
-// updated ID
+// create an undo record that allows recreatine the line
 //
-KromitItem* KromitLine::clone() {
-    auto newasz = _arrow_width;
-    const auto neww = _pen.widthF();
-    if (neww > 0.00001) newasz /= neww;
-    KromitLine* line_clone =
-        new KromitLine(nullptr, _pen.color(), neww, _arrow_type, newasz);
-    line_clone->setData(KeyID, data(KeyID));
-    setData(KeyID, Tools::generate_ID());
-    return line_clone;
+KromitUndoItem* KromitLine::create_undo_item() const {
+    auto* undo = new KromitUndoLine(this);
+    return undo;
 }
 
 // KromitLine::stash
@@ -53,17 +47,17 @@ KromitItem* KromitLine::clone() {
 // store pre-transformation state
 //
 void KromitLine::stash() {
-  _stashed_line = _line_item->line();
+    _stashed_line = _line_item->line();
 }
 
 // KromitLine::apply
 //
 // apply 2D affine transformation
 //
-void KromitLine::apply(const QTransform &m) {
-  prepareGeometryChange();
-  _line_item->setLine(m.map(_stashed_line));
-  repos_arrows();
+void KromitLine::apply(const QTransform& m) {
+    prepareGeometryChange();
+    _line_item->setLine(m.map(_stashed_line));
+    repos_arrows();
 }
 
 // KromitLine::start
@@ -99,6 +93,10 @@ void KromitLine::move(const QPointF& p, double pressure) {
     stop(p);
 }
 
+// KromitLine::outline
+//
+// create a path outlining the path at given distance
+//
 QPainterPath KromitLine::outline(double dist) const {
     QPainterPath p;
     p.moveTo(_line_item->line().p1());
@@ -109,10 +107,18 @@ QPainterPath KromitLine::outline(double dist) const {
     return ps.createStroke(p);
 }
 
+// KromitLine::shape
+//
+// selectable area
+//
 QPainterPath KromitLine::shape() const {
     return outline(15);
 }
 
+// KromitLine::boundingRect
+//
+// this area is re-painted
+//
 QRectF KromitLine::boundingRect() const {
     if (isSelected()) {
         return outline(20).boundingRect();
@@ -121,6 +127,8 @@ QRectF KromitLine::boundingRect() const {
     }
 };
 
+// KromitLine::paint
+//
 void KromitLine::paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget) {
@@ -136,11 +144,49 @@ void KromitLine::paint(QPainter* painter,
 //
 void KromitLine::repos_arrows() {
     // search radius for angle
-  const QPointF& p1 = _line_item->line().p1();
-  const QPointF& p2 = _line_item->line().p2();
-  const double rot = atan2(p2.y() - p1.y(), p2.x() - p1.x());
-
-  if (_arrow_type & ARROW_START) { set_arrow_start(p1, _arrow_width, rot); }
-  if (_arrow_type & ARROW_END) { set_arrow_start(p2, _arrow_width, rot); }
+    const QPointF& p1 = _line_item->line().p1();
+    const QPointF& p2 = _line_item->line().p2();
+    const double rot = atan2(p2.y() - p1.y(), p2.x() - p1.x());
+    const double arrow_width = _pen.widthF() * _arrow_size;
+    if (_arrow_type & ARROW_START) { set_arrow_start(p1, arrow_width, rot); }
+    if (_arrow_type & ARROW_END) { set_arrow_start(p2, arrow_width, rot); }
 }
 
+// KromitLine::dump
+//
+void KromitLine::dump(std::ostream& os) const {
+    os << string_format(" (%.0f,%.0f)",
+                        _line_item->line().p1().x(),
+                        _line_item->line().p1().y());
+    os << _arrow_type;
+    os << string_format("(%.0f,%.0f)",
+                        _line_item->line().p2().x(),
+                        _line_item->line().p2().y());
+}
+
+// ============================== undo ===============================
+
+// KromitUndoLine::KromitUndoLine
+//
+// create undo record for line
+//
+KromitUndoLine::KromitUndoLine(const KromitLine* kline) :
+    KromitUndoItem(static_cast<const KromitItem*>(kline)) {
+    pen = kline->pen();
+    arrow_type = kline->arrow_type();
+    arrow_size = kline->arrow_size();
+    line = kline->line();
+}
+
+// KromitUndoLine::create_from_undo_item
+//
+// re-create the KromitLine
+//
+KromitItem* KromitUndoLine::create_from_undo_item() const {
+    KromitLine* kline = new KromitLine(
+        nullptr, pen.color(), pen.widthF(), arrow_type, arrow_size);
+    kline->setData(KromitLine::KeyID, id);
+    kline->start(line.p1());
+    kline->stop(line.p2());
+    return kline;
+}
