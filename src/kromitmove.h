@@ -1,10 +1,13 @@
 #ifndef KROMITMOVEE_H
 #define KROMITMOVEE_H
 
-#include "kromit.h"
+#include <qgraphicsitem.h>
 
+#include <QDebug>
 #include <QGraphicsItem>
 #include <QPen>
+
+#include "kromit.h"
 
 // KromitMove
 //

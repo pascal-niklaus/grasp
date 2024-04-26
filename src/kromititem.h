@@ -3,6 +3,7 @@
 
 #include "kromit.h"
 
+#include <QTransform>
 
 class QPointF;
 
@@ -16,6 +17,9 @@ class KromitItem : public QGraphicsItem {
     enum { KeyID = 1, KeyHandle = 1 };
     KromitItem(QGraphicsItem* parent) : QGraphicsItem(parent) {}
     ~KromitItem() {}
+
+    virtual void stash() = 0;
+    virtual void apply(const QTransform& m) = 0;
     virtual void start(const QPointF& p, double pressure = 1.0) = 0;
     virtual void move(const QPointF& p, double pressure = 1.0) = 0;
     virtual void stop(const QPointF& p, double pressure = 1.0) = 0;

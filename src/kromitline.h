@@ -1,10 +1,11 @@
 #ifndef KROMITLINEH_H
 #define KROMITLINEH_H
 
-#include "kromit.h"
 #include "arrowitem.h"
+#include "kromit.h"
 #include "path.h"
 
+#include <QLine>
 #include <QPen>
 
 // KromitLine
@@ -32,6 +33,8 @@ class KromitLine : public ArrowItem {
                 CAP_DELETE);
     }
 
+    virtual void stash() override;
+    virtual void apply(const QTransform& m) override;
     virtual void start(const QPointF& p, double pressure = 1.0) override;
     virtual void move(const QPointF& p, double pressure = 1.0) override;
     virtual void stop(const QPointF& p, double pressure = 1.0) override;
@@ -51,6 +54,7 @@ class KromitLine : public ArrowItem {
     ArrowType _arrow_type = ARROW_NONE;
     double _arrow_width = 0.0;
     QGraphicsLineItem* _line_item = nullptr;
+    QLineF _stashed_line;
 };
 
 #endif  // KROMITLINEH_H

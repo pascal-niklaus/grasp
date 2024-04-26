@@ -13,6 +13,7 @@
 #include "kromitrotate.h"
 #include "utility.h"
 
+#include <cassert>
 #include <iostream>
 #include <cmath>
 
@@ -33,15 +34,15 @@ KromitFrame::KromitFrame(QGraphicsItem* parent,
         _rot_handle[i] = new KromitRotHandle(this);
         _rot_handle[i]->setPen(_pen);
         _rot_handle[i]->setRotation((i - 1) * 90);
-        _rot_handle[i]->setData(KeyHandle, POS_ROTATE + i + 1);
+        _rot_handle[i]->setData(KeyHandle, POS_ROTATE + i);
         _rot_handle[i]->hide();
         _iso_handle[i] = new KromitHandle(this);
         _iso_handle[i]->setPen(_pen);
-        _iso_handle[i]->setData(KeyHandle, POS_ISOSCALE + i + 1);
+        _iso_handle[i]->setData(KeyHandle, POS_ISOSCALE + i);
         _iso_handle[i]->hide();
         _aniso_handle[i] = new KromitHandle(this);
         _aniso_handle[i]->setPen(_pen);
-        _aniso_handle[i]->setData(KeyHandle, POS_ANISOSCALE + i + 1);
+        _aniso_handle[i]->setData(KeyHandle, POS_ANISOSCALE + i);
         _aniso_handle[i]->hide();
     }
 }
@@ -66,6 +67,78 @@ void KromitFrame::setCaps(TransformCaps caps) {
         if (caps & CAP_ROTATE) _rot_handle[i]->show();
         if (caps & CAP_ISOSCALE) _iso_handle[i]->show();
         if (caps & CAP_ANISOSCALE) _aniso_handle[i]->show();
+    }
+}
+
+// KromitFrame::handle_pos
+//
+// return position of handle
+//
+QPointF KromitFrame::handle_pos(HandlePos pos) const {
+    if (pos & POS_ANISOSCALE) {
+        switch (pos & POS_WHICHMASK) {
+            case POS_LEFT:
+                return midleft();
+            case POS_RIGHT:
+                return midright();
+            case POS_TOP:
+                return midtop();
+            case POS_BOTTOM:
+                return midbottom();
+            default:
+                assert(false);
+        }
+    } else {
+        switch (pos & POS_WHICHMASK) {
+            case POS_TOPLEFT:
+                return topleft();
+            case POS_TOPRIGHT:
+                return topright();
+            case POS_BOTTOMLEFT:
+                return bottomleft();
+            case POS_BOTTOMRIGHT:
+                return bottomright();
+            case POS_CENTER:
+                return center();
+            default:
+                assert(false);
+        }
+    }
+}
+
+// KromitFrame::opposite_pos
+//
+// return position of opposite handle
+//
+QPointF KromitFrame::opposite_pos(HandlePos pos) const {
+    if (pos & POS_ANISOSCALE) {
+        switch (pos & POS_WHICHMASK) {
+            case POS_LEFT:
+                return midright();
+            case POS_RIGHT:
+                return midleft();
+            case POS_TOP:
+                return midbottom();
+            case POS_BOTTOM:
+                return midtop();
+            default:
+                assert(false);
+        }
+    } else {
+        switch (pos & POS_WHICHMASK) {
+            case POS_TOPLEFT:
+                return bottomright();
+            case POS_TOPRIGHT:
+                return bottomleft();
+            case POS_BOTTOMLEFT:
+                return topright();
+            case POS_BOTTOMRIGHT:
+                return topleft();
+            case POS_CENTER:
+                return center();
+            default:
+                assert(false);
+        }
     }
 }
 
@@ -127,4 +200,25 @@ void KromitFrame::paint(QPainter* painter,
     p.setStyle(Qt::DashLine);
     painter->setPen(p);
     painter->drawRect(QRectF(_p1, _p2));
+}
+
+KromitFrame::HandlePos operator&(const KromitFrame::HandlePos& a,
+                                 const KromitFrame::HandlePos& b) {
+    const auto ia = static_cast<std::uint16_t>(a);
+    const auto ib = static_cast<std::uint16_t>(b);
+    return static_cast<KromitFrame::HandlePos>(ia & ib);
+}
+
+KromitFrame::HandlePos operator|(const KromitFrame::HandlePos& a,
+                                 const KromitFrame::HandlePos& b) {
+    const auto ia = static_cast<std::uint16_t>(a);
+    const auto ib = static_cast<std::uint16_t>(b);
+    return static_cast<KromitFrame::HandlePos>(ia | ib);
+}
+
+KromitFrame::HandlePos operator^(const KromitFrame::HandlePos& a,
+                                 const KromitFrame::HandlePos& b) {
+    const auto ia = static_cast<std::uint16_t>(a);
+    const auto ib = static_cast<std::uint16_t>(b);
+    return static_cast<KromitFrame::HandlePos>(ia ^ ib);
 }

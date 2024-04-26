@@ -9,7 +9,6 @@
 bool KromitItem::select() {
     prepareGeometryChange();
     if (!isSelected()) {
-        qDebug() << "KromitItem::select" << data(KeyID);
         setSelected(true);
         return true;
     }
@@ -19,7 +18,6 @@ bool KromitItem::select() {
 bool KromitItem::deselect() {
     prepareGeometryChange();
     if (isSelected()) {
-        qDebug() << "KromitItem::deselect" << data(KeyID);
         setSelected(false);
         return true;
     }
@@ -28,7 +26,6 @@ bool KromitItem::deselect() {
 
 bool KromitItem::toggleselect() {
     prepareGeometryChange();
-    qDebug() << "KromitItem::toggle" << data(KeyID);
     setSelected(!isSelected());
     return true;
 }

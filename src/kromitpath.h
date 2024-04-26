@@ -35,6 +35,8 @@ class KromitPath : public ArrowItem {
                 CAP_DELETE);
     }
 
+    virtual void stash() override;
+    virtual void apply(const QTransform& m) override;
     virtual void start(const QPointF& p, double pressure = 1.0) override;
     virtual void move(const QPointF& p, double pressure = 1.0) override;
     virtual void stop(const QPointF& p, double pressure = 1.0) override;
@@ -58,6 +60,8 @@ class KromitPath : public ArrowItem {
 
     Path _xy_path;
     QPainterPath _path;
+
+    Path _stashed_xy_path;
 };
 
 // KromitPathW

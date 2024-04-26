@@ -2,8 +2,11 @@
 #include <qbrush.h>
 #include <qdebug.h>
 #include <qevent.h>
+#include <QGraphicsItemGroup>
 #include <qgraphicsitem.h>
 #include <qnamespace.h>
+#include <qpoint.h>
+#include <qtransform.h>
 
 #include <QEvent>
 #include <QGraphicsScene>
@@ -25,6 +28,7 @@
 #include "kromitrotate.h"
 #include "kromitmove.h"
 #include "tools.h"
+#include "utility.h"
 
 // DrawingScene::DrawingScene
 //
@@ -134,57 +138,16 @@ bool DrawingScene::event(QEvent *event) {
             QGraphicsSceneMouseEvent *ev =
                 static_cast<QGraphicsSceneMouseEvent *>(event);
             QPointF p = ev->scenePos();
-
-            SelectType sel = SEL_SINGLE;
-            if (ev->modifiers() & Qt::ControlModifier) {
-                sel = SEL_TOGGLE;
-                qDebug() << "-- MousePress toggle" << p;
-            } else if (ev->modifiers() & Qt::ShiftModifier) {
-                sel = SEL_ADD;
-                qDebug() << "-- MousePress add" << p;
-            } else {
-                qDebug() << "-- MousePress single" << p;
-            }
-
             if (_settings.tool == TOOL_SELECT) {
-                for (auto &item : items()) {
-                    if (item->type() > GfxItemType::GFX_SELECTABLE) {
-                        auto *kitem = static_cast<KromitItem *>(item);
-                        if (item->contains(p)) {
-                            if (sel == SEL_ADD || sel == SEL_SINGLE) {
-                                qDebug() << "* sel"
-                                         << kitem->data(KromitItem::KeyID);
-                                kitem->select();
-                            } else if (sel == SEL_TOGGLE) {
-                                kitem->toggleselect();
-                                qDebug() << "* toggle"
-                                         << kitem->data(KromitItem::KeyID);
-                            } else {
-                                kitem->deselect();
-                                qDebug() << "* desel"
-                                         << kitem->data(KromitItem::KeyID);
-                            }
-                        } else {
-                            // item was missed !
-                            if (sel == SEL_SINGLE || sel == SEL_NONE) {
-                                kitem->deselect();
-                                qDebug() << "* desel2"
-                                         << kitem->data(KromitItem::KeyID);
-
-                            } else {
-                                qDebug() << "* none"
-                                         << kitem->data(KromitItem::KeyID);
-                            }
-                        }
-                    } else {
-                        // skip, not a KromitItem !
-                    }
-                }  // loop over items
-                update_selection_frame();
-                ev->accept();
-                return true;
+                SelectType sel = SEL_SINGLE;
+                if (ev->modifiers() & Qt::ControlModifier) {
+                    sel = SEL_TOGGLE;
+                } else if (ev->modifiers() & Qt::ShiftModifier) {
+                    sel = SEL_ADD;
+                }
+                if (!handle_transformation_clicks(p))
+                    handle_selection_clicks(p, sel);
             } else {
-                // not a select event !
                 QGraphicsSceneMouseEvent *ev =
                     static_cast<QGraphicsSceneMouseEvent *>(event);
                 _current_item = Tools::create_tool(_settings);
@@ -192,15 +155,18 @@ bool DrawingScene::event(QEvent *event) {
                 addItem(_current_item);
                 kitem->start(p);
                 kitem->move(p);
-                ev->accept();
-                return true;
             }
+            ev->accept();
+            return true;
         }
 
         case QEvent::GraphicsSceneMouseMove: {
             QGraphicsSceneMouseEvent *ev =
                 static_cast<QGraphicsSceneMouseEvent *>(event);
             if (_settings.tool == TOOL_SELECT) {
+                if (trans.is_ongoing()) {
+                  handle_transformation_move(ev->scenePos(), ev->modifiers());
+                }
                 ev->accept();
                 return true;
             } else {
@@ -218,6 +184,9 @@ bool DrawingScene::event(QEvent *event) {
             QGraphicsSceneMouseEvent *ev =
                 static_cast<QGraphicsSceneMouseEvent *>(event);
             if (_settings.tool == TOOL_SELECT) {
+                if (trans.is_ongoing()) {
+                    handle_transformation_release(ev->scenePos());
+                }
                 ev->accept();
                 return true;
             } else {
@@ -313,4 +282,99 @@ void DrawingScene::delete_selection() {
         }
         update_selection_frame();
     }
+}
+
+// DrawingScene::handle_selection_clicks
+//
+// handle item selection / deselection
+//
+void DrawingScene::handle_selection_clicks(const QPointF &p, SelectType sel) {
+    for (auto &item : items()) {
+        if (item->type() > GfxItemType::GFX_SELECTABLE) {
+            auto *kitem = static_cast<KromitItem *>(item);
+            if (item->contains(p)) {
+                if (sel == SEL_ADD || sel == SEL_SINGLE)
+                    kitem->select();
+                else if (sel == SEL_TOGGLE)
+                    kitem->toggleselect();
+                else
+                    kitem->deselect();
+            } else {
+                if (sel == SEL_SINGLE || sel == SEL_NONE) kitem->deselect();
+            }
+        }
+    }
+    update_selection_frame();
+}
+
+// DrawingScene::handle_clicked
+//
+// check if a transformation handle was clicked
+//
+// if yes, store cursor position and operation type and return true
+//
+bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
+    KromitFrame::HandlePos htype = KromitFrame::POS_NONE;
+    for (auto &item : items()) {
+        const auto itype = item->type();
+        if (itype == GfxItemType::GFX_HANDLE ||
+            itype == GfxItemType::GFX_ROTATEHANDLE ||
+            itype == GfxItemType::GFX_MOVEHANDLE) {
+            auto *kitem = static_cast<KromitItem *>(item);
+            if (kitem->contains(kitem->mapFromScene(p))) {
+                trans.handle = static_cast<KromitFrame::HandlePos>(
+                    kitem->data(KromitItem::KeyHandle).toUInt());
+                trans.pos_ref = _selection_frame->opposite_pos(trans.handle);
+                trans.pos_cur = _selection_frame->handle_pos(trans.handle);
+                trans.pos_start = p;
+                trans.pos_frame_start = _selection_frame->pos();
+                for (auto &item : _selected_items) item->stash();
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void DrawingScene::handle_transformation_move(const QPointF &p,
+                                              Qt::KeyboardModifiers mods) {
+    QPointF delta = p - trans.pos_start;
+    trans.m.reset();
+    trans.m.translate(trans.pos_ref.x(), trans.pos_ref.y());
+
+    if (trans.handle & KromitFrame::POS_MOVE) {
+        trans.m.translate(delta.x(), delta.y());
+    } else if (trans.handle & KromitFrame::POS_ISOSCALE) {
+        delta += (trans.pos_cur - trans.pos_ref);
+        double kx = (delta.x() / (trans.pos_cur.x() - trans.pos_ref.x()));
+        double ky = (delta.y() / (trans.pos_cur.y() - trans.pos_ref.y()));
+        if (mods & Qt::ShiftModifier) {
+          kx = ky = max<double>(kx, ky);
+        }
+        trans.m.scale(kx, ky);
+    } else if (trans.handle & KromitFrame::POS_ANISOSCALE) {
+        delta += (trans.pos_cur - trans.pos_ref);
+        double kx = delta.x() / (trans.pos_cur.x() - trans.pos_ref.x());
+        double ky = delta.y() / (trans.pos_cur.y() - trans.pos_ref.y());
+        auto which = trans.handle & KromitFrame::POS_WHICHMASK;
+        if (which == KromitFrame::POS_LEFT || which == KromitFrame::POS_RIGHT)
+            ky = 1.0;
+        else
+            kx = 1.0;
+        trans.m.scale(kx, ky);
+    } else if (trans.handle & KromitFrame::POS_ROTATE) {
+        double alpha0 = atan2(trans.pos_cur.y() - trans.pos_ref.y(),
+                              trans.pos_cur.x() - trans.pos_ref.x());
+        double alpha1 =
+            atan2(delta.y() + trans.pos_cur.y() - trans.pos_ref.y(),
+                  delta.x() + trans.pos_cur.x() - trans.pos_ref.x());
+        trans.m.rotate((alpha1 - alpha0) * 180 / M_PI);
+    }
+    trans.m.translate(-trans.pos_ref.x(), -trans.pos_ref.y());
+    for (auto &item : _selected_items) item->apply(trans.m);
+    update_selection_frame();
+}
+
+void DrawingScene::handle_transformation_release(const QPointF &p) {
+    update_selection_frame();
 }

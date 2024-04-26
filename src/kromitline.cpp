@@ -30,6 +30,24 @@ KromitLine::KromitLine(QGraphicsItem* parent,
 
 KromitLine::~KromitLine() {}
 
+// KromitLine::stash
+//
+// store pre-transformation state
+//
+void KromitLine::stash() {
+  _stashed_line = _line_item->line();
+}
+
+// KromitLine::apply
+//
+// apply 2D affine transformation
+//
+void KromitLine::apply(const QTransform &m) {
+  prepareGeometryChange();
+  _line_item->setLine(m.map(_stashed_line));
+  repos_arrows();
+}
+
 // KromitLine::start
 //
 // start a path

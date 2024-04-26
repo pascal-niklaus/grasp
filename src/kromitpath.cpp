@@ -32,6 +32,32 @@ KromitPath::KromitPath(QGraphicsItem* parent,
 
 KromitPath::~KromitPath() {}
 
+
+// KromitPath::stash
+//
+// store pre-transformation state
+//
+void KromitPath::stash() {
+  _stashed_xy_path = _xy_path;
+}
+
+// KromitPath::apply
+//
+// apply 2D affine transformation
+//
+void KromitPath::apply(const QTransform& m) {
+    prepareGeometryChange();
+    _xy_path = _stashed_xy_path;
+    _xy_path.apply2D(m);
+
+    _path.clear();
+    _path.moveTo(_xy_path[0]);
+    const auto size = _xy_path.size();
+    for (int i = 0; i < size; i++) _path.lineTo(_xy_path[i]);
+
+    repos_arrows();
+}
+
 // KromitPath::start
 //
 // start a path
