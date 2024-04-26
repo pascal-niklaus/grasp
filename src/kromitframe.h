@@ -64,8 +64,10 @@ class KromitFrame : public KromitItem {
     void setCaps(TransformCaps caps);
     void setRect(const QPointF& p1, const QPointF& p2);
 
-    virtual void stash() override {};
-    virtual void apply(const QTransform& m) override {};
+    virtual void stash() override{};
+    virtual void apply(const QTransform& m) override{};
+    virtual KromitItem* clone() override { return nullptr; };
+
     virtual void start(const QPointF& p, double pressure = 1.0) override;
     virtual void move(const QPointF& p, double pressure = 1.0) override;
     virtual void stop(const QPointF& p, double pressure = 1.0) override;

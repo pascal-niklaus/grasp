@@ -9,7 +9,9 @@
 #include <cmath>
 #include <iostream>
 
+#include "arrowitem.h"
 #include "kromit.h"
+#include "tools.h"
 #include "utility.h"
 
 KromitLine::KromitLine(QGraphicsItem* parent,
@@ -29,6 +31,22 @@ KromitLine::KromitLine(QGraphicsItem* parent,
 }
 
 KromitLine::~KromitLine() {}
+
+// KromitItem::clone
+//
+// create a clone. The clone has the old ID, the original gets an
+// updated ID
+//
+KromitItem* KromitLine::clone() {
+    auto newasz = _arrow_width;
+    const auto neww = _pen.widthF();
+    if (neww > 0.00001) newasz /= neww;
+    KromitLine* line_clone =
+        new KromitLine(nullptr, _pen.color(), neww, _arrow_type, newasz);
+    line_clone->setData(KeyID, data(KeyID));
+    setData(KeyID, Tools::generate_ID());
+    return line_clone;
+}
 
 // KromitLine::stash
 //

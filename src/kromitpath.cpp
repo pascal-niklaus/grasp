@@ -6,6 +6,7 @@
 
 #include "kromit.h"
 #include "utility.h"
+#include "tools.h"
 #include "arrowitem.h"
 #include "kromitarrow.h"
 #include "xy.h"
@@ -32,6 +33,24 @@ KromitPath::KromitPath(QGraphicsItem* parent,
 
 KromitPath::~KromitPath() {}
 
+
+// KromitItem::clone
+//
+// create a clone. The clone has the old ID, the original gets an
+// updated ID
+//
+KromitItem* KromitPath::clone() {
+    auto newasz = _arrow_width;
+    const auto neww = _pen.widthF();
+    if (neww > 0.00001) newasz /= neww;
+    KromitPath* path_clone =
+        new KromitPath(nullptr, _pen.color(), neww, _arrow_type, newasz);
+    path_clone->_xy_path = _xy_path;
+    path_clone->_path = _path;
+    path_clone->setData(KeyID, data(KeyID));
+    setData(KeyID, Tools::generate_ID());
+    return path_clone;
+}
 
 // KromitPath::stash
 //

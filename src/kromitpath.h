@@ -37,6 +37,8 @@ class KromitPath : public ArrowItem {
 
     virtual void stash() override;
     virtual void apply(const QTransform& m) override;
+    virtual KromitItem* clone() override;
+
     virtual void start(const QPointF& p, double pressure = 1.0) override;
     virtual void move(const QPointF& p, double pressure = 1.0) override;
     virtual void stop(const QPointF& p, double pressure = 1.0) override;

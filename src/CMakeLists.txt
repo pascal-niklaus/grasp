@@ -31,6 +31,7 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   xy.cpp xy.h
   path.cpp path.h
   tools.cpp tools.h
+  undo.h
   arrowitem.cpp arrowitem.h
   kromititem.cpp kromititem.h
   kromitpath.cpp kromitpath.h

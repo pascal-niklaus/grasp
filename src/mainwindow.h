@@ -23,6 +23,8 @@ class MainWindow : public QMainWindow {
     void toggle();
     void quit();
     void cycle_opacity();
+    void undo();
+    void redo();
 
   protected:
   //    virtual void keyPressEvent(QKeyEvent *event) override;

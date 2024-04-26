@@ -54,6 +54,16 @@ MainWindow::MainWindow(QWidget *parent)
     addAction(opaqAction);
     opaqAction->setShortcut(Qt::CTRL | Qt::Key_O);
     connect(opaqAction, &QAction::triggered, this, &MainWindow::cycle_opacity);
+
+    QAction *undoAction = new QAction(tr("Undo"), this);
+    addAction(undoAction);
+    undoAction->setShortcut(Qt::CTRL | Qt::Key_Z);
+    connect(undoAction, &QAction::triggered, this, &MainWindow::undo);
+
+    QAction *redoAction = new QAction(tr("Redo"), this);
+    addAction(redoAction);
+    redoAction->setShortcut(Qt::CTRL | Qt::Key_Y);
+    connect(redoAction, &QAction::triggered, this, &MainWindow::redo);
 }
 
 MainWindow::~MainWindow() {
@@ -72,6 +82,14 @@ void MainWindow::cycle_opacity() {
         setWindowOpacity(1);
     else
         setWindowOpacity(.3);
+}
+
+void MainWindow::undo() {
+    scene->undo();
+}
+
+void MainWindow::redo() {
+    scene->redo();
 }
 
 // ------------------- commands received via dbus --------------------

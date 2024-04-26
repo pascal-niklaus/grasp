@@ -30,7 +30,7 @@ bool KromitItem::toggleselect() {
     return true;
 }
 
-QString KromitItem::type(int item) {
+QString KromitItem::type_txt(int item) {
     switch (item) {
         case GFX_ARROWITEM:
             return "ArrowItem";

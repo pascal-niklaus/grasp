@@ -11,6 +11,7 @@
 #include "kromitframe.h"
 #include "kromititem.h"
 #include "tools.h"
+#include "undo.h"
 
 class QGraphicsItemGroup;
 
@@ -43,6 +44,9 @@ class DrawingScene : public QGraphicsScene {
     explicit DrawingScene(QObject *parent = nullptr);
     ~DrawingScene();
 
+    void redo();
+    void undo();
+
   protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *mouseEvent) override;
@@ -59,9 +63,14 @@ class DrawingScene : public QGraphicsScene {
     void update_selection_frame();
     void delete_selection();
 
+    KromitItem *find_item(int id) const;
+    KromitItem *find_undo_item(int id) const;
+    bool delete_undo_item(int id);
+
     void handle_selection_clicks(const QPointF &p, SelectType sel);
     bool handle_transformation_clicks(const QPointF &p);
-  void handle_transformation_move(const QPointF &p, Qt::KeyboardModifiers mods);
+    void handle_transformation_move(const QPointF &p,
+                                    Qt::KeyboardModifiers mods);
     void handle_transformation_release(const QPointF &p);
 
   private:
@@ -71,6 +80,10 @@ class DrawingScene : public QGraphicsScene {
     KromitFrame *_selection_frame = nullptr;
     QList<KromitItem *> _selected_items;
     Transformation trans;
+
+    std::vector<KromitItem *> undo_store;
+    std::vector<UndoRecord> undo_records;
+    std::vector<UndoRecord> redo_records;
 };
 
 #endif // DRAWINGSCENE_H

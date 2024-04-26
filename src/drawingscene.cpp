@@ -28,6 +28,7 @@
 #include "kromitrotate.h"
 #include "kromitmove.h"
 #include "tools.h"
+#include "undo.h"
 #include "utility.h"
 
 // DrawingScene::DrawingScene
@@ -40,8 +41,8 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     _settings.tool = TOOL_LINE;
     _settings.color = Qt::yellow;
     _settings.width = 5;
-    _settings.arrow_type = ARROW_NONE;
-    _settings.arrow_size = 0;
+    _settings.arrow_type = ARROW_END;
+    _settings.arrow_size = 3;
     _settings.minwidth = 1;
     _settings.maxwidth = 4;
     _settings.radius = 10;
@@ -55,8 +56,43 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     _selection_frame->hide();
 }
 
-
 DrawingScene::~DrawingScene() {}
+
+KromitItem *DrawingScene::find_item(int ID) const {
+    for (auto &item : items()) {
+        if (item->type() > GFX_SELECTABLE) {
+            bool ok;
+            auto id = item->data(KromitItem::KeyID).toInt(&ok);
+            if (ok && id == ID) return static_cast<KromitItem *>(item);
+        }
+    }
+    return nullptr;
+}
+
+KromitItem *DrawingScene::find_undo_item(int ID) const {
+    for (auto &item : undo_store) {
+        if (item->type() > GFX_SELECTABLE) {
+            bool ok;
+            auto id = item->data(KromitItem::KeyID).toInt(&ok);
+            if (ok && id == ID) return static_cast<KromitItem *>(item);
+        }
+    }
+    return nullptr;
+}
+
+bool DrawingScene::delete_undo_item(int ID)  {
+    for (auto it = undo_store.begin(); it != undo_store.end(); ++it) {
+      if ((*it)->type() > GFX_SELECTABLE) {
+            bool ok;
+            auto id = (*it)->data(KromitItem::KeyID).toInt(&ok);
+            if (ok && id == ID) {
+                undo_store.erase(it);
+                return true;
+            }
+      }
+    }
+    return false;
+}
 
 // forward mouse events to the Scene...
 
@@ -85,8 +121,8 @@ bool DrawingScene::event(QEvent *event) {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
             QPointF p = ev->scenePosition();
             double pressure = ev->pressure();
-            _current_item =
-              new KromitPath(nullptr, Qt::yellow, pressure * 3.0, ARROW_DOUBLE, 10);
+            _current_item = new KromitPath(
+                nullptr, Qt::yellow, pressure * 3.0, ARROW_DOUBLE, 10);
             KromitPath *path = static_cast<KromitPath *>(_current_item);
             path->start(p);
             path->move(p);
@@ -123,10 +159,11 @@ bool DrawingScene::event(QEvent *event) {
         case QEvent::KeyPress: {
             QKeyEvent *ev = static_cast<QKeyEvent *>(event);
             if (ev->key() == Qt::Key_Delete) {
-              delete_selection();
-              ev->accept();
-              return true;
+                delete_selection();
+                ev->accept();
+                return true;
             }
+            return QGraphicsScene::event(event);
         }
 
         case QEvent::KeyRelease:
@@ -152,6 +189,13 @@ bool DrawingScene::event(QEvent *event) {
                     static_cast<QGraphicsSceneMouseEvent *>(event);
                 _current_item = Tools::create_tool(_settings);
                 KromitItem *kitem = static_cast<KromitItem *>(_current_item);
+
+                // add undo entry
+                UndoRecord rec;
+                rec.ids_to_remove.emplace_back(
+                    kitem->data(KromitItem::KeyID).toInt());
+                undo_records.emplace_back(rec);
+
                 addItem(_current_item);
                 kitem->start(p);
                 kitem->move(p);
@@ -165,7 +209,7 @@ bool DrawingScene::event(QEvent *event) {
                 static_cast<QGraphicsSceneMouseEvent *>(event);
             if (_settings.tool == TOOL_SELECT) {
                 if (trans.is_ongoing()) {
-                  handle_transformation_move(ev->scenePos(), ev->modifiers());
+                    handle_transformation_move(ev->scenePos(), ev->modifiers());
                 }
                 ev->accept();
                 return true;
@@ -226,7 +270,7 @@ void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
         case Qt::Key_D: {
             qDebug() << "---------- items ----------";
             for (const auto &item : items()) {
-                qDebug().nospace() << KromitItem::type(item->type())
+                qDebug().nospace() << KromitItem::type_txt(item->type())
                                    << " id=" << item->data(KromitItem::KeyID)
                                    << (item->isSelected() ? " selected " : "");
             }
@@ -377,4 +421,46 @@ void DrawingScene::handle_transformation_move(const QPointF &p,
 
 void DrawingScene::handle_transformation_release(const QPointF &p) {
     update_selection_frame();
+}
+
+// DrawingScene::undo
+//
+// execute last undo record and place it in redo
+
+void DrawingScene::undo() {
+    if (undo_records.empty()) return;
+    UndoRecord& rec = undo_records.back();
+    for (auto id : rec.ids_to_remove) {
+        KromitItem *ptr = find_item(id);
+        removeItem(ptr);
+        undo_store.emplace_back(ptr);
+    }
+    for (auto id : rec.ids_to_add) {
+        KromitItem *ptr = find_undo_item(id);
+        if (ptr) {
+            addItem(ptr);
+            delete_undo_item(id);
+        }
+    }
+    redo_records.emplace_back(rec);
+    undo_records.pop_back();
+}
+
+void DrawingScene::redo() {
+    if (redo_records.empty()) return;
+    UndoRecord& rec = redo_records.back();
+    for (auto id : rec.ids_to_add) {
+        KromitItem *ptr = find_item(id);
+        removeItem(ptr);
+        undo_store.emplace_back(ptr);
+    }
+    for (auto id : rec.ids_to_remove) {
+        KromitItem *ptr = find_undo_item(id);
+        if (ptr) {
+            addItem(ptr);
+            delete_undo_item(id);
+        }
+    }
+    undo_records.emplace_back(rec);
+    redo_records.pop_back();
 }
