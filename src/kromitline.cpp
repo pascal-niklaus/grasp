@@ -21,6 +21,7 @@ KromitLine::KromitLine(QGraphicsItem* parent,
                        ArrowType arrowtype,
                        double arrowsize) :
     ArrowItem(parent) {
+    prepareGeometryChange();
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
     //    _arrow_width = arrowsize * width;
@@ -119,12 +120,15 @@ QPainterPath KromitLine::shape() const {
 //
 // this area is re-painted
 //
+// it seems the boundingRect must not change without a call to
+// prepareGeometryChange; therefore, the same rect is returned
+// regardless of whether it is selected or not
 QRectF KromitLine::boundingRect() const {
-    if (isSelected()) {
+  //if (isSelected()) {
         return outline(20).boundingRect();
-    } else {
+        // } else {
         return QRectF(0, 0, 0, 0);
-    }
+        // }
 };
 
 // KromitLine::paint

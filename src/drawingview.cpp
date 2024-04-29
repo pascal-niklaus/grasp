@@ -14,8 +14,8 @@ DrawingView::DrawingView(DrawingScene *scene, QWidget *parent) :
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    setCacheMode(QGraphicsView::CacheBackground);
-    setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
+    // setCacheMode(QGraphicsView::CacheBackground);
+    // setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
 }
 
 DrawingView::~DrawingView() {}

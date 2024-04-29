@@ -1,7 +1,9 @@
 #ifndef DRAWINGSCENE_H
 #define DRAWINGSCENE_H
 
+#include <qgraphicsitem.h>
 #include <qnamespace.h>
+#include <qpoint.h>
 #include <QGraphicsItem>
 #include <QTransform>
 #include <QGraphicsScene>
@@ -58,6 +60,18 @@ class DrawingScene : public QGraphicsScene {
     virtual bool event(QEvent *event) override;
     virtual void keyPressEvent(QKeyEvent *keyEvent) override;
 
+  signals:
+    void keyPressed(int, Qt::KeyboardModifiers);
+    void pointerPressed(QPointF, Qt::KeyboardModifiers);
+    void pointerMoved(QPointF, Qt::KeyboardModifiers);
+    void pointerReleased(QPointF, Qt::KeyboardModifiers);
+
+  private slots:
+    void slot_keyPressed(int key, Qt::KeyboardModifiers mods);
+    void slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods);
+    void slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods);
+    void slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods);
+
   private:
     void update_selection_frame();
     void delete_selection();
@@ -71,6 +85,8 @@ class DrawingScene : public QGraphicsScene {
     void handle_transformation_move(const QPointF &p,
                                     Qt::KeyboardModifiers mods);
     void handle_transformation_release(const QPointF &p);
+
+  void removeItemSafely(QGraphicsItem *item);
 
   private:
     Tools::Settings _settings;

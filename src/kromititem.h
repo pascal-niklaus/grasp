@@ -18,7 +18,7 @@ class KromitItem : public QGraphicsItem {
   public:
     enum { KeyID = 1, KeyHandle = 1 };
     KromitItem(QGraphicsItem* parent) : QGraphicsItem(parent) {}
-    ~KromitItem() {}
+    ~KromitItem() { }
 
     virtual void stash() = 0;
     virtual void apply(const QTransform& m) = 0;
@@ -34,6 +34,8 @@ class KromitItem : public QGraphicsItem {
     bool select();
     bool deselect();
     bool toggleselect();
+
+    void pgc() { prepareGeometryChange(); }
 
     void set_new_ID() { setData(KromitItem::KeyID, Tools::generate_ID()); }
 

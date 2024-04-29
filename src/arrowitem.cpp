@@ -23,8 +23,8 @@ ArrowItem::ArrowItem(QGraphicsItem* parent) : KromitItem(parent) {
 }
 
 ArrowItem::~ArrowItem() {
-    delete _arrow_start;
-    delete _arrow_end;
+    // delete _arrow_start;
+    // delete _arrow_end;
 }
 
 // ArrowItem::boundingRect
