@@ -62,11 +62,20 @@ KromitFrame::~KromitFrame() {
 //
 void KromitFrame::setCaps(TransformCaps caps) {
     prepareGeometryChange();
-    if (caps & CAP_MOVE) _move_handle->show();
+    if (caps & CAP_MOVE)
+        _move_handle->show();
+    else
+        _move_handle->hide();
     for (int i = 0; i < 4; i++) {
-        if (caps & CAP_ROTATE) _rot_handle[i]->show();
+        if (caps & CAP_ROTATE)
+            _rot_handle[i]->show();
+        else
+            _rot_handle[i]->hide();
         if (caps & CAP_ISOSCALE) _iso_handle[i]->show();
-        if (caps & CAP_ANISOSCALE) _aniso_handle[i]->show();
+        else
+            _iso_handle[i]->hide();
+        if (caps & CAP_ANISOSCALE) _aniso_handle[i]->show(); else
+            _aniso_handle[i]->hide();
     }
 }
 

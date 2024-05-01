@@ -3,6 +3,7 @@
 #include "kromitline.h"
 #include "kromitpath.h"
 #include "kromitsmooth.h"
+#include "kromitrect.h"
 
 int Tools::generate_ID(void) {
   static int id = 0;
@@ -12,7 +13,7 @@ int Tools::generate_ID(void) {
 QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
     switch (settings.tool) {
         case TOOL_SMOOTH: {
-            auto *pen = new KromitSmooth(nullptr,
+           auto *pen = new KromitSmooth(nullptr,
                                          settings.color,
                                          settings.width,
                                          settings.arrow_type,
@@ -43,6 +44,14 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
             return line;
         }
 
+        case TOOL_RECT: {
+            auto *rect = new KromitRect(nullptr,
+                                        settings.color,
+                                        settings.width,
+                                        settings.radius);
+            rect->setData(KromitItem::KeyID, generate_ID());
+            return rect;
+        }
             // case TOOL_LINE: {
             //     auto *line = new KromitLine(parent);
             //     return line;

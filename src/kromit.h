@@ -35,6 +35,7 @@ enum TransformCaps : std::uint16_t {
 
 TransformCaps operator&(const TransformCaps& a, const TransformCaps& b);
 TransformCaps operator|(const TransformCaps& a, const TransformCaps& b);
+std::ostream &operator<<(std::ostream &os, const TransformCaps &cap);
 
 enum GfxItemType : int {
     GFX_ARROW = QGraphicsItem::UserType + 1,

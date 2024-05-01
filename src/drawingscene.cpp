@@ -186,10 +186,15 @@ void DrawingScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *ev) {
 }
 
 void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
-  qDebug() << keyEvent->key();
+    qDebug() << keyEvent->key();
     switch (keyEvent->key()) {
         case Qt::Key_L: {
             _settings.tool = TOOL_LINE;
+            clear_selection();
+        } break;
+
+        case Qt::Key_R: {
+            _settings.tool = TOOL_RECT;
             clear_selection();
         } break;
 
