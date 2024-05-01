@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include <qnamespace.h>
 
 #include <QMainWindow>
 #include <QPixmap>
@@ -64,6 +65,11 @@ MainWindow::MainWindow(QWidget *parent)
     addAction(redoAction);
     redoAction->setShortcut(Qt::CTRL | Qt::Key_Y);
     connect(redoAction, &QAction::triggered, this, &MainWindow::redo);
+
+    QAction *tabAction = new QAction(tr("Dash"), this);
+    addAction(tabAction);
+    tabAction->setShortcut(Qt::Key_Tab);
+    connect(tabAction, &QAction::triggered, this, &MainWindow::tab);
 }
 
 MainWindow::~MainWindow() {
@@ -90,6 +96,10 @@ void MainWindow::undo() {
 
 void MainWindow::redo() {
     scene->redo();
+}
+
+void MainWindow::tab() {
+    scene->tab();
 }
 
 // ------------------- commands received via dbus --------------------

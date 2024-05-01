@@ -1,7 +1,6 @@
 #ifndef ARROWITEM_H
 #define ARROWITEM_H
 
-#include "kromit.h"
 #include "kromititem.h"
 
 class KromitArrow;

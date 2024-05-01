@@ -1,23 +1,10 @@
 #include "kromitpath.h"
-#include <qpoint.h>
-#include <qtransform.h>
-
-#include <QBrush>
-#include <QGraphicsItem>
-
-#include "kromit.h"
-#include "utility.h"
-#include "tools.h"
-#include "arrowitem.h"
-#include "kromitarrow.h"
-#include "xy.h"
 #include "string_format.h"
+#include "utility.h"
 
 #include <QDebug>
 #include <QPainter>
 
-#include <iostream>
-#include <cmath>
 
 // KromitPath::KromitPath
 //
@@ -29,7 +16,7 @@ KromitPath::KromitPath(QGraphicsItem* parent,
     ArrowItem(parent) {
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
-    _pen = QPen(color, width);
+    _pen = QPen(color, width, Qt::SolidLine, Qt::RoundCap);
     ArrowItem::setPen(_pen);
 
     setFlag(QGraphicsItem::ItemIsSelectable);
@@ -62,8 +49,6 @@ void KromitPath::apply(const QTransform& m) {
     _xy_path = _stashed_xy_path;
     _xy_path.apply2D(m);
 
-    std::cerr << _xy_path << "\n";
-
     _path.clear();
     _path.moveTo(_xy_path[0]);
     const auto size = _xy_path.size();
@@ -95,7 +80,7 @@ void KromitPath::stop(const QPointF& p, double pressure) {
     _xy_path.append(p);
 
     // simplify the path TODO: make epsilon dependent on width ?
-    _xy_path.douglas_peucker(_pen.widthF() * 0.9);
+    _xy_path.douglas_peucker(0.9);
 
     int oldn = _path.elementCount();
 
@@ -117,7 +102,7 @@ void KromitPath::stop(const QPointF& p, double pressure) {
 // extend the path
 //
 void KromitPath::move(const QPointF& p, double pressure) {
-    if (XY(_path.currentPosition()).distance(XY(p)) > .5) {
+  if (XY(_path.currentPosition()).distance(XY(p)) > cap<double>(sqrt(_pen.widthF()), .9, 5.0)) {
         prepareGeometryChange();
         _path.lineTo(p);
         _xy_path.append(p);
@@ -136,8 +121,10 @@ QPainterPath KromitPath::outline(double dist) const {
         p.lineTo(pt);
 
     QPainterPathStroker ps;
-    ps.setWidth(dist);
-    return ps.createStroke(p);
+    ps.setWidth(_pen.widthF() + dist);
+    ps.setCapStyle(Qt::RoundCap);
+    ps.setJoinStyle(Qt::RoundJoin);
+    return ps.createStroke(p).simplified();
 }
 
 // KromitPath::shape
@@ -145,7 +132,7 @@ QPainterPath KromitPath::outline(double dist) const {
 // selectable area
 //
 QPainterPath KromitPath::shape() const {
-    return outline(15);
+    return outline(20);
 }
 
 // KromitPath::repos_arrows
@@ -154,14 +141,14 @@ QPainterPath KromitPath::shape() const {
 //
 void KromitPath::repos_arrows() {
     // search radius for angle
-    const double radius = cap<double>(_pen.widthF() * 10.0, 10.0, 30.0);
+    const double radius = cap<double>(_pen.widthF() * 6.0, 10.0, 50.0);
     const double arrow_width = _arrow_size * _pen.widthF();
     if (_arrow_type & ARROW_START) {
         double rot = _xy_path.end_angle(radius, true);
         set_arrow_start(_xy_path.first(), arrow_width, rot);
     }
     if (_arrow_type & ARROW_END) {
-        double rot = _xy_path.end_angle(radius, false) + M_PI;
+        double rot = _xy_path.end_angle(radius, false);
         set_arrow_end(_xy_path.last(), arrow_width, rot);
     }
 }
@@ -171,9 +158,8 @@ void KromitPath::repos_arrows() {
 // this area is re-painted
 //
 QRectF KromitPath::boundingRect() const {
-    double delta = _pen.width() / 2.0 + 5;
+    double delta = _pen.width() / 2.0 + 25;
     QRectF rect = _path.boundingRect().normalized();
-    QDebug deb = qDebug();
     rect.adjust(-delta, -delta, delta, delta);
     return rect;
 }
@@ -184,8 +170,8 @@ void KromitPath::paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget) {
     if (isSelected()) {
-        painter->setPen(QPen(Qt::gray, 2, Qt::DashLine));
-        painter->drawPath(outline(10));
+        painter->setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap));
+        painter->drawPath(outline(15));
     }
     painter->setPen(_pen);
     painter->drawPath(_path);

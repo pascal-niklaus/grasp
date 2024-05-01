@@ -5,9 +5,7 @@
 #include "arrowitem.h"
 #include "path.h"
 
-#include <QPainterPath>
 #include <QPen>
-#include <QColor>
 
 class KromitUndoPath;
 
@@ -25,11 +23,14 @@ class KromitPath : public ArrowItem {
                double arrowsize = 0.0);
     ~KromitPath();
 
+    // ----- KromitItem methods
+
+    // - undo system
     virtual KromitUndoItem* create_undo_item() const override;
 
-    virtual int type() const override { return Type; }
-    virtual QRectF boundingRect() const override;
-
+    // - transform system
+    virtual void stash() override;
+    virtual void apply(const QTransform& m) override;
     virtual QRectF selectionBox() const override {
         return QRectF(_path.boundingRect());
     }
@@ -38,22 +39,24 @@ class KromitPath : public ArrowItem {
                 CAP_DELETE);
     }
 
-    virtual void stash() override;
-    virtual void apply(const QTransform& m) override;
-
+    // - build system
     virtual void start(const QPointF& p, double pressure = 1.0) override;
     virtual void move(const QPointF& p, double pressure = 1.0) override;
     virtual void stop(const QPointF& p, double pressure = 1.0) override;
 
+    // - debugging
     virtual void dump(std::ostream& os) const override;
 
+    // ----- QGraphicsItem methods
     virtual void paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget = nullptr) override;
-
-    QPainterPath outline(double dist) const;
     virtual QPainterPath shape() const override;
+    virtual int type() const override { return Type; }
+    virtual QRectF boundingRect() const override;
 
+  public:
+    // ----- item accessors
     QPen pen() const { return _pen; }
     ArrowType arrow_type() const { return _arrow_type; }
     double arrow_size() const { return _arrow_size; }
@@ -61,7 +64,9 @@ class KromitPath : public ArrowItem {
     void set_path(const Path& path);
 
   private:
+    // ----- internal helpers
     void repos_arrows();
+    QPainterPath outline(double dist) const;
 
   private:
     QPen _pen;
@@ -88,36 +93,6 @@ class KromitUndoPath : public KromitUndoItem {
     ArrowType arrow_type;
     double arrow_size;
     Path xy_path;
-};
-
-
-// KromitPathW
-//
-// same as KromitPath, but with variable width
-//
-class KromitPathW : public QGraphicsItem {
-  public:
-    enum { Type = GFX_PATHW };
-
-  public:
-    KromitPathW();
-
-    virtual int type() const override { return Type; }
-    virtual QRectF boundingRect() const override;
-
-    void start(const QPointF& p, double w);
-    void stop(const QPointF& p, double w);
-    void line_to(double x, double y, double w);
-    void line_to(const QPointF& p, double w);
-
-    virtual void paint(QPainter* painter,
-                       const QStyleOptionGraphicsItem* option,
-                       QWidget* widget = nullptr) override;
-
-  private:
-    QPen _pen;
-    PathW _xyw_path;
-    QPainterPath _path;
 };
 
 #endif  // KROMITPATH_H

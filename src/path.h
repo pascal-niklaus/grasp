@@ -1,12 +1,12 @@
 #ifndef PATH_H
 #define PATH_H
 
-#include <qpoint.h>
-#include <QTransform>
-
 #include "xy.h"
-#include <vector>
 
+#include <vector>
+#include <iostream>
+
+class QTransform;
 
 class Path {
   public:
@@ -43,9 +43,20 @@ class Path {
     void apply2D(const QTransform& m);
 
     void douglas_peucker(double epsilon);
+    void catmull_rom(int steps, bool circular);
+    bool snap_ends(double max_distance);
     double end_angle(double radius, bool end_is_beginning) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Path& p);
+
+  private:
+    static inline XY cr_f_mul_xy(double f, const XY& p1, const XY& p2) {
+        return XY(f * p1.x() + (1.0 - f) * p2.x(),
+                  f * p1.y() + (1.0 - f) * p2.y());
+    }
+    static inline double catmull_rom_tj(double ti, const XY& pi, const XY& pj) {
+        return ti + sqrt(pi.distance(pj));
+    }
 
   private:
     double _w;

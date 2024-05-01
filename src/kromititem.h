@@ -20,17 +20,24 @@ class KromitItem : public QGraphicsItem {
     KromitItem(QGraphicsItem* parent) : QGraphicsItem(parent) {}
     ~KromitItem() { }
 
+    // - undo system
+    virtual KromitUndoItem* create_undo_item() const = 0;
+
+    // - transform system
     virtual void stash() = 0;
     virtual void apply(const QTransform& m) = 0;
+    virtual QRectF selectionBox() const = 0;
+    virtual TransformCaps caps() const = 0;
 
+    // - build system
     virtual void start(const QPointF& p, double pressure = 1.0) = 0;
     virtual void move(const QPointF& p, double pressure = 1.0) = 0;
     virtual void stop(const QPointF& p, double pressure = 1.0) = 0;
 
+    // - debugging
     virtual void dump(std::ostream& os) const {};
 
-    virtual KromitUndoItem* create_undo_item() const = 0;
-
+  public:
     bool select();
     bool deselect();
     bool toggleselect();
@@ -38,9 +45,6 @@ class KromitItem : public QGraphicsItem {
     void pgc() { prepareGeometryChange(); }
 
     void set_new_ID() { setData(KromitItem::KeyID, Tools::generate_ID()); }
-
-    virtual TransformCaps caps() const = 0;
-    virtual QRectF selectionBox() const = 0;
 
     static QString type_txt(int item);
 
@@ -57,7 +61,6 @@ class KromitUndoItem {
     ~KromitUndoItem() = default;
 
     virtual KromitItem* create_from_undo_item() const = 0;
-
     virtual void dump(std::ostream& os) const {};
 
     friend std::ostream& operator<<(std::ostream& os,

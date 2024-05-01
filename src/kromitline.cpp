@@ -1,19 +1,10 @@
-
 #include "kromitline.h"
 
-#include <QBrush>
-#include <QDebug>
-#include <QLineF>
-#include <QPainter>
-#include <cmath>
-#include <iostream>
-
-#include "arrowitem.h"
-#include "kromit.h"
-#include "kromititem.h"
 #include "string_format.h"
 #include "tools.h"
 #include "utility.h"
+
+#include <QPainter>
 
 KromitLine::KromitLine(QGraphicsItem* parent,
                        const QColor& color,
@@ -25,7 +16,7 @@ KromitLine::KromitLine(QGraphicsItem* parent,
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
     //    _arrow_width = arrowsize * width;
-    _pen = QPen(color, width);
+    _pen = QPen(color, width, Qt::SolidLine, Qt::RoundCap);
     ArrowItem::setPen(_pen);
     _line_item = new QGraphicsLineItem(this);
     _line_item->setPen(_pen);

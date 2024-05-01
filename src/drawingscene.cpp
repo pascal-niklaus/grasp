@@ -1,52 +1,20 @@
 #include "drawingscene.h"
-
-#include <qbrush.h>
-#include <qdebug.h>
-#include <qevent.h>
-#include <QGraphicsItemGroup>
-#include <qgraphicsitem.h>
-#include <qnamespace.h>
-#include <qobjectdefs.h>
-#include <qpoint.h>
-#include <qtransform.h>
-
-#include <QEvent>
-#include <QGraphicsScene>
-#include <QGraphicsSceneEvent>
+#include "kromitpath.h"
+#include "utility.h"
 
 #include <QApplication>
-#include <QEvent>
 #include <QGraphicsSceneMouseEvent>
 #include <QScreen>
 #include <QTabletEvent>
-
-#include <cassert>
-#include <iostream>
-#include <unordered_map>
-#include <unordered_set>
-
-#include "kromit.h"
-#include "kromitframe.h"
-#include "kromititem.h"
-#include "kromitpath.h"
-#include "kromithandle.h"
-#include "kromitrotate.h"
-#include "kromitmove.h"
-#include "tools.h"
-#include "undo.h"
-#include "utility.h"
 
 // DrawingScene::DrawingScene
 //
 DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     // fix geometry, otherwise scene moves around when items are added
     setSceneRect(QGuiApplication::primaryScreen()->geometry());
-    // see here:
-    // https://forum.qt.io/topic/71316/qgraphicsscenefinditembsptreevisitor-visit-crashes-due-to-an-obsolete-paintevent-after-qgraphicsscene-removeitem/17
-    //    setItemIndexMethod(QGraphicsScene::ItemIndexMethod::NoIndex);
 
     // set default tool settings
-    _settings.tool = TOOL_LINE;
+    _settings.tool = TOOL_SMOOTH;
     _settings.color = Qt::yellow;
     _settings.width = 5;
     _settings.arrow_type = ARROW_END;
@@ -55,8 +23,8 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     _settings.maxwidth = 4;
     _settings.radius = 10;
     _settings.minlen = 30;
-    _settings.simplify = 1;
-    _settings.snapdist = 0;
+    _settings.simplify = 10;
+    _settings.snapdist = 20;
 
     // create selection frame
     _selection_frame = new KromitFrame(nullptr, Qt::gray, 1);
@@ -164,7 +132,8 @@ bool DrawingScene::event(QEvent *event) {
             QKeyEvent *ev = static_cast<QKeyEvent *>(event);
             const auto key = ev->key();
             const auto mods = ev->modifiers();
-            if (key == Qt::Key_Delete) {
+            if (key == Qt::Key_Delete ||
+                (key >= Qt::Key_1 && key <= Qt::Key_9)) {
                 emit keyPressed(key, mods);
                 ev->accept();
                 return true;
@@ -217,6 +186,7 @@ void DrawingScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *ev) {
 }
 
 void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
+  qDebug() << keyEvent->key();
     switch (keyEvent->key()) {
         case Qt::Key_L: {
             _settings.tool = TOOL_LINE;
@@ -304,14 +274,54 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
     } else {
         if (_current_item) {
             KromitItem *kitem = static_cast<KromitItem *>(_current_item);
-            kitem->move(p);
+            kitem->stop(p);
             _current_item = nullptr;
         }
     }
 }
 
 void DrawingScene::slot_keyPressed(int key, Qt::KeyboardModifiers mods) {
-    if (key == Qt::Key_Delete) delete_selection();
+    switch (key) {
+        case Qt::Key_Delete: {
+            delete_selection();
+        } break;
+
+        case Qt::Key_1:
+            _settings.width = 1;
+            break;
+
+        case Qt::Key_2:
+            _settings.width = 2;
+            break;
+
+        case Qt::Key_3:
+            _settings.width = 3;
+            break;
+
+        case Qt::Key_4:
+            _settings.width = 5;
+            break;
+
+        case Qt::Key_5:
+            _settings.width = 8;
+            break;
+
+        case Qt::Key_6:
+            _settings.width = 12;
+            break;
+
+        case Qt::Key_7:
+            _settings.width = 25;
+            break;
+
+        case Qt::Key_8:
+            _settings.width = 40;
+            break;
+
+        case Qt::Key_9:
+            _settings.width = 60;
+            break;
+    }
 }
 
 // DrawingScene::update_selection_frame
@@ -360,11 +370,11 @@ void DrawingScene::delete_selection() {
         for (auto &item : _selected_items) {
             int id = item->data(KromitFrame::KeyID).toInt();
             KromitUndoItem *undo_item = item->create_undo_item();
+            item->deselect();
             item->pgc();
             removeItemSafely(item);
             // delete item;
             rec.ids_to_add.insert(id);
-            item->deselect();
             undo_store.insert({id, undo_item});
         }
         undo_records.emplace_back(rec);
@@ -620,4 +630,8 @@ void DrawingScene::removeItemSafely(QGraphicsItem *item) {
         removeItemSafely(item->childItems().first());
     removeItem(item);
     delete item;
+}
+
+void DrawingScene::tab() {
+  // toggle dash
 }

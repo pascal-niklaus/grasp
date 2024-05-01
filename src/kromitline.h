@@ -1,13 +1,9 @@
 #ifndef KROMITLINEH_H
 #define KROMITLINEH_H
 
-#include <qline.h>
 #include "arrowitem.h"
-#include "kromit.h"
-#include "kromititem.h"
 #include "path.h"
 
-#include <QLine>
 #include <QPen>
 
 class KromitUndoLine;

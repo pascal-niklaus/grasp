@@ -25,6 +25,7 @@ class MainWindow : public QMainWindow {
     void cycle_opacity();
     void undo();
     void redo();
+    void tab();
 
   protected:
   //    virtual void keyPressEvent(QKeyEvent *event) override;

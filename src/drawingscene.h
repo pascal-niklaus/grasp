@@ -1,20 +1,10 @@
 #ifndef DRAWINGSCENE_H
 #define DRAWINGSCENE_H
 
-#include <qgraphicsitem.h>
-#include <qnamespace.h>
-#include <qpoint.h>
-#include <QGraphicsItem>
-#include <QTransform>
-#include <QGraphicsScene>
-#include <unordered_map>
-
-#include "drawingview.h"
-#include "kromit.h"
 #include "kromitframe.h"
-#include "kromititem.h"
-#include "tools.h"
 #include "undo.h"
+
+#include <QGraphicsScene>
 
 class QGraphicsItemGroup;
 
@@ -47,6 +37,7 @@ class DrawingScene : public QGraphicsScene {
 
     void redo();
     void undo();
+    void tab();
 
   protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;

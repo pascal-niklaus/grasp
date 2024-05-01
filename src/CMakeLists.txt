@@ -35,6 +35,7 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   arrowitem.cpp arrowitem.h
   kromititem.cpp kromititem.h
   kromitpath.cpp kromitpath.h
+  kromitsmooth.cpp kromitsmooth.h
   kromitline.cpp kromitline.h
   kromitarrow.cpp kromitarrow.h
   kromitframe.cpp kromitframe.h

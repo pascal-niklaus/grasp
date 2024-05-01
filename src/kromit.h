@@ -46,6 +46,7 @@ enum GfxItemType : int {
     GFX_SELECTABLE,  // all items after are selectable
     GFX_PATH,
     GFX_PATHW,
+    GFX_SMOOTH,
     GFX_LINE,
     GFX_RECT
 };

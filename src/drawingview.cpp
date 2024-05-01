@@ -1,12 +1,8 @@
-#include <QEvent>
-#include <QApplication>
-#include <QGraphicsView>
-#include <QGraphicsItem>
-
-#include <iostream>
-
 #include "drawingview.h"
 #include "drawingscene.h"
+
+#include <QEvent>
+#include <QApplication>
 
 
 DrawingView::DrawingView(DrawingScene *scene, QWidget *parent) :

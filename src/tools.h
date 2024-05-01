@@ -2,7 +2,6 @@
 #define TOOLS_H
 
 #include <QGraphicsItem>
-#include <QPointF>
 #include <QColor>
 
 #include "kromit.h"

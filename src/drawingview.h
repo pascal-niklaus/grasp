@@ -1,9 +1,6 @@
 #ifndef _DRAWINGVIEW_H
 #define _DRAWINGVIEW_H
 
-#include <QGraphicsItem>
-#include <QPixmap>
-#include <QObject>
 #include <QGraphicsView>
 
 class DrawingScene;

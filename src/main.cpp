@@ -1,24 +1,18 @@
-#include <qcommandlineparser.h>
-#include <qdbusconnection.h>
-#include <qnamespace.h>
-#include <qobject.h>
-#include <qvariant.h>
-#include <iostream>
-
-#include <QCryptographicHash>
-#include <QDBusConnection>
-#include <QDBusMessage>
-#include <QVariant>
-#include <QCommandLineParser>
-
 #include "mainwindow.h"
 #include "singletonapplication.h"
 #include "dbus.h"
 
+#include <QCryptographicHash>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QCommandLineParser>
+
+#include "path.h"
+#include <iostream>
 
 bool send_dbus_command(QDBusConnection& bus,
                        const QString& cmd,
-                       const QString& arg1=QString(),
+                       const QString& arg1 = QString(),
                        const QString& arg2 = QString()) {
     QDBusMessage message = QDBusMessage::createMethodCall(
         Message::service_name(), "/config", "", cmd);
