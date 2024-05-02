@@ -8,6 +8,8 @@
 #include "colors.h"
 #include "kromitpath.h"
 #include "kromittext.h"
+#include "kromitpixmap.h"
+
 #include "utility.h"
 
 // DrawingScene::DrawingScene
@@ -15,6 +17,7 @@
 DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     // fix geometry, otherwise scene moves around when items are added
     setSceneRect(QGuiApplication::primaryScreen()->geometry());
+    qDebug() << "scene rect" << sceneRect();
 
     // set default tool settings
     _settings.tool = TOOL_SMOOTH;
@@ -196,7 +199,8 @@ void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
 
     const auto key = keyEvent->key();
     const auto mods = keyEvent->modifiers();
-    emit keyPressed(key, mods);
+    const auto text = keyEvent->text();
+    emit keyPressed(key, mods, text);
 }
 
 // DrawingScene::pointerPressed
@@ -257,13 +261,49 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
         if (_current_item) {
             KromitItem *kitem = static_cast<KromitItem *>(_current_item);
             kitem->stop(p);
-            // special case of text item: keep item after mouse released
-            if (kitem->type() != GFX_TEXT) _current_item = nullptr;
+            switch (kitem->type()) {
+                case GFX_TEXT:
+                    // special case of text item: keep item after mouse released
+                    break;
+                case GFX_PIXMAP: {
+                    KromitPixmap *kpixmap = static_cast<KromitPixmap *>(kitem);
+                    const QRect rect = kpixmap->sel_rect().toRect();
+                    qDebug() << "requesting " << rect;
+                    emit take_partial_screenshot(rect);
+                } break;
+
+                default:
+                    _current_item = nullptr;
+            }
         }
     }
 }
 
-void DrawingScene::slot_keyPressed(int key, Qt::KeyboardModifiers mods) {
+void DrawingScene::slot_keyPressed(int key,
+                                   Qt::KeyboardModifiers mods,
+                                   QString text) {
+    if (text == "<") {
+        _settings.arrow_type = ARROW_START;
+    } else if (text == ">") {
+        _settings.arrow_type = ARROW_END;
+    } else if (text == "=") {
+      qDebug() << "arrow <-->";
+        _settings.arrow_type = ARROW_DOUBLE;
+    } else if (text == "-") {
+        _settings.arrow_type = ARROW_NONE;
+    }
+
+        if (mods == Qt::ShiftModifier) {
+        switch (key) {
+            case Qt::Key_G: {
+                _settings.tool = TOOL_PIXMAP;
+                clear_selection();
+                stash_scene();
+                emit set_transparent();
+            } break;
+        }
+    }
+
     if (mods == Qt::NoModifier) {
         switch (key) {
             case Qt::Key_Delete: {
@@ -679,5 +719,52 @@ void DrawingScene::removeItemSafely(QGraphicsItem *item) {
 }
 
 void DrawingScene::tab() {
-  // toggle dash
+    // toggle dash
 }
+
+void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
+    qDebug() << "received pixmap" << pixmap.rect();
+    if (_current_item) {
+        switch (_current_item->type()) {
+            case GFX_PIXMAP: {
+                KromitPixmap *kpixmap = static_cast<KromitPixmap *>(_current_item);
+                kpixmap->set_pixmap(pixmap, kpixmap->sel_rect());
+                _current_item = nullptr;
+                unstash_scene();
+            } break;
+        }
+    }
+}
+
+void DrawingScene::stash_scene() {
+    clearSelection();
+    stash.clear();
+    for (auto &it : items()) {
+        if (it->type() > GFX_SELECTABLE) {
+            KromitItem *kitem = static_cast<KromitItem *>(it);
+            auto id = kitem->data(KromitItem::KeyID).toInt();
+            KromitUndoItem *undo_item = kitem->create_undo_item();
+            kitem->pgc();
+            removeItemSafely(kitem);
+            stash.insert({id, undo_item});
+        } else {
+        }
+    }
+}
+
+void DrawingScene::unstash_scene() {
+    clear_selection();
+    for (auto &it : stash) {
+        KromitItem *item = it.second->create_from_undo_item();
+        addItem(item);
+    }
+    stash.clear();
+}
+
+void DrawingScene::fix_geometry(QRect real_rect) {
+  // this only yields the top left corner correctly...
+  QRect r = QGuiApplication::primaryScreen()->geometry();
+  real_rect.adjust(-r.left(), -r.top(), -r.left(), -r.top());
+  setSceneRect(real_rect);
+}
+

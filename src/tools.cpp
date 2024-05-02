@@ -5,10 +5,11 @@
 #include "kromitsmooth.h"
 #include "kromitrect.h"
 #include "kromittext.h"
+#include "kromitpixmap.h"
 
 int Tools::generate_ID(void) {
-  static int id = 0;
-  return ++id;
+    static int id = 0;
+    return ++id;
 }
 
 QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
@@ -59,6 +60,12 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
                 nullptr, settings.color, settings.fontsize);
             text->setData(KromitItem::KeyID, generate_ID());
             return text;
+        }
+
+        case TOOL_PIXMAP: {
+            auto *image = new KromitPixmap(nullptr, settings.color, 2);
+            image->setData(KromitItem::KeyID, generate_ID());
+            return image;
         }
 
         default:

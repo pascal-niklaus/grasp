@@ -47,6 +47,8 @@ QString KromitItem::type_txt(int item) {
             return "Smooth";
         case GFX_TEXT:
             return "Text";
+        case GFX_PIXMAP:
+            return "Pixmap";
         case GFX_SELFRAME:
             return "SelFrame";
         case GFX_HANDLE:
@@ -66,6 +68,11 @@ QString KromitItem::type_txt(int item) {
         default:
             return QString("Item-%1").arg(item);
     }
+}
+
+std::ostream& operator<<(std::ostream& os, const KromitItem* item) {
+    os << *item;
+    return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const KromitItem& item) {

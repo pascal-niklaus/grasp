@@ -41,6 +41,7 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   kromitline.cpp kromitline.h
   kromitrect.cpp kromitrect.h
   kromittext.cpp kromittext.h
+  kromitpixmap.cpp kromitpixmap.h
   kromitarrow.cpp kromitarrow.h
   kromitframe.cpp kromitframe.h
   kromithandle.cpp kromithandle.h

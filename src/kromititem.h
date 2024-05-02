@@ -58,6 +58,7 @@ class KromitItem : public QGraphicsItem {
     static QString type_txt(int item);
 
     friend std::ostream& operator<<(std::ostream& os, const KromitItem& item);
+    friend std::ostream& operator<<(std::ostream& os, const KromitItem* item);
 };
 
 // KromitUndoItem

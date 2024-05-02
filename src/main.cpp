@@ -109,6 +109,7 @@ int main(int argc, char *argv[]) {
         w.setWindowFlags(Qt::FramelessWindowHint); // TODO: | Qt::WindowStaysOnTopHint);
         w.show();
         w.setWindowOpacity(0.5);
+        w.fix_geometry();
         //  w.setWindowOpacity(1);
 
         return a.exec();

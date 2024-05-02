@@ -51,18 +51,18 @@ double Path::end_angle(double radius, bool end_is_beginning) const {
         const double y0 = _path.front().y();
         auto last = _path.cbegin();
         for (auto it = _path.cbegin(); it != _path.cend(); ++it) {
-            if (square(x0 - it->x()) + square(y0 - it->y()) > r2) break;
             last = it;
+            if (square(x0 - it->x()) + square(y0 - it->y()) > r2) break;
         }
+
         return atan2(y0 - last->y(), x0 - last->x());
-        //
     } else {
         const double x0 = _path.back().x();
         const double y0 = _path.back().y();
         auto last = _path.crbegin();
         for (auto it = _path.crbegin(); it != _path.crend(); ++it) {
-            if (square(x0 - it->x()) + square(y0 - it->y()) > r2) break;
             last = it;
+            if (square(x0 - it->x()) + square(y0 - it->y()) > r2) break;
         }
         return atan2(y0 - last->y(), x0 - last->x());
     }

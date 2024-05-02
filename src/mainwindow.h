@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QPixmap>
+
 #include "drawingscene.h"
 #include "drawingview.h"
 
@@ -17,27 +19,34 @@ class MainWindow : public QMainWindow {
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+  void fix_geometry();
+
+  signals:
+    void send_pixmap(const QPixmap &);
+
   public slots:
     void change_color(const QString &color);
     void take_screenshot(const QString &geometry);
+    void take_partial_screenshot(const QRect &geometry);
     void toggle();
     void quit();
     void cycle_opacity();
     void undo();
     void redo();
     void tab();
-
-  protected:
-  //    virtual void keyPressEvent(QKeyEvent *event) override;
+    void save(const QString &filename);
 
   private slots:
     void screenshot_step1();
+    void partial_screenshot_step1();
 
   private:
+    QRect shot_rect;
     bool on_top = true;
     DrawingScene *scene = nullptr;
     DrawingView *view = nullptr;
     QTimer *snapshot_timer = nullptr;
+    QTimer *partial_snapshot_timer = nullptr;
 };
 
 

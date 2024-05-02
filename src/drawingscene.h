@@ -35,9 +35,14 @@ class DrawingScene : public QGraphicsScene {
     explicit DrawingScene(QObject *parent = nullptr);
     ~DrawingScene();
 
+    void fix_geometry(QRect real_rect);
+
     void redo();
     void undo();
     void tab();
+
+    void stash_scene();
+    void unstash_scene();
 
   protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
@@ -52,13 +57,18 @@ class DrawingScene : public QGraphicsScene {
     virtual void keyPressEvent(QKeyEvent *keyEvent) override;
 
   signals:
-    void keyPressed(int, Qt::KeyboardModifiers);
+    void keyPressed(int, Qt::KeyboardModifiers, QString);
     void pointerPressed(QPointF, Qt::KeyboardModifiers);
     void pointerMoved(QPointF, Qt::KeyboardModifiers);
     void pointerReleased(QPointF, Qt::KeyboardModifiers);
+    void take_partial_screenshot(const QRect &rect);
+    void set_transparent();
+
+  public slots:
+    void slot_pixmap(const QPixmap &pixmap);
 
   private slots:
-    void slot_keyPressed(int key, Qt::KeyboardModifiers mods);
+    void slot_keyPressed(int key, Qt::KeyboardModifiers mods, QString text);
     void slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods);
     void slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods);
     void slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods);
@@ -91,6 +101,9 @@ class DrawingScene : public QGraphicsScene {
     std::unordered_map<int, KromitUndoItem *> undo_store;
     std::vector<UndoRecord> undo_records;
     std::vector<UndoRecord> redo_records;
+
+    // temporarily store entire scene
+    std::unordered_map<int, KromitUndoItem *> stash;
 };
 
-#endif // DRAWINGSCENE_H
+#endif  // DRAWINGSCENE_H

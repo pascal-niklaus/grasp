@@ -164,6 +164,7 @@ QRectF KromitSmooth::boundingRect() const {
 void KromitSmooth::paint(QPainter* painter,
                          const QStyleOptionGraphicsItem* option,
                          QWidget* widget) {
+    painter->setRenderHint(QPainter::Antialiasing);
     if (isSelected()) {
         painter->setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap));
         painter->drawPath(outline(15));

@@ -15,7 +15,8 @@ enum ToolType : std::uint16_t {
     TOOL_SMOOTH = 5,
     TOOL_ORTHO = 6,
     TOOL_TEXT = 7,
-    TOOL_SELECT = 8
+    TOOL_PIXMAP = 8,
+    TOOL_SELECT = 9
 };
 
 enum ArrowType : std::uint16_t {
@@ -53,6 +54,7 @@ enum GfxItemType : int {
     GFX_LINE,
     GFX_RECT,
     GFX_TEXT,
+    GFX_PIXMAP,
 };
 
 #endif

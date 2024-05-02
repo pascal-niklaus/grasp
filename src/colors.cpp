@@ -35,10 +35,10 @@ Color::Color(const std::string& name,
 
 std::uint32_t Color::get_color(std::uint32_t key, std::uint32_t mod)  {
   for (const auto& c : color_table) {
-    if (c.key1 == key && (mod==0 || (c.mod1 & mod)))
-      return c.numeric;
-    if (c.key2 == key && (mod==0 || (c.mod2 & mod)))
-      return c.numeric;
+      if (c.key1 == key && ((mod == 0 && c.mod1 == 0) || (c.mod1 & mod)))
+          return c.numeric;
+      if (c.key2 == key && ((mod == 0 && c.mod2 == 0) || (c.mod2 & mod)))
+          return c.numeric;
   }
   return 0;
 }

@@ -127,6 +127,7 @@ QRectF KromitLine::boundingRect() const {
 void KromitLine::paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget) {
+    painter->setRenderHint(QPainter::Antialiasing);
     if (isSelected()) {
         painter->setPen(QPen(Qt::gray, 2, Qt::DashLine));
         painter->drawPath(outline(10));
@@ -143,8 +144,8 @@ void KromitLine::repos_arrows() {
     const QPointF& p2 = _line_item->line().p2();
     const double rot = atan2(p2.y() - p1.y(), p2.x() - p1.x());
     const double arrow_width = _pen.widthF() * _arrow_size;
-    if (_arrow_type & ARROW_START) { set_arrow_start(p1, arrow_width, rot); }
-    if (_arrow_type & ARROW_END) { set_arrow_start(p2, arrow_width, rot); }
+    if (_arrow_type & ARROW_START) { set_arrow_start(p1, arrow_width, rot + M_PI); }
+    if (_arrow_type & ARROW_END) { set_arrow_end(p2, arrow_width, rot); }
 }
 
 // KromitLine::dump
