@@ -17,8 +17,14 @@ class KromitUndoItem;
 class KromitItem : public QGraphicsItem {
   public:
     enum { KeyID = 1, KeyHandle = 1 };
+    enum KeyResult {
+        KEY_IGNORED,    // this particular keystroke was not consumed
+        KEY_PROCESSED,  // this keystroke was consumed
+        KEY_START,      // indicates that key events should be fed to item
+        KEY_STOP        // indicate that key feeding should stop
+    };
     KromitItem(QGraphicsItem* parent) : QGraphicsItem(parent) {}
-    ~KromitItem() { }
+    ~KromitItem() {}
 
     // - undo system
     virtual KromitUndoItem* create_undo_item() const = 0;
@@ -33,6 +39,9 @@ class KromitItem : public QGraphicsItem {
     virtual void start(const QPointF& p, double pressure = 1.0) = 0;
     virtual void move(const QPointF& p, double pressure = 1.0) = 0;
     virtual void stop(const QPointF& p, double pressure = 1.0) = 0;
+    virtual KeyResult keystroke(QKeyCombination key, const QString& text) {
+        return KEY_IGNORED;
+    }
 
     // - debugging
     virtual void dump(std::ostream& os) const {};

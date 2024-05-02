@@ -7,7 +7,8 @@
 #include <QDBusMessage>
 #include <QCommandLineParser>
 
-#include "path.h"
+
+#include "kromittext.h"
 #include <iostream>
 
 bool send_dbus_command(QDBusConnection& bus,

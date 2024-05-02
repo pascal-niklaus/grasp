@@ -1,11 +1,14 @@
 #include "drawingscene.h"
-#include "kromitpath.h"
-#include "utility.h"
 
 #include <QApplication>
 #include <QGraphicsSceneMouseEvent>
 #include <QScreen>
 #include <QTabletEvent>
+
+#include "colors.h"
+#include "kromitpath.h"
+#include "kromittext.h"
+#include "utility.h"
 
 // DrawingScene::DrawingScene
 //
@@ -25,6 +28,7 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     _settings.minlen = 30;
     _settings.simplify = 10;
     _settings.snapdist = 20;
+    _settings.fontsize = 20;
 
     // create selection frame
     _selection_frame = new KromitFrame(nullptr, Qt::gray, 1);
@@ -129,15 +133,6 @@ bool DrawingScene::event(QEvent *event) {
             // ---------------- key press and release ----------------
 
         case QEvent::KeyPress: {
-            QKeyEvent *ev = static_cast<QKeyEvent *>(event);
-            const auto key = ev->key();
-            const auto mods = ev->modifiers();
-            if (key == Qt::Key_Delete ||
-                (key >= Qt::Key_1 && key <= Qt::Key_9)) {
-                emit keyPressed(key, mods);
-                ev->accept();
-                return true;
-            }
             return QGraphicsScene::event(event);
         }
 
@@ -186,58 +181,38 @@ void DrawingScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *ev) {
 }
 
 void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
-    qDebug() << keyEvent->key();
-    switch (keyEvent->key()) {
-        case Qt::Key_L: {
-            _settings.tool = TOOL_LINE;
-            clear_selection();
-        } break;
+    KromitItem *kitem = static_cast<KromitItem *>(_current_item);
 
-        case Qt::Key_R: {
-            _settings.tool = TOOL_RECT;
-            clear_selection();
-        } break;
-
-        case Qt::Key_P: {
-            _settings.tool = TOOL_PEN;
-            clear_selection();
-        } break;
-
-        case Qt::Key_E: {
-            _settings.tool = TOOL_SELECT;
-            clear_selection();
-        } break;
-
-        case Qt::Key_D: {
-            qDebug() << "---------- items ----------";
-            for (const auto &item : items()) {
-                if (item->type() > GFX_SELECTABLE) {
-                    std::cerr << static_cast<KromitItem &>(*item) << "\n";
-                } else {
-                    qDebug() << "  " << KromitItem::type_txt(item->type())
-                             << item->isVisible() << item;
-                }
-            }
-            qDebug() << "-------- undo_store -------";
-            for (const auto &it : undo_store) {
-                std::cerr << static_cast<KromitUndoItem &>(*it.second) << "\n";
-            }
-            qDebug() << "------ undo_records -------";
-            for (const auto &rec : undo_records) { std::cerr << rec; }
-            qDebug() << "------ redo_records -------";
-            for (const auto &rec : redo_records) { std::cerr << rec; }
-            qDebug() << "---------------------------";
-
-        } break;
-
-        default:
-            break;
+    if (kitem && _feed_keystrokes) {
+        auto result =
+            kitem->keystroke(keyEvent->keyCombination(), keyEvent->text());
+        if (result == KromitItem::KEY_STOP) {
+            _feed_keystrokes = false;
+            _current_item = nullptr;
+            return;
+        }
+        if (result == KromitItem::KEY_PROCESSED) return;
     }
+
+    const auto key = keyEvent->key();
+    const auto mods = keyEvent->modifiers();
+    emit keyPressed(key, mods);
 }
 
 // DrawingScene::pointerPressed
 //
 void DrawingScene::slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods) {
+    if (_current_item && _current_item->type() == GFX_TEXT) {
+        KromitText *textitem = static_cast<KromitText *>(_current_item);
+
+        if (textitem->text().isEmpty()) {
+            textitem->deselect();
+            textitem->pgc();
+            removeItemSafely(textitem);
+        } else {
+            textitem->finalize();
+        }
+    }
     if (_settings.tool == TOOL_SELECT) {
         SelectType sel = SEL_SINGLE;
         if (mods & Qt::ControlModifier)
@@ -248,6 +223,8 @@ void DrawingScene::slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods) {
     } else {
         _current_item = Tools::create_tool(_settings);
         KromitItem *kitem = static_cast<KromitItem *>(_current_item);
+
+        _feed_keystrokes = (kitem->caps() & CAP_KEYSTROKES);
 
         redo_records.clear();
         garbage_collect();
@@ -280,52 +257,116 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
         if (_current_item) {
             KromitItem *kitem = static_cast<KromitItem *>(_current_item);
             kitem->stop(p);
-            _current_item = nullptr;
+            // special case of text item: keep item after mouse released
+            if (kitem->type() != GFX_TEXT) _current_item = nullptr;
         }
     }
 }
 
 void DrawingScene::slot_keyPressed(int key, Qt::KeyboardModifiers mods) {
-    switch (key) {
-        case Qt::Key_Delete: {
-            delete_selection();
-        } break;
+    if (mods == Qt::NoModifier) {
+        switch (key) {
+            case Qt::Key_Delete: {
+                delete_selection();
+            } break;
 
-        case Qt::Key_1:
-            _settings.width = 1;
-            break;
+            case Qt::Key_1:
+                _settings.width = 1;
+                break;
 
-        case Qt::Key_2:
-            _settings.width = 2;
-            break;
+            case Qt::Key_2:
+                _settings.width = 2;
+                break;
 
-        case Qt::Key_3:
-            _settings.width = 3;
-            break;
+            case Qt::Key_3:
+                _settings.width = 3;
+                break;
 
-        case Qt::Key_4:
-            _settings.width = 5;
-            break;
+            case Qt::Key_4:
+                _settings.width = 5;
+                break;
 
-        case Qt::Key_5:
-            _settings.width = 8;
-            break;
+            case Qt::Key_5:
+                _settings.width = 8;
+                break;
 
-        case Qt::Key_6:
-            _settings.width = 12;
-            break;
+            case Qt::Key_6:
+                _settings.width = 12;
+                break;
 
-        case Qt::Key_7:
-            _settings.width = 25;
-            break;
+            case Qt::Key_7:
+                _settings.width = 25;
+                break;
 
-        case Qt::Key_8:
-            _settings.width = 40;
-            break;
+            case Qt::Key_8:
+                _settings.width = 40;
+                break;
 
-        case Qt::Key_9:
-            _settings.width = 60;
-            break;
+            case Qt::Key_9:
+                _settings.width = 60;
+                break;
+
+            case Qt::Key_L: {
+                _settings.tool = TOOL_LINE;
+                clear_selection();
+            } break;
+
+            case Qt::Key_R: {
+                _settings.tool = TOOL_RECT;
+                clear_selection();
+            } break;
+
+            case Qt::Key_P: {
+                _settings.tool = TOOL_PEN;
+                clear_selection();
+            } break;
+
+            case Qt::Key_S: {
+                _settings.tool = TOOL_SMOOTH;
+                clear_selection();
+            } break;
+
+            case Qt::Key_E: {
+                _settings.tool = TOOL_SELECT;
+                clear_selection();
+            } break;
+
+            case Qt::Key_T: {
+                _settings.tool = TOOL_TEXT;
+                clear_selection();
+            } break;
+
+            case Qt::Key_D: {
+                qDebug() << "---------- items ----------";
+                for (const auto &item : items()) {
+                    if (item->type() > GFX_SELECTABLE) {
+                        std::cerr << static_cast<KromitItem &>(*item) << "\n";
+                    } else {
+                        qDebug() << "  " << KromitItem::type_txt(item->type())
+                                 << item->isVisible() << item;
+                    }
+                }
+                qDebug() << "-------- undo_store -------";
+                for (const auto &it : undo_store) {
+                    std::cerr << static_cast<KromitUndoItem &>(*it.second)
+                              << "\n";
+                }
+                qDebug() << "------ undo_records -------";
+                for (const auto &rec : undo_records) { std::cerr << rec; }
+                qDebug() << "------ redo_records -------";
+                for (const auto &rec : redo_records) { std::cerr << rec; }
+                qDebug() << "---------------------------";
+
+            } break;
+
+            default:
+                break;
+        }
+    }
+
+    if (std::uint32_t col = Color::get_color(key, mods)) {
+        _settings.color = QColor(
+            col >> 24, (col >> 16) & 0xff, (col >> 8) & 0xff, col & 0xff);
     }
 }
 

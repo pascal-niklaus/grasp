@@ -4,6 +4,7 @@
 #include "kromitpath.h"
 #include "kromitsmooth.h"
 #include "kromitrect.h"
+#include "kromittext.h"
 
 int Tools::generate_ID(void) {
   static int id = 0;
@@ -52,10 +53,13 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
             rect->setData(KromitItem::KeyID, generate_ID());
             return rect;
         }
-            // case TOOL_LINE: {
-            //     auto *line = new KromitLine(parent);
-            //     return line;
-            // }
+
+        case TOOL_TEXT: {
+            auto *text = new KromitText(
+                nullptr, settings.color, settings.fontsize);
+            text->setData(KromitItem::KeyID, generate_ID());
+            return text;
+        }
 
         default:
             return nullptr;

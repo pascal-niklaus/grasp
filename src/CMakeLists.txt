@@ -31,13 +31,16 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   xy.cpp xy.h
   path.cpp path.h
   tools.cpp tools.h
+  colors.cpp colors.h
   undo.cpp undo.h
+  utility.cpp utility.h
   arrowitem.cpp arrowitem.h
   kromititem.cpp kromititem.h
   kromitpath.cpp kromitpath.h
   kromitsmooth.cpp kromitsmooth.h
   kromitline.cpp kromitline.h
   kromitrect.cpp kromitrect.h
+  kromittext.cpp kromittext.h
   kromitarrow.cpp kromitarrow.h
   kromitframe.cpp kromitframe.h
   kromithandle.cpp kromithandle.h

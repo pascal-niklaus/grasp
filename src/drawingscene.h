@@ -77,12 +77,13 @@ class DrawingScene : public QGraphicsScene {
                                     Qt::KeyboardModifiers mods);
     void handle_transformation_release(const QPointF &p);
 
-  void removeItemSafely(QGraphicsItem *item);
+    void removeItemSafely(QGraphicsItem *item);
 
   private:
     Tools::Settings _settings;
     //    bool select = false;
     QGraphicsItem *_current_item = nullptr;
+    bool _feed_keystrokes = false;
     KromitFrame *_selection_frame = nullptr;
     QList<KromitItem *> _selected_items;
     Transformation trans;

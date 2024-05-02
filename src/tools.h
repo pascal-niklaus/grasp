@@ -26,6 +26,7 @@ class Settings {
     double maxangle;
     double simplify;
     double snapdist;
+    double fontsize;
 };
 
     // Tool::create_tool

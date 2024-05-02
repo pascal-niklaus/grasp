@@ -43,6 +43,10 @@ QString KromitItem::type_txt(int item) {
             return "Path";
         case GFX_RECT:
             return "Rect";
+        case GFX_SMOOTH:
+            return "Smooth";
+        case GFX_TEXT:
+            return "Text";
         case GFX_SELFRAME:
             return "SelFrame";
         case GFX_HANDLE:

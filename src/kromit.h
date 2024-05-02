@@ -14,7 +14,8 @@ enum ToolType : std::uint16_t {
     TOOL_LINE = 4,
     TOOL_SMOOTH = 5,
     TOOL_ORTHO = 6,
-    TOOL_SELECT = 7
+    TOOL_TEXT = 7,
+    TOOL_SELECT = 8
 };
 
 enum ArrowType : std::uint16_t {
@@ -30,7 +31,8 @@ enum TransformCaps : std::uint16_t {
     CAP_ISOSCALE = 0x02,
     CAP_ANISOSCALE = 0x04,
     CAP_ROTATE = 0x08,
-    CAP_DELETE = 0x10
+    CAP_DELETE = 0x10,
+    CAP_KEYSTROKES = 0x20
 };
 
 TransformCaps operator&(const TransformCaps& a, const TransformCaps& b);
@@ -49,7 +51,8 @@ enum GfxItemType : int {
     GFX_PATHW,
     GFX_SMOOTH,
     GFX_LINE,
-    GFX_RECT
+    GFX_RECT,
+    GFX_TEXT,
 };
 
 #endif
