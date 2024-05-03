@@ -6,6 +6,8 @@
 #include "kromitrect.h"
 #include "kromittext.h"
 #include "kromitpixmap.h"
+#include "kromitfader.h"
+#include "kromithighlight.h"
 
 int Tools::generate_ID(void) {
     static int id = 0;
@@ -34,6 +36,30 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
                                        settings.arrow_size);
             pen->setData(KromitItem::KeyID, generate_ID());
             return pen;
+        }
+
+        case TOOL_FADER: {
+            auto *fader = new KromitFader(nullptr,
+                                        settings.color,
+                                        settings.width,
+                                        settings.arrow_type,
+                                        settings.arrow_size,
+                                        settings.sustain,
+                                        settings.fade);
+            fader->setData(KromitItem::KeyID, generate_ID());
+            return fader;
+        }
+
+        case TOOL_HIGHLIGHT: {
+            auto *highlight = new KromitHighlight(nullptr,
+                                                  settings.color,
+                                                  settings.width,
+                                                  settings.arrow_type,
+                                                  settings.arrow_size,
+                                                  settings.sustain,
+                                                  settings.fade);
+            highlight->setData(KromitItem::KeyID, generate_ID());
+            return highlight;
         }
 
         case TOOL_LINE: {

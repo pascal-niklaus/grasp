@@ -156,7 +156,7 @@ void MainWindow::take_partial_screenshot(const QRect &geometry) {
 
 void MainWindow::screenshot_step1() {
     QPixmap px = screen()->grabWindow();
-    view->set_background(px);
+    scene->set_background(px);
     show();
 }
 

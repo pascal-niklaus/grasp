@@ -4,12 +4,13 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QScreen>
 #include <QTabletEvent>
+#include <QTimer>
+#include <chrono>
 
 #include "colors.h"
 #include "kromitpath.h"
-#include "kromittext.h"
 #include "kromitpixmap.h"
-
+#include "kromittext.h"
 #include "utility.h"
 
 // DrawingScene::DrawingScene
@@ -32,11 +33,23 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     _settings.simplify = 10;
     _settings.snapdist = 20;
     _settings.fontsize = 20;
+    _settings.sustain = 5.0;
+    _settings.fade = 5.0;
 
     // create selection frame
     _selection_frame = new KromitFrame(nullptr, Qt::gray, 1);
     addItem(_selection_frame);
     _selection_frame->hide();
+
+    // dynamic update timer
+
+    dyn_tick = new QTimer();
+    dyn_tick->setInterval(100);  // 100 milliseconds
+    connect(dyn_tick,
+            &QTimer::timeout,
+            this,
+            &DrawingScene::slot_dynamic_updates,
+            Qt::QueuedConnection);
 
     connect(this,
             &DrawingScene::pointerPressed,
@@ -230,6 +243,8 @@ void DrawingScene::slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods) {
 
         _feed_keystrokes = (kitem->caps() & CAP_KEYSTROKES);
 
+        if (kitem->caps() & CAP_DYNAMIC) dyn_tick->start();
+
         redo_records.clear();
         garbage_collect();
 
@@ -361,7 +376,17 @@ void DrawingScene::slot_keyPressed(int key,
                 clear_selection();
             } break;
 
-            case Qt::Key_S: {
+            case Qt::Key_F: {
+                _settings.tool = TOOL_FADER;
+                clear_selection();
+            } break;
+
+            case Qt::Key_H: {
+                _settings.tool = TOOL_HIGHLIGHT;
+                clear_selection();
+            } break;
+
+        case Qt::Key_S: {
                 _settings.tool = TOOL_SMOOTH;
                 clear_selection();
             } break;
@@ -738,7 +763,15 @@ void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
 
 void DrawingScene::stash_scene() {
     clearSelection();
-    stash.clear();
+
+    stash.stash.clear();
+    if (_background_item) {
+        stash.background = _background_item->pixmap();
+        clear_background();
+    } else {
+        stash.background = QPixmap();
+    }
+
     for (auto &it : items()) {
         if (it->type() > GFX_SELECTABLE) {
             KromitItem *kitem = static_cast<KromitItem *>(it);
@@ -746,7 +779,7 @@ void DrawingScene::stash_scene() {
             KromitUndoItem *undo_item = kitem->create_undo_item();
             kitem->pgc();
             removeItemSafely(kitem);
-            stash.insert({id, undo_item});
+            stash.stash.insert({id, undo_item});
         } else {
         }
     }
@@ -754,17 +787,57 @@ void DrawingScene::stash_scene() {
 
 void DrawingScene::unstash_scene() {
     clear_selection();
-    for (auto &it : stash) {
+
+    clear_background();
+    if (!stash.background.isNull()) set_background(stash.background);
+
+    for (auto &it : stash.stash) {
         KromitItem *item = it.second->create_from_undo_item();
         addItem(item);
     }
-    stash.clear();
+    stash.stash.clear();
 }
 
 void DrawingScene::fix_geometry(QRect real_rect) {
-  // this only yields the top left corner correctly...
-  QRect r = QGuiApplication::primaryScreen()->geometry();
-  real_rect.adjust(-r.left(), -r.top(), -r.left(), -r.top());
-  setSceneRect(real_rect);
+    // this only yields the top left corner correctly...
+    QRect r = QGuiApplication::primaryScreen()->geometry();
+    real_rect.adjust(-r.left(), -r.top(), -r.left(), -r.top());
+    setSceneRect(real_rect);
 }
 
+void DrawingScene::set_background(QPixmap px) {
+    clear_background();
+    _background_item = addPixmap(px);
+    _background_item->setOffset(0, 0);
+    _background_item->setZValue(-1000.0);
+}
+
+void DrawingScene::clear_background() {
+    if (_background_item) {
+        removeItem(_background_item);
+        _background_item = nullptr;
+    }
+}
+
+void DrawingScene::slot_dynamic_updates() {
+    bool any_remaining = false;
+    bool any_deleted = true;
+    bool selected_deleted = false;
+    for (auto &it : items()) {
+        if (it->type() > GFX_SELECTABLE) {
+            KromitItem *kitem = static_cast<KromitItem *>(it);
+            if (kitem->caps() & CAP_DYNAMIC) {
+                any_remaining = true;
+                auto result = kitem->dynamic();
+                if (result == KromitItem::DYN_DELITEM) {
+                    any_deleted = true;
+                    if (_selected_items.contains(kitem))
+                        selected_deleted = true;
+                    removeItemSafely(kitem);
+                }
+            }
+        }
+    }
+    if (any_remaining == false) dyn_tick->stop();
+    if (selected_deleted) update_selection_frame();
+}

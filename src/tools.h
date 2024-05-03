@@ -27,6 +27,8 @@ class Settings {
     double simplify;
     double snapdist;
     double fontsize;
+    double sustain;
+    double fade;
 };
 
     // Tool::create_tool

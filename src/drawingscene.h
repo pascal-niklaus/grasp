@@ -29,6 +29,12 @@ class Transformation {
     QTransform m;
 };
 
+class Stash {
+  public:
+    QPixmap background;
+    std::unordered_map<int, KromitUndoItem *> stash;
+};
+
 class DrawingScene : public QGraphicsScene {
     Q_OBJECT
   public:
@@ -66,12 +72,16 @@ class DrawingScene : public QGraphicsScene {
 
   public slots:
     void slot_pixmap(const QPixmap &pixmap);
+    void set_background(QPixmap px);
+    void clear_background();
 
   private slots:
     void slot_keyPressed(int key, Qt::KeyboardModifiers mods, QString text);
     void slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods);
     void slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods);
     void slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods);
+
+    void slot_dynamic_updates();
 
   private:
     void update_selection_frame();
@@ -93,17 +103,20 @@ class DrawingScene : public QGraphicsScene {
     Tools::Settings _settings;
     //    bool select = false;
     QGraphicsItem *_current_item = nullptr;
+    QGraphicsPixmapItem *_background_item = nullptr;
     bool _feed_keystrokes = false;
     KromitFrame *_selection_frame = nullptr;
     QList<KromitItem *> _selected_items;
     Transformation trans;
+
+    QTimer *dyn_tick = nullptr;
 
     std::unordered_map<int, KromitUndoItem *> undo_store;
     std::vector<UndoRecord> undo_records;
     std::vector<UndoRecord> redo_records;
 
     // temporarily store entire scene
-    std::unordered_map<int, KromitUndoItem *> stash;
+    Stash stash;
 };
 
 #endif  // DRAWINGSCENE_H

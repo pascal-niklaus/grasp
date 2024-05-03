@@ -45,6 +45,12 @@ QString KromitItem::type_txt(int item) {
             return "Rect";
         case GFX_SMOOTH:
             return "Smooth";
+        case GFX_ORTHO:
+            return "Ortho";
+        case GFX_HIGHLIGHT:
+            return "Highlight";
+        case GFX_FADER:
+            return "Fader";
         case GFX_TEXT:
             return "Text";
         case GFX_PIXMAP:
@@ -65,6 +71,9 @@ QString KromitItem::type_txt(int item) {
             return "QPolyItem";
         case QGraphicsRectItem::Type:
             return "QRectItem";
+        case QGraphicsPixmapItem::Type:
+            return "QPixmapItem";
+
         default:
             return QString("Item-%1").arg(item);
     }

@@ -23,6 +23,12 @@ class KromitItem : public QGraphicsItem {
         KEY_START,      // indicates that key events should be fed to item
         KEY_STOP        // indicate that key feeding should stop
     };
+    enum DynResult {
+        DYN_DELITEM,   // delete the item !
+        DYN_STOP,      // no further calls needed
+        DYN_CONTINUE,  // continue calling
+    };
+
     KromitItem(QGraphicsItem* parent) : QGraphicsItem(parent) {}
     ~KromitItem() {}
 
@@ -42,6 +48,7 @@ class KromitItem : public QGraphicsItem {
     virtual KeyResult keystroke(QKeyCombination key, const QString& text) {
         return KEY_IGNORED;
     }
+    virtual DynResult dynamic() { return DYN_STOP; }
 
     // - debugging
     virtual void dump(std::ostream& os) const {};

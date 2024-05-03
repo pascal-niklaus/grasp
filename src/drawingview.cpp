@@ -28,9 +28,3 @@ bool DrawingView::event(QEvent *event) {
     }
 }
 
-void DrawingView::set_background(QPixmap px) {
-    if (background_item) scene()->removeItem(background_item);
-    background_item = scene()->addPixmap(px);
-    background_item->setOffset(0, 0);
-    background_item->setZValue(-1000.0);
-}
