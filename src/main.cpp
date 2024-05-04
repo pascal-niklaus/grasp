@@ -31,7 +31,33 @@ bool send_dbus_command(QDBusConnection& bus,
     return bus.send(message);
 }
 
+#include "path.h"
+
+void test() {
+    std::vector<std::pair<double, double>> vec = {
+        {400.0, 674.0},
+        {624.0, 670.0},
+        {627.0, 820.0},
+        {739.0, 678.0},
+        {777.0, 586.0},
+        {828.0, 550.0},
+        {1043.0, 546.0},
+        {1045.0, 682.0}
+    };
+    Path path;
+    for (const auto& xy : vec) path.append(xy.first, xy.second);
+
+    path.orthogonalize(15.0, 15.0);
+    std::cerr << path;
+}
+
 int main(int argc, char *argv[]) {
+
+
+
+  // test();
+  // return 0;
+
     QString key = QCryptographicHash::hash(argv[0],QCryptographicHash::Md5).toHex();
     SingletonApplication a(argc, argv, key);
 

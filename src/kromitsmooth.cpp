@@ -207,8 +207,6 @@ KromitUndoSmooth::KromitUndoSmooth(const KromitSmooth* ksmooth) :
     arrow_type = ksmooth->arrow_type();
     arrow_size = ksmooth->arrow_size();
     xy_path = ksmooth->path();
-    snap = ksmooth->snap();
-    simplify = ksmooth->simplify();
 }
 
 // KromitUndoSmooth::create_from_undo_item
@@ -218,9 +216,7 @@ KromitItem* KromitUndoSmooth::create_from_undo_item() const {
                                              pen.color(),
                                              pen.widthF(),
                                              arrow_type,
-                                             arrow_size,
-                                             simplify,
-                                             snap);
+                                             arrow_size);
     ksmooth->setData(KromitSmooth::KeyID, id);
     ksmooth->set_path(xy_path);
     return ksmooth;

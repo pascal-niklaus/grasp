@@ -3,6 +3,7 @@
 #include "kromitline.h"
 #include "kromitpath.h"
 #include "kromitsmooth.h"
+#include "kromitortho.h"
 #include "kromitrect.h"
 #include "kromittext.h"
 #include "kromitpixmap.h"
@@ -16,6 +17,21 @@ int Tools::generate_ID(void) {
 
 QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
     switch (settings.tool) {
+        case TOOL_ORTHO: {
+           auto *ortho = new KromitOrtho(nullptr,
+                                         settings.color,
+                                         settings.width,
+                                         settings.arrow_type,
+                                         settings.arrow_size,
+                                         settings.simplify,
+                                         settings.snapdist,
+                                         settings.radius,
+                                         settings.minlen,
+                                         settings.maxangle);
+            ortho->setData(KromitItem::KeyID, generate_ID());
+            return ortho;
+        }
+
         case TOOL_SMOOTH: {
            auto *pen = new KromitSmooth(nullptr,
                                          settings.color,

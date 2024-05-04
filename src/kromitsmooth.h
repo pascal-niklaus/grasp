@@ -100,8 +100,6 @@ class KromitUndoSmooth : public KromitUndoItem {
     QPen pen;
     ArrowType arrow_type;
     double arrow_size;
-    double snap;
-    double simplify;
     Path xy_path;
 };
 

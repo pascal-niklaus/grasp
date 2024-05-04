@@ -27,6 +27,9 @@ class XY : public QPointF {
     XY transformed2d(const QTransform& m) const;
 
     XY midpoint(const XY &p) const;
+    XY vector_to(const XY &p) const;
+    double vector_length() const;
+    double angle_to(const XY &p) const;
 
     double distance_from_line(const XY &line_start, const XY &line_end) const;
     double distance_from_segment(const XY &line_start, const XY &line_end) const;

@@ -48,7 +48,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
         this->setWindowOpacity(.3);
     });
 
-    // set up "quit" keyboard shortcut
+    // set up keyboard shortcut actions
     QAction *quitAction = new QAction(tr("Quit"), this);
     addAction(quitAction);
     quitAction->setShortcut(Qt::CTRL | Qt::Key_Q);
@@ -94,6 +94,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     tabAction->setShortcut(Qt::Key_Tab);
     connect(tabAction, &QAction::triggered, this, &MainWindow::tab);
 
+    // TODO: this is just a test, need proper save dialogs,
     QAction *saveAction = new QAction(tr("Save"), this);
     addAction(saveAction);
     saveAction->setShortcut(Qt::CTRL | Qt::Key_S);
@@ -105,6 +106,7 @@ MainWindow::~MainWindow() {
     delete view;
     delete scene;
     delete snapshot_timer;
+    delete partial_snapshot_timer;
 }
 
 void MainWindow::quit() {
@@ -112,11 +114,12 @@ void MainWindow::quit() {
 }
 
 void MainWindow::cycle_opacity() {
-    double o = windowOpacity();
-    if (o < 0.5)
-        setWindowOpacity(1);
-    else
-        setWindowOpacity(.3);
+  if (_opacity < 0.5) {
+      _opacity = 1.0;
+  } else {
+      _opacity = 0.3;
+  }
+  setWindowOpacity(_opacity);
 }
 
 void MainWindow::undo() {
@@ -168,7 +171,8 @@ void MainWindow::partial_screenshot_step1() {
                      -screenRect.top());
     QPixmap px = screen()->grabWindow().copy(shot_rect);
     show();
-    setWindowOpacity(1.0);
+    setStyleSheet("background:black;");
+    // setWindowOpacity(1.0);
     emit send_pixmap(px);
 }
 

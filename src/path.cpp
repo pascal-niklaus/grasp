@@ -9,6 +9,68 @@
 
 #include "utility.h"
 
+Section::Section(int i0, int i1) {
+  istart = i0;
+  iend = i1;
+}
+
+XY Section::center() const {
+    return start.midpoint(end);
+}
+
+XY Section::dxdy() const {
+    return start.vector_to(end);
+}
+
+double Section::len() const {
+    return start.distance(end);
+}
+
+bool Section::is_ortho() const {
+    return (direction % 90) == 0;
+}
+
+bool Section::is_vertical() const {
+    return direction % 180 == 90;
+}
+
+double Section::angle() const {
+    return start.angle_to(end);
+}
+
+// check if angle is close to horizontal or vertical, within
+// tolerance, and if they are, "snap" angle to these
+double Section::angle_deg_snap(double angle, double tolerance, bool *snapped) {
+    if (angle < 0) angle += 360.0;
+    if (angle == 360.0) angle = 0.0;
+    double ortho = round(angle / 90.0) * 90.0;
+    if (fabs(angle - ortho) < tolerance) {
+        if (snapped) *snapped = true;
+        angle = remainderf(ortho, 360.0);
+        if (angle < 0) angle += 360.0;
+    } else {
+        if (snapped) *snapped = false;
+    }
+    return angle;
+}
+
+std::ostream& operator<<(std::ostream& os, const Section& sec) {
+    os << "Section(" << sec.istart << "-" << sec.iend << " : " << sec.start
+       << " - " << sec.end << ")";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const std::vector<Section>& secvec) {
+    for (const auto& sec : secvec) os << sec << "\n";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const std::vector<XY>& xyvec) {
+    for (const auto& xy : xyvec) os << xy;
+    os << "\n";
+    return os;
+}
+
 // ============================== Path ===============================
 
 Path::Path() {}
@@ -174,7 +236,7 @@ void Path::catmull_rom(int steps, bool circular) {
 
     const int last = _path.size() - 1;  // last valid element
     // during last iteration, i==last-1
-    for (int i = 0; i+1 <= last; i++) {
+    for (int i = 0; i + 1 <= last; i++) {
         XY a1, a2, a3, b1, b2, pt;
         double t0 = 0.0;
         double t1 = 0.0;
@@ -182,24 +244,24 @@ void Path::catmull_rom(int steps, bool circular) {
         if (i == 0) {
             if (circular) {
                 // first point: take 2nd last point because first=last
-                t1 = catmull_rom_tj(t0, _path[last-1], _path[i]);
+                t1 = catmull_rom_tj(t0, _path[last - 1], _path[i]);
             } else {
                 t1 = 0.0;
             }
         } else {
-            t1 = catmull_rom_tj(t0, _path[i-1], _path[i]);
+            t1 = catmull_rom_tj(t0, _path[i - 1], _path[i]);
         }
-        double t2 = catmull_rom_tj(t1,_path[i], _path[i+1]);
+        double t2 = catmull_rom_tj(t1, _path[i], _path[i + 1]);
         double t3;
         if (is_last) {
             if (circular) {
                 // last point: take 2nd point because first = last
-                t3 = catmull_rom_tj(t2, _path[i+1], _path[1]);
+                t3 = catmull_rom_tj(t2, _path[i + 1], _path[1]);
             } else {
                 t3 = t2;
             }
         } else {
-            t3 = catmull_rom_tj(t2, _path[i+1], _path[i+2]);
+            t3 = catmull_rom_tj(t2, _path[i + 1], _path[i + 2]);
         }
 
         // interpolate curve
@@ -219,12 +281,14 @@ void Path::catmull_rom(int steps, bool circular) {
             a2 = cr_f_mul_xy((t2 - t) / (t2 - t1), _path[i], _path[i + 1]);
             if (is_last) {
                 if (circular) {
-                    a3 = cr_f_mul_xy((t3 - t) / (t3 - t2), _path[i+1], _path[1]);
+                    a3 = cr_f_mul_xy(
+                        (t3 - t) / (t3 - t2), _path[i + 1], _path[1]);
                 } else {
-                    a3 = _path[i+1];
+                    a3 = _path[i + 1];
                 }
             } else {
-                a3 = cr_f_mul_xy((t3 - t) / (t3 - t2), _path[i+1], _path[i+2]);
+                a3 = cr_f_mul_xy(
+                    (t3 - t) / (t3 - t2), _path[i + 1], _path[i + 2]);
             }
             const XY b1 = cr_f_mul_xy((t2 - t) / (t2 - t0), a1, a2);
             const XY b2 = cr_f_mul_xy((t3 - t) / (t3 - t1), a2, a3);
@@ -233,6 +297,331 @@ void Path::catmull_rom(int steps, bool circular) {
         }
     }
     _path = result;
+}
+
+// Path::build_section_list
+//
+// build list with 'Section's that are orthogonal (withing +-
+// max_angular_deviation) or 'free'; unnecessary intermediate points
+// in _path are deleted (in the orthogonal sections)
+//
+void Path::build_section_list(const double max_angular_deviation,
+                              const double min_ortho_len) {
+    _sections.clear();
+
+    int i = 0;
+    int last;
+
+    while (i < (last = static_cast<int>(_path.size()) - 1)) {
+
+        // start a section
+        Section sec(i, i);
+
+        // check if section is orthogonal
+        bool ortho;
+        int angle, angle0;
+        while (sec.iend < last) {
+            // look forward at next angle
+            angle = _path[sec.iend].angle_to(_path[sec.iend + 1]) * 180 / M_PI;
+            angle =
+                Section::angle_deg_snap(angle, max_angular_deviation, &ortho);
+            // if section not orthogonal: next step
+            if (!ortho) break;
+            if (sec.istart == sec.iend) angle0 = angle;
+            // if change of direction: end of section reached
+            else if (angle != angle0)
+                break;
+            sec.iend++;
+        }
+
+        // if section exceeds minimum length, add orthogonal section to list
+        if (_path[sec.istart].distance(_path[sec.iend]) > min_ortho_len) {
+            assert(sec.iend > sec.istart);
+            // erase intermediate points in path
+            _path.erase(_path.begin() + sec.istart + 1,
+                        _path.begin() + sec.iend);
+            sec.direction = angle0;
+            sec.iend = sec.istart + 1;
+            i = sec.iend;
+            _sections.emplace_back(sec);
+            continue;
+        }
+
+        // if not, include it in free (non-orthogonal) section
+        while (sec.iend < last) {
+            angle = _path[sec.iend].angle_to(_path[sec.iend + 1]) * 180 / M_PI;
+            angle =
+                Section::angle_deg_snap(angle, max_angular_deviation, &ortho);
+            if (ortho) break;
+            sec.iend++;
+        }
+
+        sec.direction = Section::NON_ORTHO_ANGLE;
+        _sections.emplace_back(sec);
+
+        i = sec.iend;
+    }
+
+    // cleanup: join successive non-orthogonal sections
+    i = 0;
+    while (i < (last = _sections.size() - 1)) {
+        int dir = _sections[i].direction;
+        int nextdir = _sections[i + 1].direction;
+        if (dir == nextdir) {
+            _sections[i].end = _sections[i + 1].end;
+            _sections.erase(_sections.begin() + i + 1);
+        } else {
+            i++;
+        }
+    }
+
+    // fill in start and end coordinates
+    for (auto& sec : _sections) {
+        sec.start = _path[sec.istart];
+        sec.end = _path[sec.iend];
+    }
+}
+
+void Path::orthogonalize(const double max_angular_deviation,
+                         const double min_ortho_len) {
+    build_section_list(max_angular_deviation, min_ortho_len);
+
+    const int last = _sections.size() - 1;
+    if (last > 0) {
+        // determine "fixed" coordinate of H and V sections (x for V and y
+        // for H) and adjust start and end points of path accordingly
+        for (int i = 0; i <= last; i++) {
+            Section &sec = _sections[i];
+            if (sec.is_ortho()) {
+                XY center;
+                if (i == 0)
+                    center = _sections[0].start;
+                else if (i == last)
+                    center = _sections[last].end;
+                else
+                    center = sec.center();
+                if (sec.is_vertical()) {
+                  sec.start.setX(center.x());
+                  sec.end.setX(center.x());
+                } else {
+                  sec.start.setY(center.y());
+                  sec.end.setY(center.y());
+                }
+            }
+        }
+
+        // now "join" ends of adjacent sections
+        for (int i = 0; i <= last; i++) {
+            Section &sec = _sections[i];
+            if (sec.is_ortho()) {
+                if (i < last && _sections[i+1].is_ortho()) {
+                    Section &next_sec = _sections[i + 1];
+                    // join orthogonal section to other orthogonal section
+                    const bool first_v = sec.is_vertical();
+                    const bool second_v = next_sec.is_vertical();
+                    if (first_v != second_v) {
+                        // sections meet at 90 degrees -> join them
+                        if (first_v) {
+                            sec.end.setY(next_sec.start.y());
+                            next_sec.start.setX(sec.end.x());
+                        } else {
+                            sec.end.setX(next_sec.start.x());
+                            next_sec.start.setY(sec.end.y());
+                        }
+                    } else {
+                        // sections are parallel -> align ends
+                        if (first_v) {
+                            const auto y =
+                                0.5 * (sec.end.y() + next_sec.start.y());
+                            sec.end.setY(y);
+                            next_sec.start.setY(y);
+
+                        } else {
+                          const auto x = 0.5 * (sec.end.x() + next_sec.start.x());
+                          sec.end.setX(x);
+                          next_sec.start.setX(x);
+                        }
+                    }
+                } else {
+                    if (i > 0) {
+                        Section& prev_sec = _sections[i - 1];
+                        if (prev_sec.is_ortho()) {
+                            sec.start = prev_sec.end;
+                        }
+                    }
+                }
+            } else {
+                // section is not orthogonal
+                QTransform m, t;
+                if (i > 0 && i < last) {
+                    Section& prev_sec = _sections[i - 1];
+                    Section& sec = _sections[i];
+                    Section& next_sec = _sections[i + 1];
+                    bool prev_vert = prev_sec.is_vertical();
+                    bool next_vert = next_sec.is_vertical();
+
+                    // one could fine-tune the orientation of the free section,
+                    // based on how skewed the adjacent orthogonal sections are.
+                    // gfloat angle = 0.5 * (remainderf(section_angle(prev_sec), M_PI_2) +
+                    //                       remainderf(section_angle(next_sec), M_PI_2));
+                    // rotate2D(angle, &m);  // or -angle ??
+                    // apply2D(sec->start, sec->end, &m);
+
+                    XY delta = sec.dxdy();
+
+                    if (prev_vert != next_vert) {
+                        // prev & next sections are at 90 degrees ->
+                        // adjust their lengths to accomodate intermediate section.
+                        //
+                        // TODO: this could produce artifacts when ends would be moved back
+                        // too much; then, the section could be scaled down to fit or rotated.
+                        // But this does not seem to happen...
+                        if (prev_vert) {
+                            next_sec.start.setX(prev_sec.end.x() + delta.x());
+                            prev_sec.end.setY(next_sec.start.y() - delta.y());
+                        } else {
+                            next_sec.start.setY(prev_sec.end.y() + delta.y());
+                            prev_sec.end.setX(next_sec.start.x() - delta.x());
+                        }
+                        // update fields in Section
+                        sec.start = prev_sec.end;
+                        sec.end = next_sec.start;
+                        // move section to right place
+                        m = QTransform::fromTranslate(prev_sec.end.x() - sec.start.x(),
+                                                      prev_sec.end.y() - sec.start.y());
+                    } else {
+                      // prev & next are somehow parallel -> fit free section between adjacent sections
+                      double x0 = prev_sec.end.x();
+                      double y0 = prev_sec.end.y();
+                      m = QTransform::fromTranslate(x0, y0);
+
+                      const XY v1(sec.end - sec.start);
+                      const XY v2(next_sec.start - prev_sec.end);
+                      const double rot = atan2(v1.x() * v2.y() - v2.x() * v1.y(), v1.x() * v2.x() + v1.y() * v2.y());
+
+                      m.rotateRadians(-rot); // TODO really need to check this direction!
+
+                      const double scale = prev_sec.end.distance(next_sec.start) / sec.len();
+                      m.scale(scale, scale);
+
+                      m.translate(-x0, -y0);
+                    }
+
+                    for (int j=sec.istart; j<=sec.iend; j++)
+                        _path[j].apply2d(m);
+                }
+            }
+        }
+
+        // copy start and end points of orthogonal sections to coords
+        for (int i = 0; i <= last; i++) {
+            Section& sec = _sections[i];
+            if (sec.is_ortho()) {
+                _path[sec.istart] = sec.start;
+                _path[sec.iend] = sec.end;
+            }
+        }
+    }
+}
+
+void Path::round_corners(double radius, int npoints, bool ends_join) {
+    const int last = _path.size() - 1;
+    if (last > 1) {
+        std::vector<XY> result;
+        double prev_len = 0, next_len = 0;
+        for (int i = 0; i <= last; i++) {
+            const XY& next_pt = (i == last) ? _path[1] : _path[i + 1];
+            if (ends_join || i < last) {
+                prev_len = next_len;
+                next_len = _path[i].distance(next_pt);
+                if (i > 0 && next_len > 2 * radius && prev_len > 2 * radius) {
+                    // there is space for a round corner !
+                    const XY& prev_pt = _path[i - 1];
+                    XY pt = _path[i];
+
+                    const XY v1(pt - prev_pt);
+                    const XY v2(next_pt - pt);
+                    const double rot = atan2(v1.x() * v2.y() - v2.x() * v1.y(),
+                                             v1.x() * v2.x() + v1.y() * v2.y());
+                    const double beta = rot / npoints;
+                    const double a = 2 * radius * tan((M_PI - rot) / 2) *
+                                     sin(rot / (2 * npoints));
+
+                    // move back current point by radius
+                    XY dirvec = prev_pt.vector_to(pt);
+                    double k = radius / dirvec.vector_length();
+                    pt -= k * dirvec;
+
+                    result.emplace_back(pt);
+
+                    // initial step with length a
+                    k *= (a / radius);
+                    dirvec.setX(dirvec.x() * k);
+                    dirvec.setY(dirvec.y() * k);
+
+                    QTransform m;
+                    m.rotateRadians(-beta / 2.0);
+                    dirvec.apply2d(m);
+                    m.reset();
+                    m.rotateRadians(beta);
+
+                    for (int j = 0; j < npoints; j++) {
+                        dirvec.apply2d(m);
+                        pt += dirvec;
+                        result.emplace_back(pt);
+                    }
+
+                    if (i==last)
+                      result.front() = result.back();
+
+
+                } else {
+                    // there is no space, just insert the point !
+                    result.emplace_back(_path[i]);
+                }
+            } else {
+                result.emplace_back(_path[i]);
+            }
+        }
+        _path = result;
+    }
+}
+
+/*
+ * check for back-tracking once there are at least 'minpoints' points
+ * in the path.  The 'nsteps' last points are checked for a monotonic
+ * decrease of the distance to the last point. If this is not the
+ * case, this is interpreted as sign of back-tracking and 'ndelete'
+ * points before the last point are removed.
+ */
+
+void Path::backtrack(int minpoints, int nsteps, int ndelete) {
+  if (static_cast<int>(_path.size()) > minpoints) {
+        std::vector<double> distances;
+        int last = _path.size() - 1;
+
+        // calculate and store distances
+        for (int n = 0; n < nsteps; n++)
+            distances.emplace_back(_path[last].distance(_path[last - 1 - n]));
+
+        // check whether distances increase monotonically, and find
+        // likely "closest" point after which one should remove points
+        bool backtracking = false;
+        int last_decr = 0;
+        for (int n = nsteps - 2; n >= 0; n--) {
+            if (distances[n] > distances[n + 1]) {
+                backtracking = true;
+            } else if (last_decr == 0) {
+                last_decr = n;
+            }
+        }
+        if (backtracking) {
+            // delete n points before last one
+            int n = std::min<int>(last_decr, ndelete);
+            _path[last - n] = _path[last];
+            _path.resize(last - n);
+        }
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const Path& p) {
@@ -381,7 +770,6 @@ void PathW::simplify(double max_dev, double max_width_dev) {
     }
     _path.resize(trg);
 }
-
 
 std::ostream& operator<<(std::ostream& os, const PathW& p) {
   os << "Path @ " << &p << ", len=" << p.size() << " :";

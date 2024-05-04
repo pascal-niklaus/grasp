@@ -7,7 +7,38 @@
 #include <iostream>
 
 class QTransform;
+class Path;
 
+// Section
+//
+// internal helper class used during orthogonalize
+//
+class Section {
+  public:
+    static const int NON_ORTHO_ANGLE = -999;
+
+  public:
+    explicit Section(int i0, int i1);
+    XY dxdy() const;
+    XY center() const;
+    double len() const;
+    bool is_ortho() const;
+    bool is_vertical() const;
+    double angle() const;
+    static double angle_deg_snap(double angle, double tolerance, bool* snapped);
+
+    friend std::ostream& operator<<(std::ostream& os, const Section& sec);
+
+  public:
+    XY start;
+    XY end;
+    int istart;
+    int iend;
+    int direction;
+};
+
+// Path
+//
 class Path {
   public:
     Path();
@@ -16,6 +47,7 @@ class Path {
     bool is_empty() const { return _path.empty(); }
     int size() const { return _path.size(); }
     XY& operator[](int i) { return _path[i]; }
+    const XY& operator[](int i) const { return _path[i]; }
     const std::vector<XY>& path() const { return _path; };
     std::vector<XY>& path() { return _path; }
 
@@ -44,8 +76,11 @@ class Path {
 
     void douglas_peucker(double epsilon);
     void catmull_rom(int steps, bool circular);
+    void orthogonalize(double max_angular_deviation, double min_ortho_len);
+    void round_corners(double radius, int npoints, bool ends_join);
     bool snap_ends(double max_distance);
     double end_angle(double radius, bool end_is_beginning) const;
+    void backtrack(int minpoints, int nsteps, int ndelete);
 
     friend std::ostream& operator<<(std::ostream& os, const Path& p);
 
@@ -57,10 +92,13 @@ class Path {
     static inline double catmull_rom_tj(double ti, const XY& pi, const XY& pj) {
         return ti + sqrt(pi.distance(pj));
     }
+    void build_section_list(const double max_angular_deviation,
+                       const double min_ortho_len);
 
   private:
     double _w;
     std::vector<XY> _path;
+    std::vector<Section> _sections;
 };
 
 class PathW {

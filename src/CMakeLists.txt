@@ -38,6 +38,7 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   kromititem.cpp kromititem.h
   kromitpath.cpp kromitpath.h
   kromitsmooth.cpp kromitsmooth.h
+  kromitortho.cpp kromitortho.h
   kromitline.cpp kromitline.h
   kromitfader.cpp kromitfader.h
   kromithighlight.cpp kromithighlight.h

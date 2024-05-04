@@ -23,6 +23,31 @@ XY XY::midpoint(const XY &p) const {
   return XY(0.5 * (x() + p.x()), 0.5 * (y() + p.y()));
 };
 
+// XY::vector_to
+//
+// return vector from XY to other XY
+//
+XY XY::vector_to(const XY& p) const {
+    return XY(p.x() - x(), p.y() - y());
+}
+
+// XY::vector_length
+//
+// return length
+//
+double XY::vector_length() const {
+    return sqrt(square(x()) + square(y()));
+}
+
+// XY::angle_to
+//
+// returns angle to point p
+//
+double XY::angle_to(const XY &p) const {
+    return atan2(p.y() - y(), p.x() - x());
+}
+
+
 // XY::distance
 //
 // return distance between XY and other point

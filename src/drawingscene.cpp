@@ -28,10 +28,11 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     _settings.arrow_size = 3;
     _settings.minwidth = 1;
     _settings.maxwidth = 4;
-    _settings.radius = 10;
-    _settings.minlen = 30;
-    _settings.simplify = 10;
+    _settings.radius = 30;
+    _settings.minlen = 70;
+    _settings.simplify = 15;
     _settings.snapdist = 20;
+    _settings.maxangle = 25;
     _settings.fontsize = 20;
     _settings.sustain = 5.0;
     _settings.fade = 5.0;
@@ -386,8 +387,13 @@ void DrawingScene::slot_keyPressed(int key,
                 clear_selection();
             } break;
 
-        case Qt::Key_S: {
+            case Qt::Key_S: {
                 _settings.tool = TOOL_SMOOTH;
+                clear_selection();
+            } break;
+
+            case Qt::Key_O: {
+                _settings.tool = TOOL_ORTHO;
                 clear_selection();
             } break;
 
@@ -752,7 +758,8 @@ void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
     if (_current_item) {
         switch (_current_item->type()) {
             case GFX_PIXMAP: {
-                KromitPixmap *kpixmap = static_cast<KromitPixmap *>(_current_item);
+                KromitPixmap *kpixmap =
+                    static_cast<KromitPixmap *>(_current_item);
                 kpixmap->set_pixmap(pixmap, kpixmap->sel_rect());
                 _current_item = nullptr;
                 unstash_scene();
@@ -821,7 +828,7 @@ void DrawingScene::clear_background() {
 
 void DrawingScene::slot_dynamic_updates() {
     bool any_remaining = false;
-    bool any_deleted = true;
+    // bool any_deleted = true;
     bool selected_deleted = false;
     for (auto &it : items()) {
         if (it->type() > GFX_SELECTABLE) {
@@ -830,7 +837,7 @@ void DrawingScene::slot_dynamic_updates() {
                 any_remaining = true;
                 auto result = kitem->dynamic();
                 if (result == KromitItem::DYN_DELITEM) {
-                    any_deleted = true;
+                    // any_deleted = true;
                     if (_selected_items.contains(kitem))
                         selected_deleted = true;
                     removeItemSafely(kitem);

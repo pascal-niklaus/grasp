@@ -47,7 +47,7 @@ class MainWindow : public QMainWindow {
     DrawingView *view = nullptr;
     QTimer *snapshot_timer = nullptr;
     QTimer *partial_snapshot_timer = nullptr;
+    double _opacity;
 };
-
 
 #endif // MAINWINDOW_H
