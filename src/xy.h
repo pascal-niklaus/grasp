@@ -36,6 +36,10 @@ class XY : public QPointF {
 
     double distance(const XY &p) const;
     static double distance(const XY &p1, const XY &p2);
+    static double angle_between(const XY &src1,
+                                const XY &src2,
+                                const XY &dst1,
+                                const XY &dst2);
 
     friend std::ostream &operator<<(std::ostream &os, const XY &p);
 };

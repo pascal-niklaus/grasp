@@ -1,6 +1,8 @@
 #include "path.h"
 
 #include <QTransform>
+#include <QDebug>
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -490,21 +492,20 @@ void Path::orthogonalize(const double max_angular_deviation,
                         m = QTransform::fromTranslate(prev_sec.end.x() - sec.start.x(),
                                                       prev_sec.end.y() - sec.start.y());
                     } else {
-                      // prev & next are somehow parallel -> fit free section between adjacent sections
+                      // prev & next are somehow parallel -> fit free
+                      // section between adjacent sections
                       double x0 = prev_sec.end.x();
                       double y0 = prev_sec.end.y();
                       m = QTransform::fromTranslate(x0, y0);
 
-                      const XY v1(sec.end - sec.start);
-                      const XY v2(next_sec.start - prev_sec.end);
-                      const double rot = atan2(v1.x() * v2.y() - v2.x() * v1.y(), v1.x() * v2.x() + v1.y() * v2.y());
-
-                      m.rotateRadians(-rot); // TODO really need to check this direction!
+                      const double rot = XY::angle_between(
+                          sec.start, sec.end, prev_sec.end, next_sec.start);
+                      m.rotateRadians(rot);
 
                       const double scale = prev_sec.end.distance(next_sec.start) / sec.len();
                       m.scale(scale, scale);
 
-                      m.translate(-x0, -y0);
+                      m.translate(-sec.start.x(), -sec.start.y());
                     }
 
                     for (int j=sec.istart; j<=sec.iend; j++)
@@ -522,6 +523,42 @@ void Path::orthogonalize(const double max_angular_deviation,
             }
         }
     }
+}
+
+// the code below works ok, the sequence is
+//
+// 1)
+
+void Path::test_rotation() {
+  // destination
+  XY dest1(2, 3);
+  XY dest2(7, 5);
+
+  // points to move there
+  XY src1(3, 2);
+  XY src2(6, 2.5);
+
+  auto m = QTransform::fromTranslate(dest1.x(), dest1.y());
+
+  double rot = XY::angle_between(src1, src2, dest1, dest2);
+  // const XY v1(src2 - src1);
+  // const XY v2(dest2 - dest1);
+
+  // const double rot = atan2(v1.x() * v2.y() - v2.x() * v1.y(),
+  //                          v1.x() * v2.x() + v1.y() * v2.y());
+
+  m.rotateRadians(rot);
+
+  const double scale = dest1.distance(dest2) / src1.distance(src2);
+  m.scale(scale, scale);
+  qDebug() << "rot=" << rot * 180 / M_PI << "°, scale=" << scale << "\n";
+
+  m.translate(-src1.x(), -src1.y());
+
+  qDebug() << "src1 was at" << src1 << ", maps to" << m.map(src1)
+           << ", should be at " << dest1;
+  qDebug() << "src2 was at" << src2 << ", maps to" << m.map(src2)
+           << ", should be at " << dest2;
 }
 
 void Path::round_corners(double radius, int npoints, bool ends_join) {

@@ -56,6 +56,8 @@ class Path {
     void append(const double x, const double y);
     void clear();
 
+    static void test_rotation();
+
     QPointF first() const {
         if (_path.empty())
             return QPointF(0, 0);

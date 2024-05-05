@@ -90,6 +90,7 @@ class KromitOrtho : public ArrowItem {
 
     Path _xy_path;
     Path _xy_path_raw;
+
     QPainterPath _path;
     QPainterPath _raw_path;
 

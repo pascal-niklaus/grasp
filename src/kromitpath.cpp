@@ -92,9 +92,6 @@ void KromitPath::stop(const QPointF& p, double pressure) {
     _path.moveTo(_xy_path[0]);
     const auto size = _xy_path.size();
     for (int i = 0; i < size; i++) _path.lineTo(_xy_path[i]);
-
-    qDebug() << "path simplified from" << oldn << "to" << _path.elementCount()
-             << "points";
 }
 
 // KromitPath::line_to

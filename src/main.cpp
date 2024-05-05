@@ -32,34 +32,65 @@ bool send_dbus_command(QDBusConnection& bus,
 }
 
 #include "path.h"
+#include <regex>
 
 void test() {
-    std::vector<std::pair<double, double>> vec = {
-        {400.0, 674.0},
-        {624.0, 670.0},
-        {627.0, 820.0},
-        {739.0, 678.0},
-        {777.0, 586.0},
-        {828.0, 550.0},
-        {1043.0, 546.0},
-        {1045.0, 682.0}
-    };
-    Path path;
-    for (const auto& xy : vec) path.append(xy.first, xy.second);
+    std::string dbtxt =
+        "(1002.0,477.0) (1324.0,476.0) (1489.0,550.0) (1512.0,568.0) "
+        "(1522.0,728.0)";
+    const std::regex xyrx(R"( *\(([0-9\.]+),([0-9\.]+)\))");
+    std::sregex_iterator it(dbtxt.begin(), dbtxt.end(), xyrx);
+    std::sregex_iterator end;
 
-    path.orthogonalize(15.0, 15.0);
+    Path path;
+    while (it != end) {
+        std::smatch xyrx_match = *it;
+        const double x = std::stof(xyrx_match[1]);
+        const double y = std::stof(xyrx_match[2]);
+        path.append(x,y);
+        ++it;
+    }
+
+    Path opath = path;
+    opath.orthogonalize(20.0, 70.0);
+    opath.round_corners(30, 6, false);
+
     std::cerr << path;
+    std::cerr << opath;
+
+    // plot everything
+    QPixmap pixmap(2000, 1000);
+    pixmap.fill(Qt::black);
+    QPainter painter(&pixmap);
+
+    QPen pen(Qt::yellow);
+    pen.setWidth(1);
+    painter.setPen(pen);
+
+    QPainterPath pp;
+    pp.moveTo(path.first());
+    for (int i=1; i<path.size(); i++)
+      pp.lineTo(path[i]);
+    painter.drawPath(pp);
+
+    pp.clear();
+    pen.setColor(Qt::cyan);
+    painter.setPen(pen);
+    pp.moveTo(opath.first());
+    for (int i=1; i<opath.size(); i++)
+      pp.lineTo(opath[i]);
+    painter.drawPath(pp);
+
+    pixmap.save("debug.png", "PNG");
 }
 
 int main(int argc, char *argv[]) {
 
-
-
-  // test();
-  // return 0;
-
     QString key = QCryptographicHash::hash(argv[0],QCryptographicHash::Md5).toHex();
     SingletonApplication a(argc, argv, key);
+
+  //     test();
+  // return 0;
 
     a.setApplicationName(APP_NAME);
     a.setApplicationVersion(APP_VERSION);

@@ -31,8 +31,9 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     _settings.radius = 30;
     _settings.minlen = 70;
     _settings.simplify = 15;
+    _settings.simplify_ortho = 25;
     _settings.snapdist = 20;
-    _settings.maxangle = 25;
+    _settings.maxangle = 15;
     _settings.fontsize = 20;
     _settings.sustain = 5.0;
     _settings.fade = 5.0;
@@ -114,35 +115,28 @@ bool DrawingScene::event(QEvent *event) {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
             QPointF p = ev->scenePosition();
             double pressure = ev->pressure();
-            _current_item = new KromitPath(
-                nullptr, Qt::yellow, pressure * 3.0, ARROW_DOUBLE, 10);
-            KromitPath *path = static_cast<KromitPath *>(_current_item);
-            path->start(p);
-            path->move(p);
-            addItem(_current_item);
+            const auto mods = ev->modifiers();
+            emit pointerPressed(p, mods);
             ev->accept();
             return true;
         }
 
         case QEvent::TabletMove: {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-            // double pressure = ev->pressure();
-            if (_current_item) {
-                KromitPath *path = static_cast<KromitPath *>(_current_item);
-                path->move(ev->scenePosition());
-            }
+            QPointF p = ev->scenePosition();
+            double pressure = ev->pressure();
+            const auto mods = ev->modifiers();
+            emit pointerMoved(p, mods);
             ev->accept();
             return true;
         }
 
         case QEvent::TabletRelease: {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-            // double pressure = ev->pressure();
-            if (_current_item) {
-                KromitPath *path = static_cast<KromitPath *>(_current_item);
-                path->stop(ev->scenePosition());
-                _current_item = nullptr;
-            }
+                        QPointF p = ev->scenePosition();
+            double pressure = ev->pressure();
+            const auto mods = ev->modifiers();
+            emit pointerReleased(p, mods);
             ev->accept();
             return true;
         }

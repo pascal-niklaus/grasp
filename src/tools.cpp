@@ -23,7 +23,7 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
                                          settings.width,
                                          settings.arrow_type,
                                          settings.arrow_size,
-                                         settings.simplify,
+                                         settings.simplify_ortho,
                                          settings.snapdist,
                                          settings.radius,
                                          settings.minlen,

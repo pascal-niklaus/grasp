@@ -25,6 +25,7 @@ class Settings {
     double minlen;
     double maxangle;
     double simplify;
+    double simplify_ortho;
     double snapdist;
     double fontsize;
     double sustain;

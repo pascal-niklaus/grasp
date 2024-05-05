@@ -105,6 +105,7 @@ void KromitOrtho::move_internal(const QPointF& p, bool force) {
             _xy_path.douglas_peucker(_simplify);
             bool snapped = false;
             if (_snap > 0.1) snapped = _xy_path.snap_ends(_snap);
+
             _xy_path.orthogonalize(_maxangle, _minlen);
             _xy_path.round_corners(_radius, 6, snapped);
         }
@@ -118,7 +119,6 @@ void KromitOrtho::move_internal(const QPointF& p, bool force) {
         _raw_path.clear();
         _raw_path.moveTo(_xy_path_raw.first());
         for (int i = 1; i < _xy_path_raw.size(); i++) _raw_path.lineTo(_xy_path_raw[i]);
-
     }
 }
 
@@ -190,7 +190,6 @@ void KromitOrtho::paint(QPainter* painter,
 
     painter->setPen(QPen(_pen.color(),1, Qt::DashLine));
     painter->drawPath(_raw_path);
-
 }
 
 // KromitOrtho::set_smooth

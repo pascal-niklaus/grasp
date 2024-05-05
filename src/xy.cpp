@@ -47,6 +47,22 @@ double XY::angle_to(const XY &p) const {
     return atan2(p.y() - y(), p.x() - x());
 }
 
+// XY::angle_between
+//
+// returns the angle [in radians] that is necessary, in a QTransform operation,
+// to rotate (src1->src2) into (dst1->dst2)
+//
+double XY::angle_between(const XY& src1,
+                         const XY& src2,
+                         const XY& dst1,
+                         const XY& dst2) {
+    const XY v1(src2 - src1);
+    const XY v2(dst2 - dst1);
+
+    const double rot = atan2(v1.x() * v2.y() - v2.x() * v1.y(),
+                             v1.x() * v2.x() + v1.y() * v2.y());
+    return rot;
+}
 
 // XY::distance
 //
