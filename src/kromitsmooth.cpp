@@ -89,20 +89,23 @@ void KromitSmooth::move_internal(const QPointF& p, bool force) {
     if (force || XY(_path.currentPosition()).distance(XY(p)) >
                      cap<double>(sqrt(_pen.widthF()), .9, 5.0)) {
         _xy_path_raw.append(p);
-
+        bool snapped = false;
         _xy_path = _xy_path_raw;
         if (_simplify > 0.0) {
             _xy_path.douglas_peucker(_simplify);
-            bool snapped = false;
+            _xy_path.add_points(200);
+
             if (_snap > 0.0) snapped = _xy_path.snap_ends(_snap);
             _xy_path.catmull_rom(6, snapped);
         }
 
         prepareGeometryChange();
+
         _path.clear();
         _path.moveTo(_xy_path.first());
         for (int i = 1; i < _xy_path.size(); i++) _path.lineTo(_xy_path[i]);
-        repos_arrows();
+
+        repos_arrows(snapped);
     }
 }
 
@@ -134,10 +137,10 @@ QPainterPath KromitSmooth::shape() const {
 //
 // reposition arrow heads according to path
 //
-void KromitSmooth::repos_arrows() {
+void KromitSmooth::repos_arrows(bool snapped) {
     // search radius for angle
     const double radius = cap<double>(_pen.widthF() * 6.0, 10.0, 50.0);
-    const double arrow_width = _arrow_size * _pen.widthF();
+    const double arrow_width = snapped ? 0.0 : _arrow_size * _pen.widthF();
     if (_arrow_type & ARROW_START) {
         double rot = _xy_path.end_angle(radius, true);
         set_arrow_start(_xy_path.first(), arrow_width, rot);
@@ -207,6 +210,7 @@ KromitUndoSmooth::KromitUndoSmooth(const KromitSmooth* ksmooth) :
     arrow_type = ksmooth->arrow_type();
     arrow_size = ksmooth->arrow_size();
     xy_path = ksmooth->path();
+    snap = ksmooth->snap();
 }
 
 // KromitUndoSmooth::create_from_undo_item
@@ -215,7 +219,7 @@ KromitItem* KromitUndoSmooth::create_from_undo_item() const {
     KromitSmooth* ksmooth = new KromitSmooth(nullptr,
                                              pen.color(),
                                              pen.widthF(),
-                                             arrow_type,
+                                             xy_path.end_distance() < snap ? ARROW_NONE: arrow_type,
                                              arrow_size);
     ksmooth->setData(KromitSmooth::KeyID, id);
     ksmooth->set_path(xy_path);

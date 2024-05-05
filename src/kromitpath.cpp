@@ -82,8 +82,6 @@ void KromitPath::stop(const QPointF& p, double pressure) {
     // simplify the path TODO: make epsilon dependent on width ?
     _xy_path.douglas_peucker(0.9);
 
-    int oldn = _path.elementCount();
-
     prepareGeometryChange();
 
     repos_arrows();

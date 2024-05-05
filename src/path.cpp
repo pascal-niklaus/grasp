@@ -152,6 +152,33 @@ bool Path::snap_ends(double max_distance) {
     return false;
 }
 
+// Path::add_points
+//
+// insert points into segment so that inter-point distance becomes
+// smaller than maxdist
+//
+void Path::add_points(double maxdist) {
+    if (_path.size() >= 2) {
+        std::vector<XY> result;
+        const int last = _path.size() - 1;
+        result.emplace_back(_path.front());
+        for (int i = 1; i <= last; i++) {
+            const double dist = _path[i - 1].distance(_path[i]);
+            if (dist > maxdist) {
+                const int steps = ceil(dist / maxdist);
+                const auto& start = _path[i-1];
+                const auto vec = _path[i-1].vector_to(_path[i]);
+                for (int j = 1; j < steps; j++) {
+                    const double k = static_cast<double>(j) / steps;
+                    result.emplace_back(start + k * vec);
+                }
+            }
+          result.emplace_back(_path[i]);
+        }
+        _path = result;
+    }
+}
+
 // Path::douglas_peucker
 //
 // perform Douglas-Peucker smoothing of path points with distance

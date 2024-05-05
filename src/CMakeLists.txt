@@ -15,7 +15,7 @@ include(GNUInstallDirs)
 
 add_definitions(-DAPP_VERSION="${CMAKE_PROJECT_VERSION}" -DAPP_NAME="${CMAKE_PROJECT_NAME}")
 
-find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS DBus)
 find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Widgets)
@@ -50,6 +50,19 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   kromithandle.cpp kromithandle.h
   kromitrotate.cpp kromitrotate.h
   kromitmove.cpp kromitmove.h
+)
+
+qt_add_resources(kromit "cursors"
+    PREFIX "/cursors"
+    FILES ../cursors/text.png
+    FILES ../cursors/smooth.png
+    FILES ../cursors/rect.png
+    FILES ../cursors/line.png
+    FILES ../cursors/pen.png
+    FILES ../cursors/ortho.png
+    FILES ../cursors/fader.png
+    FILES ../cursors/highlight.png
+    FILES ../cursors/grab.png
 )
 
 target_link_libraries(kromit PRIVATE

@@ -47,6 +47,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(scene, &DrawingScene::set_transparent, [this]() {
         this->setWindowOpacity(.3);
     });
+    connect(scene, &DrawingScene::set_opaque, [this]() {
+        this->setWindowOpacity(1);
+    });
 
     // set up keyboard shortcut actions
     QAction *quitAction = new QAction(tr("Quit"), this);
@@ -116,8 +119,11 @@ void MainWindow::quit() {
 void MainWindow::cycle_opacity() {
   if (_opacity < 0.5) {
       _opacity = 1.0;
+      setStyleSheet("background:black;");
   } else {
       _opacity = 0.3;
+      setStyleSheet("background:transparent;");
+
   }
   setWindowOpacity(_opacity);
 }
@@ -172,7 +178,6 @@ void MainWindow::partial_screenshot_step1() {
     QPixmap px = screen()->grabWindow().copy(shot_rect);
     show();
     setStyleSheet("background:black;");
-    // setWindowOpacity(1.0);
     emit send_pixmap(px);
 }
 

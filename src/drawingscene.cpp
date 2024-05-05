@@ -115,6 +115,7 @@ bool DrawingScene::event(QEvent *event) {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
             QPointF p = ev->scenePosition();
             double pressure = ev->pressure();
+            Q_UNUSED(pressure);
             const auto mods = ev->modifiers();
             emit pointerPressed(p, mods);
             ev->accept();
@@ -125,6 +126,7 @@ bool DrawingScene::event(QEvent *event) {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
             QPointF p = ev->scenePosition();
             double pressure = ev->pressure();
+            Q_UNUSED(pressure);
             const auto mods = ev->modifiers();
             emit pointerMoved(p, mods);
             ev->accept();
@@ -135,6 +137,7 @@ bool DrawingScene::event(QEvent *event) {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
                         QPointF p = ev->scenePosition();
             double pressure = ev->pressure();
+            Q_UNUSED(pressure);
             const auto mods = ev->modifiers();
             emit pointerReleased(p, mods);
             ev->accept();
@@ -307,9 +310,10 @@ void DrawingScene::slot_keyPressed(int key,
         switch (key) {
             case Qt::Key_G: {
                 _settings.tool = TOOL_PIXMAP;
+                init_tool();
+                emit set_transparent();
                 clear_selection();
                 stash_scene();
-                emit set_transparent();
             } break;
         }
     }
@@ -358,46 +362,55 @@ void DrawingScene::slot_keyPressed(int key,
 
             case Qt::Key_L: {
                 _settings.tool = TOOL_LINE;
+                init_tool();
                 clear_selection();
             } break;
 
             case Qt::Key_R: {
                 _settings.tool = TOOL_RECT;
+                init_tool();
                 clear_selection();
             } break;
 
             case Qt::Key_P: {
                 _settings.tool = TOOL_PEN;
+                init_tool();
                 clear_selection();
             } break;
 
             case Qt::Key_F: {
                 _settings.tool = TOOL_FADER;
+                init_tool();
                 clear_selection();
             } break;
 
             case Qt::Key_H: {
                 _settings.tool = TOOL_HIGHLIGHT;
+                init_tool();
                 clear_selection();
             } break;
 
             case Qt::Key_S: {
                 _settings.tool = TOOL_SMOOTH;
+                init_tool();
                 clear_selection();
             } break;
 
             case Qt::Key_O: {
                 _settings.tool = TOOL_ORTHO;
+                init_tool();
                 clear_selection();
             } break;
 
             case Qt::Key_E: {
                 _settings.tool = TOOL_SELECT;
+                init_tool();
                 clear_selection();
             } break;
 
             case Qt::Key_T: {
                 _settings.tool = TOOL_TEXT;
+                init_tool();
                 clear_selection();
             } break;
 
@@ -841,4 +854,18 @@ void DrawingScene::slot_dynamic_updates() {
     }
     if (any_remaining == false) dyn_tick->stop();
     if (selected_deleted) update_selection_frame();
+}
+
+void DrawingScene::init_tool() {
+    emit tool_changed(_settings.tool);
+    switch (_settings.tool) {
+        case TOOL_PIXMAP: {
+            emit set_transparent();
+            break;
+        }
+        default: {
+            emit set_opaque();
+            break;
+        }
+    }
 }

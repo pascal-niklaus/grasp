@@ -70,7 +70,7 @@ class KromitSmooth : public ArrowItem {
 
   private:
     // ----- internal helpers
-    void repos_arrows();
+    void repos_arrows(bool snapped = false);
     QPainterPath outline(double dist) const;
 
   private:
@@ -101,6 +101,7 @@ class KromitUndoSmooth : public KromitUndoItem {
     ArrowType arrow_type;
     double arrow_size;
     Path xy_path;
+    double snap;
 };
 
 #endif  // KROMITSMOOTH_H

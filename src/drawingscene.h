@@ -69,6 +69,8 @@ class DrawingScene : public QGraphicsScene {
     void pointerReleased(QPointF, Qt::KeyboardModifiers);
     void take_partial_screenshot(const QRect &rect);
     void set_transparent();
+    void set_opaque();
+    void tool_changed(ToolType);
 
   public slots:
     void slot_pixmap(const QPixmap &pixmap);
@@ -88,6 +90,7 @@ class DrawingScene : public QGraphicsScene {
     void delete_selection();
     void clear_selection();
     void garbage_collect();
+    void init_tool();
 
     KromitItem *find_item(int id) const;
 

@@ -101,9 +101,9 @@ void KromitOrtho::move_internal(const QPointF& p, bool force) {
 
         _xy_path = _xy_path_raw;
 
+        bool snapped = false;
         if (_simplify > 0.0) {
             _xy_path.douglas_peucker(_simplify);
-            bool snapped = false;
             if (_snap > 0.1) snapped = _xy_path.snap_ends(_snap);
 
             _xy_path.orthogonalize(_maxangle, _minlen);
@@ -114,7 +114,7 @@ void KromitOrtho::move_internal(const QPointF& p, bool force) {
         _path.clear();
         _path.moveTo(_xy_path.first());
         for (int i = 1; i < _xy_path.size(); i++) _path.lineTo(_xy_path[i]);
-        repos_arrows();
+        repos_arrows(snapped);
 
         _raw_path.clear();
         _raw_path.moveTo(_xy_path_raw.first());
@@ -150,10 +150,10 @@ QPainterPath KromitOrtho::shape() const {
 //
 // reposition arrow heads according to path
 //
-void KromitOrtho::repos_arrows() {
+void KromitOrtho::repos_arrows(bool snapped) {
     // search radius for angle
     const double radius = cap<double>(_pen.widthF() * 6.0, 10.0, 50.0);
-    const double arrow_width = _arrow_size * _pen.widthF();
+    const double arrow_width = snapped ? 0.0 : _arrow_size * _pen.widthF();
     if (_arrow_type & ARROW_START) {
         double rot = _xy_path.end_angle(radius, true);
         set_arrow_start(_xy_path.first(), arrow_width, rot);
@@ -226,21 +226,23 @@ KromitUndoOrtho::KromitUndoOrtho(const KromitOrtho* kortho) :
     arrow_type = kortho->arrow_type();
     arrow_size = kortho->arrow_size();
     xy_path = kortho->path();
+    snap = kortho->snap();
 }
 
 // KromitUndoOrtho::create_from_undo_item
 //
 KromitItem* KromitUndoOrtho::create_from_undo_item() const {
-    KromitOrtho* kortho = new KromitOrtho(nullptr,
-                                          pen.color(),
-                                          pen.widthF(),
-                                          arrow_type,
-                                          arrow_size,
-                                          10,
-                                          0,
-                                          10,
-                                          10,
-                                          10);
+    KromitOrtho* kortho =
+        new KromitOrtho(nullptr,
+                        pen.color(),
+                        pen.widthF(),
+                        xy_path.end_distance() < snap ? ARROW_NONE : arrow_type,
+                        arrow_size,
+                        10,
+                        0,
+                        10,
+                        10,
+                        10);
     kortho->setData(KromitOrtho::KeyID, id);
     kortho->set_path(xy_path);
     return kortho;

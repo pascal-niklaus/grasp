@@ -71,12 +71,18 @@ class Path {
             return _path.back();
     }
 
+    double end_distance() const {
+        if (_path.empty()) return 0.0;
+        return _path.front().distance(_path.back());
+    }
+
     double w() const { return _w; }
     void set_w(double w) { _w = w; }
 
     void apply2D(const QTransform& m);
 
     void douglas_peucker(double epsilon);
+    void add_points(double maxdist);
     void catmull_rom(int steps, bool circular);
     void orthogonalize(double max_angular_deviation, double min_ortho_len);
     void round_corners(double radius, int npoints, bool ends_join);
