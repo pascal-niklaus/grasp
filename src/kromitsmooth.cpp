@@ -213,6 +213,8 @@ KromitUndoSmooth::KromitUndoSmooth(const KromitSmooth* ksmooth) :
     snap = ksmooth->snap();
 }
 
+KromitUndoSmooth::~KromitUndoSmooth() {}
+
 // KromitUndoSmooth::create_from_undo_item
 //
 KromitItem* KromitUndoSmooth::create_from_undo_item() const {

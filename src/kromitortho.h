@@ -102,6 +102,7 @@ class KromitOrtho : public ArrowItem {
 class KromitUndoOrtho : public KromitUndoItem {
   public:
     explicit KromitUndoOrtho(const KromitOrtho* kpath);
+    ~KromitUndoOrtho();
 
     virtual KromitItem* create_from_undo_item() const override;
 

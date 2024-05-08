@@ -229,6 +229,8 @@ KromitUndoOrtho::KromitUndoOrtho(const KromitOrtho* kortho) :
     snap = kortho->snap();
 }
 
+KromitUndoOrtho::~KromitUndoOrtho() {}
+
 // KromitUndoOrtho::create_from_undo_item
 //
 KromitItem* KromitUndoOrtho::create_from_undo_item() const {

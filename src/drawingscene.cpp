@@ -11,14 +11,19 @@
 #include "kromitpath.h"
 #include "kromitpixmap.h"
 #include "kromittext.h"
+#include "kromitdash.h"
 #include "utility.h"
 
 // DrawingScene::DrawingScene
 //
 DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     // fix geometry, otherwise scene moves around when items are added
-    setSceneRect(QGuiApplication::primaryScreen()->geometry());
-    qDebug() << "scene rect" << sceneRect();
+    QRectF r = QGuiApplication::primaryScreen()->geometry();
+    const double k = QGuiApplication::primaryScreen()->devicePixelRatio();
+    r.setWidth(round(r.width() * k));
+    r.setHeight(round(r.height() * k));
+
+    setSceneRect(r);
 
     // set default tool settings
     _settings.tool = TOOL_SMOOTH;
@@ -73,9 +78,38 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
             this,
             &DrawingScene::slot_keyPressed,
             Qt::QueuedConnection);
+    connect(this,
+            &DrawingScene::save_scene,
+            this,
+            &DrawingScene::slot_save_scene,
+            Qt::QueuedConnection);
+    connect(this,
+            &DrawingScene::restore_scene,
+            this,
+            &DrawingScene::slot_restore_scene,
+            Qt::QueuedConnection);
+
+    _dash = new KromitDash(nullptr, sceneRect().width(), 25);
+    _dash->setPos(0,0);
+    addItem(_dash);
+
+    connect(
+        this, &DrawingScene::set_color, this, &DrawingScene::slot_set_color);
+    connect(
+        this, &DrawingScene::set_arrow, this, &DrawingScene::slot_set_arrow);
+
+    emit set_arrow(ARROW_END);
+
+    _dash->add_scene(1);
+    _dash->select_scene(1);
 }
 
-DrawingScene::~DrawingScene() {}
+DrawingScene::~DrawingScene() {
+    for (auto &it : undo_store) delete it.second;
+    undo_store.clear();
+    undo_records.clear();
+    redo_records.clear();
+}
 
 KromitItem *DrawingScene::find_item(int ID) const {
     for (auto &item : items()) {
@@ -135,7 +169,7 @@ bool DrawingScene::event(QEvent *event) {
 
         case QEvent::TabletRelease: {
             QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-                        QPointF p = ev->scenePosition();
+            QPointF p = ev->scenePosition();
             double pressure = ev->pressure();
             Q_UNUSED(pressure);
             const auto mods = ev->modifiers();
@@ -228,7 +262,10 @@ void DrawingScene::slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods) {
             textitem->finalize();
         }
     }
-    if (_settings.tool == TOOL_SELECT) {
+
+    if (handle_dash_clicks(p)) {
+        //
+    } else if (_settings.tool == TOOL_SELECT) {
         SelectType sel = SEL_SINGLE;
         if (mods & Qt::ControlModifier)
             sel = SEL_TOGGLE;
@@ -296,17 +333,24 @@ void DrawingScene::slot_keyPressed(int key,
                                    Qt::KeyboardModifiers mods,
                                    QString text) {
     if (text == "<") {
-        _settings.arrow_type = ARROW_START;
+        emit set_arrow(ARROW_START);
     } else if (text == ">") {
-        _settings.arrow_type = ARROW_END;
+        emit set_arrow(ARROW_END);
     } else if (text == "=") {
-      qDebug() << "arrow <-->";
-        _settings.arrow_type = ARROW_DOUBLE;
+        emit set_arrow(ARROW_DOUBLE);
     } else if (text == "-") {
-        _settings.arrow_type = ARROW_NONE;
+        emit set_arrow(ARROW_NONE);
     }
 
-        if (mods == Qt::ShiftModifier) {
+    if (mods == (Qt::ShiftModifier | Qt::ControlModifier)) {
+        switch (key) {
+            case Qt::Key_Delete: {
+                clear_scene();
+            } break;
+        }
+    }
+
+    if (mods == Qt::ShiftModifier) {
         switch (key) {
             case Qt::Key_G: {
                 _settings.tool = TOOL_PIXMAP;
@@ -320,7 +364,14 @@ void DrawingScene::slot_keyPressed(int key,
 
     if (mods == Qt::NoModifier) {
         switch (key) {
-            case Qt::Key_Delete: {
+            case Qt::Key_F1:
+                if (_dash->isVisible())
+                    _dash->hide();
+                else
+                    _dash->show();
+                break;
+
+        case Qt::Key_Delete: {
                 delete_selection();
             } break;
 
@@ -442,10 +493,8 @@ void DrawingScene::slot_keyPressed(int key,
         }
     }
 
-    if (std::uint32_t col = Color::get_color(key, mods)) {
-        _settings.color = QColor(
-            col >> 24, (col >> 16) & 0xff, (col >> 8) & 0xff, col & 0xff);
-    }
+    if (std::uint32_t col = Color::get_color(key, mods))
+        slot_set_color(Color::qcolor_from_uint32(col));
 }
 
 // DrawingScene::update_selection_frame
@@ -497,7 +546,6 @@ void DrawingScene::delete_selection() {
             item->deselect();
             item->pgc();
             removeItemSafely(item);
-            // delete item;
             rec.ids_to_add.insert(id);
             undo_store.insert({id, undo_item});
         }
@@ -536,6 +584,44 @@ void DrawingScene::handle_selection_clicks(const QPointF &p, SelectType sel) {
         }
     }
     update_selection_frame();
+}
+
+// DrawingScene::dash_clicked
+//
+// check if a dashboard item clicked
+//
+bool DrawingScene::handle_dash_clicks(const QPointF &p) {
+    if (_dash->isVisible())
+        for (auto &item : items()) {
+            const auto itype = item->type();
+            if (itype > GFX_DASH_MIN && itype < GFX_DASH_MAX) {
+                auto *ditem = static_cast<DashIcon *>(item);
+                if (ditem->contains(ditem->mapFromScene(p))) {
+                    const auto type = ditem->data(KromitItem::KeyDash).toInt();
+                    const auto data =
+                        ditem->data(KromitItem::KeyDashAux).toInt();
+                    qDebug() << "Dash hit:" << type << data;
+                    switch (type & DashIcon::DashMask) {
+                        case DashIcon::DashCol:
+                            emit set_color(Color::qcolor_from_uint32(data));
+                            break;
+                        case DashIcon::DashScene:
+                            // store scene in current id, load other id and make
+                            // it active !
+                            break;
+                        case DashIcon::DashArrow:
+                            emit set_arrow(static_cast<ArrowType>(data));
+                            break;
+                        case DashIcon::DashSetup:
+                            // show setup !
+                            break;
+                    }
+
+                    return true;
+                }
+            }
+        }
+    return false;
 }
 
 // DrawingScene::handle_clicked
@@ -619,7 +705,8 @@ void DrawingScene::handle_transformation_move(const QPointF &p,
 // DrawingScene::handle_transformation_release
 //
 void DrawingScene::handle_transformation_release(const QPointF &p) {
-    trans.m.reset();  // not really required
+    trans.m.reset();
+    trans.handle = KromitFrame::POS_NONE;
     update_selection_frame();
 }
 
@@ -638,7 +725,6 @@ void DrawingScene::undo() {
             KromitUndoItem *undo_item = ptr->create_undo_item();
             ptr->pgc();
             removeItemSafely(ptr);
-            // delete ptr;
             undo_store.insert({id, undo_item});
         } else {
             qDebug() << "undo: Could not find item" << id << "ptr=" << ptr;
@@ -649,6 +735,7 @@ void DrawingScene::undo() {
         if (it != undo_store.end()) {
             KromitItem *item = it->second->create_from_undo_item();
             addItem(item);
+            delete it->second;
             undo_store.erase(it);
         } else {
             qDebug() << "undo: Could not find item" << id;
@@ -675,7 +762,6 @@ void DrawingScene::redo() {
             KromitUndoItem *redo_item = ptr->create_undo_item();
             ptr->pgc();
             removeItemSafely(ptr);
-            //            delete ptr;
             undo_store.insert({id, redo_item});
         } else {
             qDebug() << "redo: Could not find item" << id << "ptr=" << ptr;
@@ -686,6 +772,7 @@ void DrawingScene::redo() {
         if (it != undo_store.end()) {
             KromitItem *item = it->second->create_from_undo_item();
             addItem(item);
+            delete it->second;
             undo_store.erase(it);
         } else {
             qDebug() << "redo: Could not find item" << id;
@@ -728,7 +815,9 @@ void DrawingScene::garbage_collect() {
         }
 
         std::erase_if(undo_store, [&](auto &v) -> bool {
-            return !ids_in_undoredo.contains(v.first);
+            bool do_erase = !ids_in_undoredo.contains(v.first);
+            if (do_erase) delete v.second;
+            return do_erase;
         });
 
         // remove undo or redo operations that reference objects that no
@@ -814,13 +903,15 @@ void DrawingScene::unstash_scene() {
 
 void DrawingScene::fix_geometry(QRect real_rect) {
     // this only yields the top left corner correctly...
-    QRect r = QGuiApplication::primaryScreen()->geometry();
-    real_rect.adjust(-r.left(), -r.top(), -r.left(), -r.top());
-    setSceneRect(real_rect);
+    // QRect r = QGuiApplication::primaryScreen()->geometry();
+    // real_rect.adjust(-r.left(), -r.top(), -r.left(), -r.top());
+    // setSceneRect(real_rect);
+  qDebug() << "real rect" << real_rect << " scene_rect " << sceneRect();
 }
 
 void DrawingScene::set_background(QPixmap px) {
     clear_background();
+    if (px.isNull()) return;
     _background_item = addPixmap(px);
     _background_item->setOffset(0, 0);
     _background_item->setZValue(-1000.0);
@@ -847,6 +938,7 @@ void DrawingScene::slot_dynamic_updates() {
                     // any_deleted = true;
                     if (_selected_items.contains(kitem))
                         selected_deleted = true;
+                    kitem->pgc();
                     removeItemSafely(kitem);
                 }
             }
@@ -868,4 +960,146 @@ void DrawingScene::init_tool() {
             break;
         }
     }
+}
+
+// ----------------------- save / load scenes ------------------------
+
+// important: the same undo item pointer must not be saved in two
+// places, otherwise this will eventually cause a double deletion!
+
+void DrawingScene::slot_save_scene(int id) {
+    std::cerr << "save_scene " << id << "\n";
+
+    clear_selection();
+
+    {  // delete saved scene if it already exists
+        auto it = saved_scenes.find(id);
+        if (it != saved_scenes.end()) {
+            it->second.free_items();
+            saved_scenes.erase(it);  // TODO: causes crash ! but why?
+        }
+    }
+
+    SavedScene scene;
+
+    // copy settings
+    scene.settings = _settings;
+
+    // save and remove background, if any
+    if (_background_item) {
+        scene.background = _background_item->pixmap();
+        clear_background();
+    }
+
+    // copy over undo/redo records
+    scene.undo_records = undo_records;
+    scene.redo_records = redo_records;
+    undo_records.clear();
+    redo_records.clear();
+
+    // CAREFUL: here the undo record pointer is moved, but the item
+    // itself remains allocated where it is
+    scene.undo_store = undo_store;
+    undo_store.clear();
+
+    // construct records in gfxitems
+    for (auto &it : items()) {
+        if (it->type() > GFX_SELECTABLE) {
+            KromitItem *kitem = static_cast<KromitItem *>(it);
+            auto id = kitem->data(KromitItem::KeyID).toInt();
+            KromitUndoItem *undo_item = kitem->create_undo_item();
+            kitem->pgc();
+            removeItemSafely(kitem);
+            scene.gfxitems.insert({id, undo_item});
+        }
+    }
+
+    // insert everything into map with saved scenes
+    saved_scenes.insert({id, scene});
+    std::cerr << "save_scene " << id << " -- done\n";
+}
+
+void DrawingScene::slot_restore_scene(int id) {
+    std::cerr << "restore_scene " << id << "\n";
+
+    clear_selection();
+    // find the stored scene, and return if it does not exist
+    auto it = saved_scenes.find(id);
+    if (it == saved_scenes.end()) {
+        std::cerr << "- scene not found !\n";
+        return;
+    }
+
+    auto &scene = it->second;
+
+    // the scene must be empty to start with
+    clear_scene();
+
+    // copy settings
+    _settings = scene.settings;
+
+    // restore background
+    set_background(scene.background);
+
+    undo_records = scene.undo_records;
+    redo_records = scene.redo_records;
+    scene.undo_records.clear();
+    scene.redo_records.clear();
+
+    // copy over the undo_store
+    // IMPORTANT: the undo item references in the scene are removed,
+    // so no double pointers to the same item remain!
+    undo_store = scene.undo_store;
+    scene.undo_store.clear();
+
+    // reconstruct all visible items
+    for (auto &it : scene.gfxitems) {
+        KromitItem *item = it.second->create_from_undo_item();
+        std::cerr << "- restoring " << item << "\n";
+        addItem(item);
+    }
+
+    // there may be dynamic items that were restored
+    dyn_tick->start();
+
+    // the saved scene is NOT erased here, because we need it as a
+    // placeholder:
+
+    // saved_scenes.erase(it);
+}
+
+// DrawingScene::clear_scene
+//
+// remove everything, cannot be undone
+//
+void DrawingScene::clear_scene() {
+    clearSelection();
+
+    // remove background, if any
+    if (_background_item) clear_background();
+
+    for (auto &it : undo_store) delete it.second;
+    undo_store.clear();
+
+    redo_records.clear();
+    undo_records.clear();
+
+    // remove all items
+    for (auto &it : items()) {
+        if (it->type() > GFX_SELECTABLE) {
+            KromitItem *kitem = static_cast<KromitItem *>(it);
+            kitem->pgc();
+            removeItemSafely(kitem);
+        }
+    }
+}
+
+void DrawingScene::slot_set_color(const QColor& color) {
+    _settings.color = color;
+    _dash->select_color(color);
+}
+
+void DrawingScene::slot_set_arrow(ArrowType type) {
+    _settings.arrow_type = type;
+    _dash->select_arrow(type);
 }

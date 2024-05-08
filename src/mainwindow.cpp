@@ -14,6 +14,8 @@
 #include <QShortcut>
 #include <QTimer>
 #include <iostream>
+#include <QGuiApplication>
+#include <QWindow>
 
 #include "drawingscene.h"
 #include "drawingview.h"
@@ -23,6 +25,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     scene = new DrawingScene;
     view = new DrawingView(scene);
     setCentralWidget(view);
+
+    //???    connect(QGuiApplication::primaryScreen(), &QGuiApplication::primaryScreenChanged, this, &MainWindow::slot_screen_changed);
+    slot_screen_changed(nullptr);
 
     // setup timer for snapshot delay
     snapshot_timer = new QTimer(this);
@@ -50,6 +55,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(scene, &DrawingScene::set_opaque, [this]() {
         this->setWindowOpacity(1);
     });
+
+
 
     // set up keyboard shortcut actions
     QAction *quitAction = new QAction(tr("Quit"), this);
@@ -96,13 +103,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     addAction(tabAction);
     tabAction->setShortcut(Qt::Key_Tab);
     connect(tabAction, &QAction::triggered, this, &MainWindow::tab);
-
-    // TODO: this is just a test, need proper save dialogs,
-    QAction *saveAction = new QAction(tr("Save"), this);
-    addAction(saveAction);
-    saveAction->setShortcut(Qt::CTRL | Qt::Key_S);
-    connect(
-        saveAction, &QAction::triggered, [this]() { this->save("test.png"); });
 }
 
 MainWindow::~MainWindow() {
@@ -110,6 +110,13 @@ MainWindow::~MainWindow() {
     delete scene;
     delete snapshot_timer;
     delete partial_snapshot_timer;
+}
+
+void MainWindow::slot_screen_changed(QScreen *) {
+    screen_rect = QGuiApplication::primaryScreen()->geometry();
+    pixel_ratio = QGuiApplication::primaryScreen()->devicePixelRatio();
+    qDebug() << "Screen changed:" << screen_rect << " pixelRatio=" << pixel_ratio << "view rect: " << view->rect();;
+    view->slot_screen_rect_changed(screen_rect);
 }
 
 void MainWindow::quit() {
@@ -165,7 +172,10 @@ void MainWindow::take_partial_screenshot(const QRect &geometry) {
 
 void MainWindow::screenshot_step1() {
     QPixmap px = screen()->grabWindow();
+    auto rect = px.rect().adjusted(1,1,-1,-1);
+    qDebug() << rect;
     scene->set_background(px);
+    setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
     show();
 }
 
@@ -177,7 +187,9 @@ void MainWindow::partial_screenshot_step1() {
                      -screenRect.top());
     QPixmap px = screen()->grabWindow().copy(shot_rect);
     show();
-    setStyleSheet("background:black;");
+    setWindowOpacity(1.0);
+    setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
+    //    setStyleSheet("background:black;");
     emit send_pixmap(px);
 }
 
@@ -199,12 +211,14 @@ void MainWindow::toggle() {
     on_top = !on_top;
 }
 
+/*
 void MainWindow::fix_geometry() {
     // TODO: this is an ugly hack because otherwise we don't get the
     // full screen resolution in multi-monitor mode
     QRect real_size = screen()->grabWindow().rect();
     scene->fix_geometry(real_size);
 }
+*/
 
 void MainWindow::save(const QString &filename) {
     setWindowOpacity(1.0);

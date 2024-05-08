@@ -33,6 +33,25 @@ Color::Color(const std::string& name,
     this->numeric = hex;
 }
 
+std::uint32_t Color::uint32_from_qcolor(const QColor& color) {
+    return (color.red() << 24) + (color.green() << 16) + (color.blue() << 8) +
+           color.alpha();
+}
+
+QColor Color::qcolor_from_uint32(std::uint32_t color) {
+    return QColor(
+        color >> 24, (color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
+}
+
+int Color::qcolor_find_index(std::uint32_t color) {
+    const auto it = std::find_if(
+        Color::color_table.cbegin(),
+        Color::color_table.cend(),
+        [&color](const Color& item) { return item.numeric == color; });
+    if (it == Color::color_table.cend()) return -1;
+    return std::distance(Color::color_table.cbegin(), it);
+}
+
 std::uint32_t Color::get_color(std::uint32_t key, std::uint32_t mod)  {
   for (const auto& c : color_table) {
       if (c.key1 == key && ((mod == 0 && c.mod1 == 0) || (c.mod1 & mod)))

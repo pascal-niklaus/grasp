@@ -79,6 +79,7 @@ class KromitRect : public KromitItem {
 class KromitUndoRect : public KromitUndoItem {
   public:
     explicit KromitUndoRect(const KromitRect* kpath);
+    virtual ~KromitUndoRect();
 
     virtual KromitItem* create_from_undo_item() const override;
 

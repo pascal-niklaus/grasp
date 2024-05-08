@@ -46,11 +46,21 @@ std::ostream &operator<<(std::ostream &os, const TransformCaps &cap);
 enum GfxItemType : int {
     GFX_ARROW = QGraphicsItem::UserType + 1,
     GFX_ARROWITEM,
+    // --------------------------- dash ----------------------------
+    GFX_DASH,
+    GFX_DASH_MIN,
+    GFX_SCENE,
+    GFX_DASHICON,
+    GFX_ARROWICON,
+    GFX_COLOR,
+    GFX_DASH_MAX,
+    // ---------------------- selection frame ----------------------
     GFX_HANDLE,
     GFX_ROTATEHANDLE,
     GFX_MOVEHANDLE,
     GFX_SELFRAME,
-    GFX_SELECTABLE,  // all items that follow are selectable
+    // ----------- all items that follow are selectable ------------
+    GFX_SELECTABLE,
     GFX_PATH,
     GFX_PATHW,
     GFX_SMOOTH,

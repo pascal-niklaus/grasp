@@ -1,3 +1,4 @@
+
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -39,8 +40,11 @@ class MainWindow : public QMainWindow {
   private slots:
     void screenshot_step1();
     void partial_screenshot_step1();
+    void slot_screen_changed(QScreen *);
 
   private:
+    QRect screen_rect;
+    double pixel_ratio = 1.0;
     QRect shot_rect;
     bool on_top = true;
     DrawingScene *scene = nullptr;

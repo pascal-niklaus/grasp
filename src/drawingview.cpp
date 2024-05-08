@@ -4,7 +4,7 @@
 #include <QEvent>
 #include <QApplication>
 #include <QDirIterator>
-
+#include <QResizeEvent>
 
 DrawingView::DrawingView(DrawingScene *scene, QWidget *parent) :
     QGraphicsView(scene, parent) {
@@ -15,8 +15,8 @@ DrawingView::DrawingView(DrawingScene *scene, QWidget *parent) :
     // setCacheMode(QGraphicsView::CacheBackground);
     // setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
 
-    QDirIterator it(":", QDirIterator::Subdirectories);
-    while (it.hasNext()) { qDebug() << it.next(); }
+    // QDirIterator it(":", QDirIterator::Subdirectories);
+    // while (it.hasNext()) { qDebug() << it.next(); }
 
     QPixmap px;
     px = QPixmap(":/cursors/cursors/text.png");
@@ -51,6 +51,15 @@ DrawingView::DrawingView(DrawingScene *scene, QWidget *parent) :
 
 DrawingView::~DrawingView() {}
 
+// DrawingView::resizeEvent
+//
+// detect size change events and adjust scene accordingly
+//
+void DrawingView::resizeEvent(QResizeEvent *event) {
+    const auto sz = event->size();
+    if (sz.width() > 500 && screen_rect.width() > 500) fitInView(screen_rect);
+}
+
 bool DrawingView::event(QEvent *event) {
     switch (event->type()) {
         case QEvent::TabletPress:
@@ -61,6 +70,14 @@ bool DrawingView::event(QEvent *event) {
         default:
             return QGraphicsView::event(event);
     }
+}
+
+void DrawingView::slot_screen_rect_changed(QRect rect) {
+    qDebug() << "view::screen_rect_changed" << rect << width();
+    rect.adjust(1, 1, -1, -1);
+    screen_rect = rect;
+    setSceneRect(rect);
+    fitInView(rect);
 }
 
 void DrawingView::slot_tool_changed(ToolType tool) {

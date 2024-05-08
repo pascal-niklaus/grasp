@@ -35,6 +35,7 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   undo.cpp undo.h
   utility.cpp utility.h
   arrowitem.cpp arrowitem.h
+  kromitdash.cpp kromitdash.h
   kromititem.cpp kromititem.h
   kromitpath.cpp kromitpath.h
   kromitsmooth.cpp kromitsmooth.h
@@ -63,6 +64,11 @@ qt_add_resources(kromit "cursors"
     FILES ../cursors/fader.png
     FILES ../cursors/highlight.png
     FILES ../cursors/grab.png
+)
+
+qt_add_resources(kromit "icons"
+    PREFIX "/icons"
+    FILES ../icons/settings.png
 )
 
 target_link_libraries(kromit PRIVATE

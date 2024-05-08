@@ -263,6 +263,8 @@ KromitUndoText::KromitUndoText(const KromitText* ktext) :
     path = ktext->path();
 }
 
+KromitUndoText::~KromitUndoText() {}
+
 // KromitUndoText::create_from_undo_item
 //
 KromitItem* KromitUndoText::create_from_undo_item() const {

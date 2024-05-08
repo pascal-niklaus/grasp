@@ -156,6 +156,8 @@ KromitUndoRect::KromitUndoRect(const KromitRect* krect) :
     rect = krect->rect();
 }
 
+KromitUndoRect::~KromitUndoRect() {}
+
 // KromitUndoRect::create_from_undo_item
 //
 KromitItem* KromitUndoRect::create_from_undo_item() const {

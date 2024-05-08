@@ -115,11 +115,11 @@ QPainterPath KromitLine::shape() const {
 // prepareGeometryChange; therefore, the same rect is returned
 // regardless of whether it is selected or not
 QRectF KromitLine::boundingRect() const {
-  //if (isSelected()) {
-        return outline(20).boundingRect();
-        // } else {
-        return QRectF(0, 0, 0, 0);
-        // }
+    // if (isSelected()) {
+    return outline(20).boundingRect();
+    // } else {
+    return QRectF(0, 0, 0, 0);
+    // }
 };
 
 // KromitLine::paint
@@ -144,7 +144,9 @@ void KromitLine::repos_arrows() {
     const QPointF& p2 = _line_item->line().p2();
     const double rot = atan2(p2.y() - p1.y(), p2.x() - p1.x());
     const double arrow_width = _pen.widthF() * _arrow_size;
-    if (_arrow_type & ARROW_START) { set_arrow_start(p1, arrow_width, rot + M_PI); }
+    if (_arrow_type & ARROW_START) {
+        set_arrow_start(p1, arrow_width, rot + M_PI);
+    }
     if (_arrow_type & ARROW_END) { set_arrow_end(p2, arrow_width, rot); }
 }
 
@@ -168,10 +170,15 @@ void KromitLine::dump(std::ostream& os) const {
 //
 KromitUndoLine::KromitUndoLine(const KromitLine* kline) :
     KromitUndoItem(static_cast<const KromitItem*>(kline)) {
+    std::cerr << "KUL ctor" << static_cast<void*>(this) << " id=" << id << "\n";
     pen = kline->pen();
     arrow_type = kline->arrow_type();
     arrow_size = kline->arrow_size();
     line = kline->line();
+}
+
+KromitUndoLine::~KromitUndoLine() {
+    std::cerr << "KUL dtor" << static_cast<void*>(this) << " id=" << id << "\n";
 }
 
 // KromitUndoLine::create_from_undo_item

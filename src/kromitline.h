@@ -72,7 +72,7 @@ class KromitLine : public ArrowItem {
 class KromitUndoLine : public KromitUndoItem {
   public:
     explicit KromitUndoLine(const KromitLine* kline);
-
+    virtual ~KromitUndoLine();
     virtual KromitItem* create_from_undo_item() const override;
 
     QPen pen;

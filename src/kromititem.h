@@ -1,10 +1,10 @@
 #ifndef KROMITITEM_H
 #define KROMITITEM_H
 
+#include <QTransform>
+
 #include "kromit.h"
 #include "tools.h"
-
-#include <QTransform>
 
 class QPointF;
 class KromitUndoItem;
@@ -16,7 +16,9 @@ class KromitUndoItem;
 //
 class KromitItem : public QGraphicsItem {
   public:
-    enum { KeyID = 1, KeyHandle = 1 };
+    // data QVariant members
+    enum { KeyID = 1, KeyHandle = 2, KeyDash = 3, KeyDashAux = 4 };
+
     enum KeyResult {
         KEY_IGNORED,    // this particular keystroke was not consumed
         KEY_PROCESSED,  // this keystroke was consumed
@@ -30,7 +32,7 @@ class KromitItem : public QGraphicsItem {
     };
 
     KromitItem(QGraphicsItem* parent) : QGraphicsItem(parent) {}
-    ~KromitItem() {}
+    virtual ~KromitItem() = 0;
 
     // - undo system
     virtual KromitUndoItem* create_undo_item() const = 0;
@@ -74,8 +76,8 @@ class KromitItem : public QGraphicsItem {
 //
 class KromitUndoItem {
   public:
-    explicit KromitUndoItem(const KromitItem * item);
-    ~KromitUndoItem() = default;
+    explicit KromitUndoItem(const KromitItem* item);
+    virtual ~KromitUndoItem() = 0;
 
     virtual KromitItem* create_from_undo_item() const = 0;
     virtual void dump(std::ostream& os) const {};

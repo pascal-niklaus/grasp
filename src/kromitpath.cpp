@@ -209,6 +209,8 @@ KromitUndoPath::KromitUndoPath(const KromitPath* kpath) :
     xy_path = kpath->path();
 }
 
+KromitUndoPath::~KromitUndoPath() {}
+
 // KromitUndoPath::create_from_undo_item
 //
 KromitItem* KromitUndoPath::create_from_undo_item() const {

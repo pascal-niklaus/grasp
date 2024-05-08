@@ -14,11 +14,15 @@ class DrawingView : public QGraphicsView {
 
   public slots:
     void slot_tool_changed(ToolType tool);
+    void slot_screen_rect_changed(QRect rect);
 
   protected:
     virtual bool event(QEvent *event);
+    virtual void resizeEvent(QResizeEvent *event);
 
   private:
+    QRect screen_rect;
+
     QCursor cursor_text;
     QCursor cursor_smooth;
     QCursor cursor_line;

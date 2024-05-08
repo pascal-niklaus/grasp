@@ -7,6 +7,8 @@
 #include <QGraphicsPolygonItem>
 #include <QGraphicsRectItem>
 
+KromitItem::~KromitItem() {}
+
 bool KromitItem::select() {
     prepareGeometryChange();
     if (!isSelected()) {
@@ -108,6 +110,8 @@ KromitUndoItem::KromitUndoItem(const KromitItem * item) {
     type = item->type();
     id = item->data(KromitItem::KeyID).toInt();
 }
+
+KromitUndoItem::~KromitUndoItem() {}
 
 std::ostream& operator<<(std::ostream& os, const KromitUndoItem& item) {
     os << KromitItem::type_txt(item.type).toStdString() << ":";

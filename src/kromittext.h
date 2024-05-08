@@ -90,6 +90,7 @@ class KromitText : public KromitItem {
 class KromitUndoText : public KromitUndoItem {
   public:
     explicit KromitUndoText(const KromitText* kpath);
+    virtual ~KromitUndoText();
 
     virtual KromitItem* create_from_undo_item() const override;
 

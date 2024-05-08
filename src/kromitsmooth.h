@@ -94,6 +94,7 @@ class KromitSmooth : public ArrowItem {
 class KromitUndoSmooth : public KromitUndoItem {
   public:
     explicit KromitUndoSmooth(const KromitSmooth* kpath);
+    virtual ~KromitUndoSmooth();
 
     virtual KromitItem* create_from_undo_item() const override;
 
