@@ -8,6 +8,7 @@
 #include <QGraphicsScene>
 
 class QGraphicsItemGroup;
+class QMenu;
 
 class Transformation {
   public:
@@ -77,6 +78,9 @@ class SavedScene {
 //
 class DrawingScene : public QGraphicsScene {
     Q_OBJECT
+  private:
+    enum MenuItem : int { MENU_CANCEL = 0, MENU_DELETE, MENU_NEW, MENU_SAVE };
+
   public:
     explicit DrawingScene(QObject *parent = nullptr);
     ~DrawingScene();
@@ -108,7 +112,7 @@ class DrawingScene : public QGraphicsScene {
 
   signals:
     void keyPressed(int, Qt::KeyboardModifiers, QString);
-    void pointerPressed(QPointF, Qt::KeyboardModifiers);
+    void pointerPressed(QPointF, Qt::MouseButtons, Qt::KeyboardModifiers);
     void pointerMoved(QPointF, Qt::KeyboardModifiers);
     void pointerReleased(QPointF, Qt::KeyboardModifiers);
     void take_partial_screenshot(const QRect &rect);
@@ -119,17 +123,25 @@ class DrawingScene : public QGraphicsScene {
     void restore_scene(int id);
     void set_color(const QColor &color);
     void set_arrow(ArrowType type);
+    void delete_scene(int id);
 
   public slots:
+    void slot_new();
+    void slot_set_background(QPixmap px);
+    void slot_clear_background();
     void slot_pixmap(const QPixmap &pixmap);
-    void set_background(QPixmap px);
-    void clear_background();
     void slot_set_color(const QColor &color);
+    void slot_set_color_from_index(int index);
+
+    void slot_set_tool(ToolType tool);
     void slot_set_arrow(ArrowType type);
+    void slot_set_width(int width);
 
   private slots:
     void slot_keyPressed(int key, Qt::KeyboardModifiers mods, QString text);
-    void slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods);
+    void slot_pointerPressed(QPointF p,
+                             Qt::MouseButtons buttons,
+                             Qt::KeyboardModifiers mods);
     void slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods);
     void slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods);
 
@@ -137,6 +149,7 @@ class DrawingScene : public QGraphicsScene {
 
     void slot_save_scene(int id);
     void slot_restore_scene(int id);
+    void slot_delete_scene(int id);
 
   private:
     void update_selection_frame();
@@ -147,39 +160,46 @@ class DrawingScene : public QGraphicsScene {
 
     KromitItem *find_item(int id) const;
 
-  bool handle_dash_clicks(const QPointF &p);
-  void handle_selection_clicks(const QPointF &p, SelectType sel);
-  bool handle_transformation_clicks(const QPointF &p);
-  void handle_transformation_move(const QPointF &p, Qt::KeyboardModifiers mods);
-  void handle_transformation_release(const QPointF &p);
+    bool handle_dash_clicks(const QPointF &p,
+                            const Qt::MouseButtons buttons,
+                            const Qt::KeyboardModifiers mods);
+    void handle_selection_clicks(const QPointF &p, SelectType sel);
+    bool handle_transformation_clicks(const QPointF &p);
+    void handle_transformation_move(const QPointF &p,
+                                    Qt::KeyboardModifiers mods);
+    void handle_transformation_release(const QPointF &p);
 
-  void removeItemSafely(QGraphicsItem *item);
+    void removeItemSafely(QGraphicsItem *item);
 
-private:
-  Tools::Settings _settings;
-  KromitDash *_dash;
+    int new_scene_id(void);
 
-  QGraphicsItem *_current_item = nullptr;
+  private:
+    Tools::Settings _settings;
+    KromitDash *_dash;
 
-  QGraphicsPixmapItem *_background_item = nullptr;
+    QGraphicsItem *_current_item = nullptr;
 
-  bool _feed_keystrokes = false;
-  QTimer *dyn_tick = nullptr;
+    QGraphicsPixmapItem *_background_item = nullptr;
 
-  KromitFrame *_selection_frame = nullptr;
-  QList<KromitItem *> _selected_items;
-  Transformation trans;
+    bool _feed_keystrokes = false;
+    QTimer *_dyn_tick = nullptr;
+    QMenu *_rmb_menu = nullptr;
 
-  // undo records
-  std::unordered_map<int, KromitUndoItem *> undo_store;
-  std::vector<UndoRecord> undo_records;
-  std::vector<UndoRecord> redo_records;
+    KromitFrame *_selection_frame = nullptr;
+    QList<KromitItem *> _selected_items;
+    Transformation _trans;
 
-  // temporarily stash entire scene here during grabbing
-  Stash stash;
+    // undo records
+    std::unordered_map<int, KromitUndoItem *> _undo_store;
+    std::vector<UndoRecord> _undo_records;
+    std::vector<UndoRecord> _redo_records;
 
-  // saved scenes
-    std::unordered_map<int, SavedScene> saved_scenes;
+    // temporarily stash entire scene here during grabbing
+    Stash _stash;
+
+    // scenes
+    int _current_scene = 0;
+    std::unordered_map<int, SavedScene> _saved_scenes;
 };
 
 #endif  // DRAWINGSCENE_H

@@ -1,6 +1,6 @@
+#include "drawingscene.h"
+#include "drawingview.h"
 #include "mainwindow.h"
-
-#include <qnamespace.h>
 
 #include <QAction>
 #include <QFile>
@@ -13,179 +13,213 @@
 #include <QScreen>
 #include <QShortcut>
 #include <QTimer>
-#include <iostream>
 #include <QGuiApplication>
 #include <QWindow>
 
-#include "drawingscene.h"
-#include "drawingview.h"
+#include <iostream>
 
+// MainWindow::MainWindow
+//
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // graphics scene
-    scene = new DrawingScene;
-    view = new DrawingView(scene);
-    setCentralWidget(view);
+    _scene = new DrawingScene;
+    _view = new DrawingView(_scene);
+    setCentralWidget(_view);
 
-    //???    connect(QGuiApplication::primaryScreen(), &QGuiApplication::primaryScreenChanged, this, &MainWindow::slot_screen_changed);
     slot_screen_changed(nullptr);
 
     // setup timer for snapshot delay
-    snapshot_timer = new QTimer(this);
-    snapshot_timer->setSingleShot(true);
-    snapshot_timer->setInterval(10);
-    connect(
-        snapshot_timer, &QTimer::timeout, this, &MainWindow::screenshot_step1);
-
-    // setup timer for pixmap grabbing
-    partial_snapshot_timer = new QTimer(this);
-    partial_snapshot_timer->setSingleShot(true);
-    partial_snapshot_timer->setInterval(10);
-    connect(partial_snapshot_timer,
+    _snapshot_timer = new QTimer(this);
+    _snapshot_timer->setSingleShot(true);
+    _snapshot_timer->setInterval(10);
+    connect(_snapshot_timer,
             &QTimer::timeout,
             this,
-            &MainWindow::partial_screenshot_step1);
-    connect(this, &MainWindow::send_pixmap, scene, &DrawingScene::slot_pixmap);
-    connect(scene,
+            &MainWindow::slot_screenshot_step1);
+
+    // setup timer for pixmap grabbing
+    _partial_snapshot_timer = new QTimer(this);
+    _partial_snapshot_timer->setSingleShot(true);
+    _partial_snapshot_timer->setInterval(10);
+    connect(_partial_snapshot_timer,
+            &QTimer::timeout,
+            this,
+            &MainWindow::slot_partial_screenshot_step1);
+    connect(this, &MainWindow::send_pixmap, _scene, &DrawingScene::slot_pixmap);
+    connect(_scene,
             &DrawingScene::take_partial_screenshot,
             this,
-            &MainWindow::take_partial_screenshot);
-    connect(scene, &DrawingScene::set_transparent, [this]() {
+            &MainWindow::slot_grab_partial);
+    connect(_scene, &DrawingScene::set_transparent, [this]() {
         this->setWindowOpacity(.3);
     });
-    connect(scene, &DrawingScene::set_opaque, [this]() {
+    connect(_scene, &DrawingScene::set_opaque, [this]() {
         this->setWindowOpacity(1);
     });
-
-
 
     // set up keyboard shortcut actions
     QAction *quitAction = new QAction(tr("Quit"), this);
     addAction(quitAction);
     quitAction->setShortcut(Qt::CTRL | Qt::Key_Q);
-    connect(quitAction, &QAction::triggered, this, &MainWindow::quit);
+    connect(quitAction, &QAction::triggered, this, &MainWindow::slot_quit);
 
     QAction *grabAction = new QAction(tr("Grab"), this);
     addAction(grabAction);
     grabAction->setShortcut(Qt::CTRL | Qt::Key_G);
-    connect(grabAction, &QAction::triggered, [this]() {
-        this->take_screenshot("");
-    });
-
-    QAction *toggleAction = new QAction(tr("Toggle"), this);
-    addAction(toggleAction);
-    toggleAction->setShortcut(Qt::CTRL | Qt::Key_T);
-    connect(toggleAction, &QAction::triggered, this, &MainWindow::toggle);
-
-    QAction *topAction = new QAction(tr("Top"), this);
-    addAction(topAction);
-    topAction->setShortcut(Qt::CTRL | Qt::SHIFT | Qt::Key_T);
-    connect(topAction, &QAction::triggered, [this]() {
-        this->on_top = false;
-        this->toggle();
-    });
-
-    QAction *opaqAction = new QAction(tr("Opaq"), this);
+    connect(grabAction, &QAction::triggered, [this]() { this->slot_grab(); });
+  
+    QAction *opaqAction = new QAction(tr("Opacity"), this);
     addAction(opaqAction);
     opaqAction->setShortcut(Qt::CTRL | Qt::Key_O);
-    connect(opaqAction, &QAction::triggered, this, &MainWindow::cycle_opacity);
+    connect(
+        opaqAction, &QAction::triggered, this, &MainWindow::slot_cycle_opacity);
 
     QAction *undoAction = new QAction(tr("Undo"), this);
     addAction(undoAction);
     undoAction->setShortcut(Qt::CTRL | Qt::Key_Z);
-    connect(undoAction, &QAction::triggered, this, &MainWindow::undo);
+    connect(undoAction, &QAction::triggered, this, &MainWindow::slot_undo);
 
     QAction *redoAction = new QAction(tr("Redo"), this);
     addAction(redoAction);
     redoAction->setShortcut(Qt::CTRL | Qt::Key_Y);
-    connect(redoAction, &QAction::triggered, this, &MainWindow::redo);
+    connect(redoAction, &QAction::triggered, this, &MainWindow::slot_redo);
 
-    QAction *tabAction = new QAction(tr("Dash"), this);
-    addAction(tabAction);
-    tabAction->setShortcut(Qt::Key_Tab);
-    connect(tabAction, &QAction::triggered, this, &MainWindow::tab);
+
+    // this action is questionable and better set up as system-wide
+    // shortcut, because it obviously only works when the application
+    // has focus
+    QAction *toggleAction = new QAction(tr("Toggle"), this);
+    addAction(toggleAction);
+    toggleAction->setShortcut(Qt::CTRL | Qt::Key_T);
+    connect(toggleAction, &QAction::triggered, this, &MainWindow::slot_toggle);
 }
 
 MainWindow::~MainWindow() {
-    delete view;
-    delete scene;
-    delete snapshot_timer;
-    delete partial_snapshot_timer;
+    delete _view;
+    delete _scene;
+    delete _snapshot_timer;
+    delete _partial_snapshot_timer;
 }
 
 void MainWindow::slot_screen_changed(QScreen *) {
-    screen_rect = QGuiApplication::primaryScreen()->geometry();
-    pixel_ratio = QGuiApplication::primaryScreen()->devicePixelRatio();
-    qDebug() << "Screen changed:" << screen_rect << " pixelRatio=" << pixel_ratio << "view rect: " << view->rect();;
-    view->slot_screen_rect_changed(screen_rect);
+    _screen_rect = QGuiApplication::primaryScreen()->geometry();
+    _pixel_ratio = QGuiApplication::primaryScreen()->devicePixelRatio();
+    qDebug() << "Screen changed:" << _screen_rect
+             << " pixelRatio=" << _pixel_ratio
+             << "view rect: " << _view->rect();
+    _view->slot_screen_rect_changed(_screen_rect);
 }
 
-void MainWindow::quit() {
+void MainWindow::slot_quit() {
     close();
 }
 
-void MainWindow::cycle_opacity() {
-  if (_opacity < 0.5) {
-      _opacity = 1.0;
-      setStyleSheet("background:black;");
-  } else {
-      _opacity = 0.3;
-      setStyleSheet("background:transparent;");
-
-  }
-  setWindowOpacity(_opacity);
+void MainWindow::slot_cycle_opacity() {
+    if (_opacity < 0.5) {
+        _opacity = 1.0;
+        setStyleSheet("background:black;");
+    } else {
+        _opacity = 0.3;
+        setStyleSheet("background:transparent;");
+    }
+    setWindowOpacity(_opacity);
 }
 
-void MainWindow::undo() {
-    scene->undo();
+void MainWindow::slot_undo() {
+    _scene->undo();
 }
 
-void MainWindow::redo() {
-    scene->redo();
-}
-
-void MainWindow::tab() {
-    scene->tab();
+void MainWindow::slot_redo() {
+    _scene->redo();
 }
 
 // ------------------- commands received via dbus --------------------
 
-void MainWindow::change_color(const QString &color) {
-    qDebug() << "MainWindow::change_color" << color;
+void MainWindow::slot_change_color(int index) {
+    _scene->slot_set_color_from_index(index);
 }
 
-void MainWindow::take_screenshot(const QString &geometry) {
+void MainWindow::slot_change_tool(const QString &tool) {
+    if (tool == "pen") {
+        _scene->slot_set_tool(TOOL_PEN);
+    } else if (tool == "smooth") {
+        _scene->slot_set_tool(TOOL_SMOOTH);
+    } else if (tool == "line") {
+        _scene->slot_set_tool(TOOL_LINE);
+    } else if (tool == "rect") {
+        _scene->slot_set_tool(TOOL_RECT);
+    } else if (tool == "text") {
+        _scene->slot_set_tool(TOOL_TEXT);
+    } else if (tool == "ortho") {
+        _scene->slot_set_tool(TOOL_ORTHO);
+    } else if (tool == "fader") {
+        _scene->slot_set_tool(TOOL_FADER);
+    } else if (tool == "highlight") {
+        _scene->slot_set_tool(TOOL_HIGHLIGHT);
+    } else if (tool == "select") {
+        _scene->slot_set_tool(TOOL_SELECT);
+    } else if (tool == "grab") {
+        _scene->slot_set_tool(TOOL_PIXMAP);
+    } else {
+        std::cerr << "Unknown tool: " << tool.toStdString();
+    }
+}
+
+void MainWindow::slot_change_arrow(const QString &arrow) {
+    if (arrow == "->") {
+        _scene->slot_set_arrow(ARROW_END);
+    } else if (arrow == "<-") {
+        _scene->slot_set_arrow(ARROW_START);
+    } else if (arrow == "<->") {
+        _scene->slot_set_arrow(ARROW_DOUBLE);
+    } else {
+        _scene->slot_set_arrow(ARROW_NONE);
+    }
+}
+
+void MainWindow::slot_change_width(int width) {
+  if (width > 0 && width < 80)
+    _scene->slot_set_width(width);
+}
+
+void MainWindow::slot_grab_and_new() {
+    _scene->slot_new();
+    slot_grab();
+}
+
+void MainWindow::slot_grab() {
     hide();
     // 10 ms is too short
     // 50 ms seems to work
     // we use 100ms for safety
-    snapshot_timer->start(200);
+    _snapshot_timer->start(200);
 }
 
-void MainWindow::take_partial_screenshot(const QRect &geometry) {
+void MainWindow::slot_grab_partial(const QRect &geometry) {
     hide();
     // 10 ms is too short
     // 50 ms seems to work
     // we use 100ms for safety
-    shot_rect = geometry;
-    partial_snapshot_timer->start(200);
+    _shot_rect = geometry;
+    _partial_snapshot_timer->start(200);
 }
 
-void MainWindow::screenshot_step1() {
+void MainWindow::slot_screenshot_step1() {
     QPixmap px = screen()->grabWindow();
     auto rect = px.rect().adjusted(1,1,-1,-1);
-    qDebug() << rect;
-    scene->set_background(px);
+    qDebug() << "screenshot step 1:" << rect;
+    _scene->slot_set_background(px);
     setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
-    show();
+    slot_show();
 }
 
-void MainWindow::partial_screenshot_step1() {
+void MainWindow::slot_partial_screenshot_step1() {
     QRect screenRect = screen()->geometry();
-    shot_rect.adjust(-screenRect.left(),
+    _shot_rect.adjust(-screenRect.left(),
                      -screenRect.top(),
                      -screenRect.left(),
                      -screenRect.top());
-    QPixmap px = screen()->grabWindow().copy(shot_rect);
+    QPixmap px = screen()->grabWindow().copy(_shot_rect);
     show();
     setWindowOpacity(1.0);
     setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
@@ -193,8 +227,8 @@ void MainWindow::partial_screenshot_step1() {
     emit send_pixmap(px);
 }
 
-void MainWindow::toggle() {
-    if (on_top) {
+void MainWindow::slot_toggle() {
+    if (_on_top) {
         // ------------------------ hide window ------------------------
         setWindowState(Qt::WindowMinimized);
         setWindowFlags(
@@ -208,19 +242,20 @@ void MainWindow::toggle() {
         show();
     }
     show();
-    on_top = !on_top;
+    _on_top = !_on_top;
 }
 
-/*
-void MainWindow::fix_geometry() {
-    // TODO: this is an ugly hack because otherwise we don't get the
-    // full screen resolution in multi-monitor mode
-    QRect real_size = screen()->grabWindow().rect();
-    scene->fix_geometry(real_size);
+void MainWindow::slot_show() {
+    _on_top = false;
+    slot_toggle();
 }
-*/
 
-void MainWindow::save(const QString &filename) {
+void MainWindow::slot_hide() {
+    _on_top = true;
+    slot_toggle();
+}
+
+void MainWindow::slot_save(const QString &filename) {
     setWindowOpacity(1.0);
     setStyleSheet("background:black;");
     QPixmap px(size());

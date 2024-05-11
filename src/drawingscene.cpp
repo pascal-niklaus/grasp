@@ -5,6 +5,10 @@
 #include <QScreen>
 #include <QTabletEvent>
 #include <QTimer>
+#include <QMenu>
+#include <QAction>
+#include <QMessageBox>
+
 #include <chrono>
 
 #include "colors.h"
@@ -48,11 +52,25 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     addItem(_selection_frame);
     _selection_frame->hide();
 
-    // dynamic update timer
 
-    dyn_tick = new QTimer();
-    dyn_tick->setInterval(100);  // 100 milliseconds
-    connect(dyn_tick,
+    // prepare RMB menu
+    _rmb_menu = new QMenu();
+    {
+        QAction *action = _rmb_menu->addAction("Delete drawing");
+        action->setData(MENU_DELETE);
+        action = _rmb_menu->addAction("Save drawing");
+        action->setData(MENU_SAVE);
+        action = _rmb_menu->addAction("New drawing");
+        action->setData(MENU_NEW);
+        _rmb_menu->addSeparator();
+        action = _rmb_menu->addAction("Cancel");
+        action->setData(MENU_CANCEL);
+    }
+
+    // dynamic update timer
+    _dyn_tick = new QTimer();
+    _dyn_tick->setInterval(100);  // 100 milliseconds
+    connect(_dyn_tick,
             &QTimer::timeout,
             this,
             &DrawingScene::slot_dynamic_updates,
@@ -88,6 +106,11 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
             this,
             &DrawingScene::slot_restore_scene,
             Qt::QueuedConnection);
+    connect(this,
+            &DrawingScene::delete_scene,
+            this,
+            &DrawingScene::slot_delete_scene,
+            Qt::QueuedConnection);
 
     _dash = new KromitDash(nullptr, sceneRect().width(), 25);
     _dash->setPos(0,0);
@@ -100,15 +123,17 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
 
     emit set_arrow(ARROW_END);
 
-    _dash->add_scene(1);
-    _dash->select_scene(1);
+    _current_scene = new_scene_id();
+    _dash->add_scene(_current_scene);
+    _dash->select_scene(_current_scene);
 }
 
 DrawingScene::~DrawingScene() {
-    for (auto &it : undo_store) delete it.second;
-    undo_store.clear();
-    undo_records.clear();
-    redo_records.clear();
+    for (auto &it : _undo_store) delete it.second;
+    _undo_store.clear();
+    _undo_records.clear();
+    _redo_records.clear();
+    delete _rmb_menu;
 }
 
 KromitItem *DrawingScene::find_item(int ID) const {
@@ -151,7 +176,8 @@ bool DrawingScene::event(QEvent *event) {
             double pressure = ev->pressure();
             Q_UNUSED(pressure);
             const auto mods = ev->modifiers();
-            emit pointerPressed(p, mods);
+            const auto buttons = ev->buttons();
+            emit pointerPressed(p, buttons, mods);
             ev->accept();
             return true;
         }
@@ -194,7 +220,8 @@ bool DrawingScene::event(QEvent *event) {
                 static_cast<QGraphicsSceneMouseEvent *>(event);
             const QPointF p = ev->scenePos();
             const auto mods = ev->modifiers();
-            emit pointerPressed(p, mods);
+            const auto buttons = ev->buttons();
+            emit pointerPressed(p, buttons, mods);
             ev->accept();
             return true;
         }
@@ -250,7 +277,9 @@ void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
 
 // DrawingScene::pointerPressed
 //
-void DrawingScene::slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods) {
+void DrawingScene::slot_pointerPressed(QPointF p,
+                                       Qt::MouseButtons buttons,
+                                       Qt::KeyboardModifiers mods) {
     if (_current_item && _current_item->type() == GFX_TEXT) {
         KromitText *textitem = static_cast<KromitText *>(_current_item);
 
@@ -263,7 +292,7 @@ void DrawingScene::slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods) {
         }
     }
 
-    if (handle_dash_clicks(p)) {
+    if (handle_dash_clicks(p, buttons, mods)) {
         //
     } else if (_settings.tool == TOOL_SELECT) {
         SelectType sel = SEL_SINGLE;
@@ -278,14 +307,14 @@ void DrawingScene::slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods) {
 
         _feed_keystrokes = (kitem->caps() & CAP_KEYSTROKES);
 
-        if (kitem->caps() & CAP_DYNAMIC) dyn_tick->start();
+        if (kitem->caps() & CAP_DYNAMIC) _dyn_tick->start();
 
-        redo_records.clear();
+        _redo_records.clear();
         garbage_collect();
 
         UndoRecord rec;
         rec.ids_to_remove.insert(kitem->data(KromitItem::KeyID).toInt());
-        undo_records.emplace_back(rec);
+        _undo_records.emplace_back(rec);
 
         addItem(_current_item);
         kitem->start(p);
@@ -295,7 +324,7 @@ void DrawingScene::slot_pointerPressed(QPointF p, Qt::KeyboardModifiers mods) {
 
 void DrawingScene::slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods) {
     if (_settings.tool == TOOL_SELECT) {
-        if (trans.is_ongoing()) { handle_transformation_move(p, mods); }
+        if (_trans.is_ongoing()) { handle_transformation_move(p, mods); }
     } else {
         if (_current_item) {
             KromitItem *kitem = static_cast<KromitItem *>(_current_item);
@@ -306,7 +335,7 @@ void DrawingScene::slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods) {
 
 void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
     if (_settings.tool == TOOL_SELECT) {
-        if (trans.is_ongoing()) { handle_transformation_release(p); }
+        if (_trans.is_ongoing()) { handle_transformation_release(p); }
     } else {
         if (_current_item) {
             KromitItem *kitem = static_cast<KromitItem *>(_current_item);
@@ -353,10 +382,8 @@ void DrawingScene::slot_keyPressed(int key,
     if (mods == Qt::ShiftModifier) {
         switch (key) {
             case Qt::Key_G: {
-                _settings.tool = TOOL_PIXMAP;
-                init_tool();
+                slot_set_tool(TOOL_PIXMAP);
                 emit set_transparent();
-                clear_selection();
                 stash_scene();
             } break;
         }
@@ -371,7 +398,7 @@ void DrawingScene::slot_keyPressed(int key,
                     _dash->show();
                 break;
 
-        case Qt::Key_Delete: {
+            case Qt::Key_Delete: {
                 delete_selection();
             } break;
 
@@ -411,59 +438,41 @@ void DrawingScene::slot_keyPressed(int key,
                 _settings.width = 60;
                 break;
 
-            case Qt::Key_L: {
-                _settings.tool = TOOL_LINE;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_L:
+                slot_set_tool(TOOL_LINE);
+                break;
 
-            case Qt::Key_R: {
-                _settings.tool = TOOL_RECT;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_R:
+                slot_set_tool(TOOL_RECT);
+                break;
 
-            case Qt::Key_P: {
-                _settings.tool = TOOL_PEN;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_P:
+                slot_set_tool(TOOL_PEN);
+                break;
 
-            case Qt::Key_F: {
-                _settings.tool = TOOL_FADER;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_F:
+                slot_set_tool(TOOL_FADER);
+                break;
 
-            case Qt::Key_H: {
-                _settings.tool = TOOL_HIGHLIGHT;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_H:
+                slot_set_tool(TOOL_HIGHLIGHT);
+                break;
 
-            case Qt::Key_S: {
-                _settings.tool = TOOL_SMOOTH;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_S:
+                slot_set_tool(TOOL_SMOOTH);
+                break;
 
-            case Qt::Key_O: {
-                _settings.tool = TOOL_ORTHO;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_O:
+                slot_set_tool(TOOL_ORTHO);
+                break;
 
-            case Qt::Key_E: {
-                _settings.tool = TOOL_SELECT;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_E:
+                slot_set_tool(TOOL_SELECT);
+                break;
 
-            case Qt::Key_T: {
-                _settings.tool = TOOL_TEXT;
-                init_tool();
-                clear_selection();
-            } break;
+            case Qt::Key_T:
+                slot_set_tool(TOOL_TEXT);
+                break;
 
             case Qt::Key_D: {
                 qDebug() << "---------- items ----------";
@@ -476,14 +485,14 @@ void DrawingScene::slot_keyPressed(int key,
                     }
                 }
                 qDebug() << "-------- undo_store -------";
-                for (const auto &it : undo_store) {
+                for (const auto &it : _undo_store) {
                     std::cerr << static_cast<KromitUndoItem &>(*it.second)
                               << "\n";
                 }
                 qDebug() << "------ undo_records -------";
-                for (const auto &rec : undo_records) { std::cerr << rec; }
+                for (const auto &rec : _undo_records) { std::cerr << rec; }
                 qDebug() << "------ redo_records -------";
-                for (const auto &rec : redo_records) { std::cerr << rec; }
+                for (const auto &rec : _redo_records) { std::cerr << rec; }
                 qDebug() << "---------------------------";
 
             } break;
@@ -547,9 +556,9 @@ void DrawingScene::delete_selection() {
             item->pgc();
             removeItemSafely(item);
             rec.ids_to_add.insert(id);
-            undo_store.insert({id, undo_item});
+            _undo_store.insert({id, undo_item});
         }
-        undo_records.emplace_back(rec);
+        _undo_records.emplace_back(rec);
         update_selection_frame();
     }
 }
@@ -590,25 +599,60 @@ void DrawingScene::handle_selection_clicks(const QPointF &p, SelectType sel) {
 //
 // check if a dashboard item clicked
 //
-bool DrawingScene::handle_dash_clicks(const QPointF &p) {
+bool DrawingScene::handle_dash_clicks(const QPointF &p,
+                                      const Qt::MouseButtons buttons,
+                                      const Qt::KeyboardModifiers mods) {
     if (_dash->isVisible())
         for (auto &item : items()) {
             const auto itype = item->type();
             if (itype > GFX_DASH_MIN && itype < GFX_DASH_MAX) {
                 auto *ditem = static_cast<DashIcon *>(item);
                 if (ditem->contains(ditem->mapFromScene(p))) {
-                    const auto type = ditem->data(KromitItem::KeyDash).toInt();
-                    const auto data =
-                        ditem->data(KromitItem::KeyDashAux).toInt();
-                    qDebug() << "Dash hit:" << type << data;
-                    switch (type & DashIcon::DashMask) {
-                        case DashIcon::DashCol:
-                            emit set_color(Color::qcolor_from_uint32(data));
-                            break;
-                        case DashIcon::DashScene:
-                            // store scene in current id, load other id and make
-                            // it active !
-                            break;
+                  const auto type = ditem->data(KromitItem::KeyDash).toInt() & DashIcon::DashMask;
+                  const auto data = ditem->data(KromitItem::KeyDashAux).toInt();
+                  switch (type) {
+                      case DashIcon::DashCol:
+                          emit set_color(Color::qcolor_from_uint32(data));
+                          break;
+                      case DashIcon::DashScene: {
+                          if (buttons & Qt::RightButton) {
+                              auto chosen = _rmb_menu->exec(QCursor::pos());
+                              if (chosen && chosen->data().isValid()) {
+                                  auto item = chosen->data().toInt();
+                                  if (item == MENU_SAVE) {
+                                      // make active (if not), hide dash, then
+                                      // call save
+                                  } else if (item == MENU_NEW) {
+                                      // store scene in current id, load other
+                                      // id and make it active !
+                                      slot_new();
+                                  } else if (item == MENU_DELETE) {
+                                      if (data == _current_scene) {
+                                          QMessageBox::warning(
+                                              nullptr,
+                                              "Cannot delete",
+                                              "Cannot delete currently "
+                                              "active sketch",
+                                              QMessageBox::Ok,
+                                              QMessageBox::Ok);
+                                      } else {
+                                          emit delete_scene(data);
+                                        }
+                                    }
+                                }
+                            } else {
+                                if (type == DashIcon::DashScene) {
+                                    if (data != _current_scene) {
+                                        slot_save_scene(_current_scene);
+                                        slot_restore_scene(_current_scene =
+                                                               data);
+                                        _dash->select_scene(_current_scene);
+                                    } else {
+                                        // is already current scene !
+                                    }
+                                }
+                            }
+                        } break;
                         case DashIcon::DashArrow:
                             emit set_arrow(static_cast<ArrowType>(data));
                             break;
@@ -618,8 +662,8 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p) {
                     }
 
                     return true;
-                }
-            }
+                }  // ditem->contains(...)
+            }      // dash item clicked
         }
     return false;
 }
@@ -631,7 +675,7 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p) {
 // if yes, store cursor position and operation type and return true
 //
 bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
-    trans.handle = KromitFrame::POS_NONE;
+    _trans.handle = KromitFrame::POS_NONE;
     for (auto &item : items()) {
         const auto itype = item->type();
         if (itype == GfxItemType::GFX_HANDLE ||
@@ -639,12 +683,12 @@ bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
             itype == GfxItemType::GFX_MOVEHANDLE) {
             auto *kitem = static_cast<KromitItem *>(item);
             if (kitem->contains(kitem->mapFromScene(p))) {
-                trans.handle = static_cast<KromitFrame::HandlePos>(
+                _trans.handle = static_cast<KromitFrame::HandlePos>(
                     kitem->data(KromitItem::KeyHandle).toUInt());
-                trans.pos_ref = _selection_frame->opposite_pos(trans.handle);
-                trans.pos_cur = _selection_frame->handle_pos(trans.handle);
-                trans.pos_start = p;
-                trans.pos_frame_start = _selection_frame->pos();
+                _trans.pos_ref = _selection_frame->opposite_pos(_trans.handle);
+                _trans.pos_cur = _selection_frame->handle_pos(_trans.handle);
+                _trans.pos_start = p;
+                _trans.pos_frame_start = _selection_frame->pos();
 
                 UndoRecord rec;
                 for (auto &item : _selected_items) {
@@ -652,12 +696,12 @@ bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
                     const int old_id = item->data(KromitItem::KeyID).toInt();
                     item->set_new_ID();
                     const int new_id = item->data(KromitItem::KeyID).toInt();
-                    undo_store.insert({old_id, undo_item});
+                    _undo_store.insert({old_id, undo_item});
                     rec.ids_to_add.insert(old_id);
                     rec.ids_to_remove.insert(new_id);
                     item->stash();
                 }
-                undo_records.emplace_back(rec);
+                _undo_records.emplace_back(rec);
                 return true;
             }
         }
@@ -667,46 +711,46 @@ bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
 
 void DrawingScene::handle_transformation_move(const QPointF &p,
                                               Qt::KeyboardModifiers mods) {
-    QPointF delta = p - trans.pos_start;
-    trans.m.reset();
-    trans.m.translate(trans.pos_ref.x(), trans.pos_ref.y());
+    QPointF delta = p - _trans.pos_start;
+    _trans.m.reset();
+    _trans.m.translate(_trans.pos_ref.x(), _trans.pos_ref.y());
 
-    if (trans.handle & KromitFrame::POS_MOVE) {
-        trans.m.translate(delta.x(), delta.y());
-    } else if (trans.handle & KromitFrame::POS_ISOSCALE) {
-        delta += (trans.pos_cur - trans.pos_ref);
-        double kx = (delta.x() / (trans.pos_cur.x() - trans.pos_ref.x()));
-        double ky = (delta.y() / (trans.pos_cur.y() - trans.pos_ref.y()));
+    if (_trans.handle & KromitFrame::POS_MOVE) {
+        _trans.m.translate(delta.x(), delta.y());
+    } else if (_trans.handle & KromitFrame::POS_ISOSCALE) {
+        delta += (_trans.pos_cur - _trans.pos_ref);
+        double kx = (delta.x() / (_trans.pos_cur.x() - _trans.pos_ref.x()));
+        double ky = (delta.y() / (_trans.pos_cur.y() - _trans.pos_ref.y()));
         if (mods & Qt::ShiftModifier) { kx = ky = max<double>(kx, ky); }
-        trans.m.scale(kx, ky);
-    } else if (trans.handle & KromitFrame::POS_ANISOSCALE) {
-        delta += (trans.pos_cur - trans.pos_ref);
-        double kx = delta.x() / (trans.pos_cur.x() - trans.pos_ref.x());
-        double ky = delta.y() / (trans.pos_cur.y() - trans.pos_ref.y());
-        auto which = trans.handle & KromitFrame::POS_WHICHMASK;
+        _trans.m.scale(kx, ky);
+    } else if (_trans.handle & KromitFrame::POS_ANISOSCALE) {
+        delta += (_trans.pos_cur - _trans.pos_ref);
+        double kx = delta.x() / (_trans.pos_cur.x() - _trans.pos_ref.x());
+        double ky = delta.y() / (_trans.pos_cur.y() - _trans.pos_ref.y());
+        auto which = _trans.handle & KromitFrame::POS_WHICHMASK;
         if (which == KromitFrame::POS_LEFT || which == KromitFrame::POS_RIGHT)
             ky = 1.0;
         else
             kx = 1.0;
-        trans.m.scale(kx, ky);
-    } else if (trans.handle & KromitFrame::POS_ROTATE) {
-        double alpha0 = atan2(trans.pos_cur.y() - trans.pos_ref.y(),
-                              trans.pos_cur.x() - trans.pos_ref.x());
+        _trans.m.scale(kx, ky);
+    } else if (_trans.handle & KromitFrame::POS_ROTATE) {
+        double alpha0 = atan2(_trans.pos_cur.y() - _trans.pos_ref.y(),
+                              _trans.pos_cur.x() - _trans.pos_ref.x());
         double alpha1 =
-            atan2(delta.y() + trans.pos_cur.y() - trans.pos_ref.y(),
-                  delta.x() + trans.pos_cur.x() - trans.pos_ref.x());
-        trans.m.rotate((alpha1 - alpha0) * 180 / M_PI);
+            atan2(delta.y() + _trans.pos_cur.y() - _trans.pos_ref.y(),
+                  delta.x() + _trans.pos_cur.x() - _trans.pos_ref.x());
+        _trans.m.rotate((alpha1 - alpha0) * 180 / M_PI);
     }
-    trans.m.translate(-trans.pos_ref.x(), -trans.pos_ref.y());
-    for (auto &item : _selected_items) item->apply(trans.m);
+    _trans.m.translate(-_trans.pos_ref.x(), -_trans.pos_ref.y());
+    for (auto &item : _selected_items) item->apply(_trans.m);
     update_selection_frame();
 }
 
 // DrawingScene::handle_transformation_release
 //
 void DrawingScene::handle_transformation_release(const QPointF &p) {
-    trans.m.reset();
-    trans.handle = KromitFrame::POS_NONE;
+    _trans.m.reset();
+    _trans.handle = KromitFrame::POS_NONE;
     update_selection_frame();
 }
 
@@ -716,8 +760,8 @@ void DrawingScene::handle_transformation_release(const QPointF &p) {
 //
 void DrawingScene::undo() {
     clearSelection();
-    if (undo_records.empty()) return;
-    UndoRecord &rec = undo_records.back();
+    if (_undo_records.empty()) return;
+    UndoRecord &rec = _undo_records.back();
     for (auto id : rec.ids_to_remove) {
         KromitItem *ptr = find_item(id);
         if (ptr) {
@@ -725,24 +769,24 @@ void DrawingScene::undo() {
             KromitUndoItem *undo_item = ptr->create_undo_item();
             ptr->pgc();
             removeItemSafely(ptr);
-            undo_store.insert({id, undo_item});
+            _undo_store.insert({id, undo_item});
         } else {
             qDebug() << "undo: Could not find item" << id << "ptr=" << ptr;
         }
     }
     for (auto id : rec.ids_to_add) {
-        auto it = undo_store.find(id);
-        if (it != undo_store.end()) {
+        auto it = _undo_store.find(id);
+        if (it != _undo_store.end()) {
             KromitItem *item = it->second->create_from_undo_item();
             addItem(item);
             delete it->second;
-            undo_store.erase(it);
+            _undo_store.erase(it);
         } else {
             qDebug() << "undo: Could not find item" << id;
         }
     }
-    redo_records.emplace_back(rec);
-    undo_records.pop_back();
+    _redo_records.emplace_back(rec);
+    _undo_records.pop_back();
     clearSelection();
     update_selection_frame();
 }
@@ -753,8 +797,8 @@ void DrawingScene::undo() {
 //
 void DrawingScene::redo() {
     clearSelection();
-    if (redo_records.empty()) return;
-    UndoRecord &rec = redo_records.back();
+    if (_redo_records.empty()) return;
+    UndoRecord &rec = _redo_records.back();
     for (auto id : rec.ids_to_add) {
         KromitItem *ptr = find_item(id);
         if (ptr) {
@@ -762,24 +806,24 @@ void DrawingScene::redo() {
             KromitUndoItem *redo_item = ptr->create_undo_item();
             ptr->pgc();
             removeItemSafely(ptr);
-            undo_store.insert({id, redo_item});
+            _undo_store.insert({id, redo_item});
         } else {
             qDebug() << "redo: Could not find item" << id << "ptr=" << ptr;
         }
     }
     for (auto id : rec.ids_to_remove) {
-        auto it = undo_store.find(id);
-        if (it != undo_store.end()) {
+        auto it = _undo_store.find(id);
+        if (it != _undo_store.end()) {
             KromitItem *item = it->second->create_from_undo_item();
             addItem(item);
             delete it->second;
-            undo_store.erase(it);
+            _undo_store.erase(it);
         } else {
             qDebug() << "redo: Could not find item" << id;
         }
     }
-    undo_records.emplace_back(rec);
-    redo_records.pop_back();
+    _undo_records.emplace_back(rec);
+    _redo_records.pop_back();
     update_selection_frame();
 }
 
@@ -798,23 +842,23 @@ void DrawingScene::garbage_collect() {
     return;
     for (;;) {
         int new_n =
-            undo_store.size() + undo_records.size() + redo_records.size();
+            _undo_store.size() + _undo_records.size() + _redo_records.size();
         if (new_n == last_n) break;
         last_n = new_n;
 
         // remove records from undo_store that are no longer references by
         // any undo or redo operation
         std::unordered_set<int> ids_in_undoredo;
-        for (const auto &rec : undo_records) {
+        for (const auto &rec : _undo_records) {
             for (auto v : rec.ids_to_add) ids_in_undoredo.insert(v);
             for (auto v : rec.ids_to_remove) ids_in_undoredo.insert(v);
         }
-        for (const auto &rec : redo_records) {
+        for (const auto &rec : _redo_records) {
             for (auto v : rec.ids_to_add) ids_in_undoredo.insert(v);
             for (auto v : rec.ids_to_remove) ids_in_undoredo.insert(v);
         }
 
-        std::erase_if(undo_store, [&](auto &v) -> bool {
+        std::erase_if(_undo_store, [&](auto &v) -> bool {
             bool do_erase = !ids_in_undoredo.contains(v.first);
             if (do_erase) delete v.second;
             return do_erase;
@@ -826,13 +870,13 @@ void DrawingScene::garbage_collect() {
         for (const auto &item : items())
             ids_in_stores.insert(item->data(KromitItem::KeyID).toInt());
 
-        for (const auto &item : undo_store)
+        for (const auto &item : _undo_store)
             ids_in_stores.insert(item.second->id);
 
-        std::erase_if(undo_records, [&](auto &rec) -> bool {
+        std::erase_if(_undo_records, [&](auto &rec) -> bool {
             return !rec.all_ids_in(ids_in_stores);
         });
-        std::erase_if(redo_records, [&](auto &rec) -> bool {
+        std::erase_if(_redo_records, [&](auto &rec) -> bool {
             return !rec.all_ids_in(ids_in_stores);
         });
     }
@@ -845,12 +889,7 @@ void DrawingScene::removeItemSafely(QGraphicsItem *item) {
     delete item;
 }
 
-void DrawingScene::tab() {
-    // toggle dash
-}
-
 void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
-    qDebug() << "received pixmap" << pixmap.rect();
     if (_current_item) {
         switch (_current_item->type()) {
             case GFX_PIXMAP: {
@@ -867,12 +906,12 @@ void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
 void DrawingScene::stash_scene() {
     clearSelection();
 
-    stash.stash.clear();
+    _stash.stash.clear();
     if (_background_item) {
-        stash.background = _background_item->pixmap();
-        clear_background();
+        _stash.background = _background_item->pixmap();
+        slot_clear_background();
     } else {
-        stash.background = QPixmap();
+        _stash.background = QPixmap();
     }
 
     for (auto &it : items()) {
@@ -882,7 +921,7 @@ void DrawingScene::stash_scene() {
             KromitUndoItem *undo_item = kitem->create_undo_item();
             kitem->pgc();
             removeItemSafely(kitem);
-            stash.stash.insert({id, undo_item});
+            _stash.stash.insert({id, undo_item});
         } else {
         }
     }
@@ -891,14 +930,14 @@ void DrawingScene::stash_scene() {
 void DrawingScene::unstash_scene() {
     clear_selection();
 
-    clear_background();
-    if (!stash.background.isNull()) set_background(stash.background);
+    slot_clear_background();
+    if (!_stash.background.isNull()) slot_set_background(_stash.background);
 
-    for (auto &it : stash.stash) {
+    for (auto &it : _stash.stash) {
         KromitItem *item = it.second->create_from_undo_item();
         addItem(item);
     }
-    stash.stash.clear();
+    _stash.stash.clear();
 }
 
 void DrawingScene::fix_geometry(QRect real_rect) {
@@ -909,15 +948,15 @@ void DrawingScene::fix_geometry(QRect real_rect) {
   qDebug() << "real rect" << real_rect << " scene_rect " << sceneRect();
 }
 
-void DrawingScene::set_background(QPixmap px) {
-    clear_background();
+void DrawingScene::slot_set_background(QPixmap px) {
+    slot_clear_background();
     if (px.isNull()) return;
     _background_item = addPixmap(px);
     _background_item->setOffset(0, 0);
     _background_item->setZValue(-1000.0);
 }
 
-void DrawingScene::clear_background() {
+void DrawingScene::slot_clear_background() {
     if (_background_item) {
         removeItem(_background_item);
         _background_item = nullptr;
@@ -944,7 +983,7 @@ void DrawingScene::slot_dynamic_updates() {
             }
         }
     }
-    if (any_remaining == false) dyn_tick->stop();
+    if (any_remaining == false) _dyn_tick->stop();
     if (selected_deleted) update_selection_frame();
 }
 
@@ -968,15 +1007,13 @@ void DrawingScene::init_tool() {
 // places, otherwise this will eventually cause a double deletion!
 
 void DrawingScene::slot_save_scene(int id) {
-    std::cerr << "save_scene " << id << "\n";
-
     clear_selection();
 
     {  // delete saved scene if it already exists
-        auto it = saved_scenes.find(id);
-        if (it != saved_scenes.end()) {
+        auto it = _saved_scenes.find(id);
+        if (it != _saved_scenes.end()) {
             it->second.free_items();
-            saved_scenes.erase(it);  // TODO: causes crash ! but why?
+            _saved_scenes.erase(it);
         }
     }
 
@@ -988,19 +1025,19 @@ void DrawingScene::slot_save_scene(int id) {
     // save and remove background, if any
     if (_background_item) {
         scene.background = _background_item->pixmap();
-        clear_background();
+        slot_clear_background();
     }
 
     // copy over undo/redo records
-    scene.undo_records = undo_records;
-    scene.redo_records = redo_records;
-    undo_records.clear();
-    redo_records.clear();
+    scene.undo_records = _undo_records;
+    scene.redo_records = _redo_records;
+    _undo_records.clear();
+    _redo_records.clear();
 
     // CAREFUL: here the undo record pointer is moved, but the item
     // itself remains allocated where it is
-    scene.undo_store = undo_store;
-    undo_store.clear();
+    scene.undo_store = _undo_store;
+    _undo_store.clear();
 
     // construct records in gfxitems
     for (auto &it : items()) {
@@ -1015,17 +1052,14 @@ void DrawingScene::slot_save_scene(int id) {
     }
 
     // insert everything into map with saved scenes
-    saved_scenes.insert({id, scene});
-    std::cerr << "save_scene " << id << " -- done\n";
+    _saved_scenes.insert({id, scene});
 }
 
 void DrawingScene::slot_restore_scene(int id) {
-    std::cerr << "restore_scene " << id << "\n";
-
     clear_selection();
     // find the stored scene, and return if it does not exist
-    auto it = saved_scenes.find(id);
-    if (it == saved_scenes.end()) {
+    auto it = _saved_scenes.find(id);
+    if (it == _saved_scenes.end()) {
         std::cerr << "- scene not found !\n";
         return;
     }
@@ -1039,33 +1073,49 @@ void DrawingScene::slot_restore_scene(int id) {
     _settings = scene.settings;
 
     // restore background
-    set_background(scene.background);
+    slot_set_background(scene.background);
 
-    undo_records = scene.undo_records;
-    redo_records = scene.redo_records;
+    _undo_records = scene.undo_records;
+    _redo_records = scene.redo_records;
     scene.undo_records.clear();
     scene.redo_records.clear();
 
     // copy over the undo_store
     // IMPORTANT: the undo item references in the scene are removed,
     // so no double pointers to the same item remain!
-    undo_store = scene.undo_store;
+    _undo_store = scene.undo_store;
     scene.undo_store.clear();
 
     // reconstruct all visible items
     for (auto &it : scene.gfxitems) {
         KromitItem *item = it.second->create_from_undo_item();
-        std::cerr << "- restoring " << item << "\n";
         addItem(item);
     }
 
     // there may be dynamic items that were restored
-    dyn_tick->start();
+    _dyn_tick->start();
 
     // the saved scene is NOT erased here, because we need it as a
     // placeholder:
 
     // saved_scenes.erase(it);
+}
+
+void DrawingScene::slot_delete_scene(int id) {
+    // find the stored scene, and return if it does not exist
+    auto it = _saved_scenes.find(id);
+    if (it == _saved_scenes.end()) {
+        std::cerr << "ERROR: scene not found !\n";
+        return;
+    }
+
+    // remove saved scene
+    SavedScene& saved = it->second;
+    saved.free_items();
+    _saved_scenes.erase(id);
+
+    // also remove icon from dash
+    _dash->remove_scene(id);
 }
 
 // DrawingScene::clear_scene
@@ -1076,13 +1126,13 @@ void DrawingScene::clear_scene() {
     clearSelection();
 
     // remove background, if any
-    if (_background_item) clear_background();
+    if (_background_item) slot_clear_background();
 
-    for (auto &it : undo_store) delete it.second;
-    undo_store.clear();
+    for (auto &it : _undo_store) delete it.second;
+    _undo_store.clear();
 
-    redo_records.clear();
-    undo_records.clear();
+    _redo_records.clear();
+    _undo_records.clear();
 
     // remove all items
     for (auto &it : items()) {
@@ -1094,12 +1144,41 @@ void DrawingScene::clear_scene() {
     }
 }
 
+void DrawingScene::slot_new() {
+    slot_save_scene(_current_scene);
+    _current_scene = new_scene_id();
+    _dash->add_scene(_current_scene);
+    _dash->select_scene(_current_scene);
+}
+
 void DrawingScene::slot_set_color(const QColor& color) {
     _settings.color = color;
     _dash->select_color(color);
 }
 
+void DrawingScene::slot_set_color_from_index(int index) {
+  if (index >= 0 && index < static_cast<int>(Color::color_table.size())) {
+      slot_set_color(
+          Color::qcolor_from_uint32(Color::color_table[index].numeric));
+  }
+}
+
+void DrawingScene::slot_set_tool(ToolType tool) {
+    _settings.tool = tool;
+    init_tool();
+    clear_selection();
+}
+
 void DrawingScene::slot_set_arrow(ArrowType type) {
     _settings.arrow_type = type;
     _dash->select_arrow(type);
+}
+
+void DrawingScene::slot_set_width(int width) {
+  _settings.width = width;
+}
+
+int DrawingScene::new_scene_id(void) {
+    static int id = 0;
+    return ++id;
 }

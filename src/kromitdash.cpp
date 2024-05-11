@@ -353,7 +353,6 @@ void KromitDash::select_tool(ToolType type){
 void KromitDash::select_scene(int n){
   _active_scene = n;
   reposition_scenes();
-    // TODO
 };
 
 void KromitDash::add_scene(int id) {
@@ -370,6 +369,7 @@ void KromitDash::remove_scene(int id) {
     if (it != _scenes.end()) {
         prepareGeometryChange();
         delete it->second;
+        _scenes.erase(id);
         reposition_scenes();
     }
 }

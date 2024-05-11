@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(Kromit VERSION 0.9 LANGUAGES C CXX)
+project(Grasp VERSION 0.9 LANGUAGES C CXX)
 
 set(CMAKE_CXX_FLAGS  " ${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -std=c++20")
 
@@ -20,7 +20,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS DBus)
 find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Widgets)
 
-qt_add_executable(kromit WIN32 MACOSX_BUNDLE
+qt_add_executable(grasp WIN32 MACOSX_BUNDLE
   kromit.cpp kromit.h
   singletonapplication.h
   dbus.cpp dbus.h
@@ -53,7 +53,7 @@ qt_add_executable(kromit WIN32 MACOSX_BUNDLE
   kromitmove.cpp kromitmove.h
 )
 
-qt_add_resources(kromit "cursors"
+qt_add_resources(grasp "cursors"
     PREFIX "/cursors"
     FILES ../cursors/text.png
     FILES ../cursors/smooth.png
@@ -66,24 +66,24 @@ qt_add_resources(kromit "cursors"
     FILES ../cursors/grab.png
 )
 
-qt_add_resources(kromit "icons"
+qt_add_resources(grasp "icons"
     PREFIX "/icons"
     FILES ../icons/settings.png
 )
 
-target_link_libraries(kromit PRIVATE
+target_link_libraries(grasp PRIVATE
     Qt::Core
     Qt::Gui
     Qt::DBus
 )
 
 if((QT_VERSION_MAJOR GREATER 4))
-    target_link_libraries(kromit PRIVATE
+    target_link_libraries(grasp PRIVATE
         Qt::Widgets
     )
 endif()
 
-install(TARGETS kromit
+install(TARGETS grasp
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
