@@ -3,8 +3,8 @@
 
 #include <QGraphicsScene>
 
-#include "kromitdash.h"
-#include "kromitframe.h"
+#include "gfxdash.h"
+#include "gfxframe.h"
 #include "undo.h"
 
 class QGraphicsItemGroup;
@@ -15,11 +15,11 @@ class Transformation {
   public:
     Transformation() { clear(); }
     // clear
-    void clear() { handle = KromitFrame::POS_NONE; }
+    void clear() { handle = GfxFrame::POS_NONE; }
     // is any operation ongoing?
-    bool is_ongoing() const { return handle != KromitFrame::POS_NONE; }
+    bool is_ongoing() const { return handle != GfxFrame::POS_NONE; }
     // which of the handles is dragged?
-    KromitFrame::HandlePos handle;
+    GfxFrame::HandlePos handle;
     // where was cursor when it was clicked?
     QPointF pos_start;
     // where was the selection frame when it was clicked?
@@ -39,7 +39,7 @@ class Transformation {
 class Stash {
   public:
     QPixmap background;
-    std::unordered_map<int, KromitUndoItem *> stash;
+    std::unordered_map<int, GfxUndoItem *> stash;
 };
 
 // SavedScene
@@ -67,9 +67,9 @@ class SavedScene {
 
     // the visible items
     QPixmap background;
-    std::unordered_map<int, KromitUndoItem *> gfxitems;
+    std::unordered_map<int, GfxUndoItem *> gfxitems;
     // invisible items
-    std::unordered_map<int, KromitUndoItem *> undo_store;
+    std::unordered_map<int, GfxUndoItem *> undo_store;
     std::vector<UndoRecord> undo_records;
     std::vector<UndoRecord> redo_records;
     Settings settings;
@@ -161,7 +161,7 @@ class DrawingScene : public QGraphicsScene {
     void garbage_collect();
     void init_tool();
 
-    KromitItem *find_item(int id) const;
+    GfxItem *find_item(int id) const;
 
     bool handle_dash_clicks(const QPointF &p,
                             const Qt::MouseButtons buttons,
@@ -179,7 +179,7 @@ class DrawingScene : public QGraphicsScene {
   private:
     QSettings& _qset;
     Settings _settings;
-    KromitDash *_dash;
+    GfxDash *_dash;
 
     QGraphicsItem *_current_item = nullptr;
 
@@ -189,12 +189,12 @@ class DrawingScene : public QGraphicsScene {
     QTimer *_dyn_tick = nullptr;
     QMenu *_rmb_menu = nullptr;
 
-    KromitFrame *_selection_frame = nullptr;
-    QList<KromitItem *> _selected_items;
+    GfxFrame *_selection_frame = nullptr;
+    QList<GfxItem *> _selected_items;
     Transformation _trans;
 
     // undo records
-    std::unordered_map<int, KromitUndoItem *> _undo_store;
+    std::unordered_map<int, GfxUndoItem *> _undo_store;
     std::vector<UndoRecord> _undo_records;
     std::vector<UndoRecord> _redo_records;
 

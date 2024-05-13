@@ -1,14 +1,14 @@
 #include "tools.h"
 
-#include "kromitline.h"
-#include "kromitpath.h"
-#include "kromitsmooth.h"
-#include "kromitortho.h"
-#include "kromitrect.h"
-#include "kromittext.h"
-#include "kromitpixmap.h"
-#include "kromitfader.h"
-#include "kromithighlight.h"
+#include "gfxline.h"
+#include "gfxpath.h"
+#include "gfxsmooth.h"
+#include "gfxortho.h"
+#include "gfxrect.h"
+#include "gfxtext.h"
+#include "gfxpixmap.h"
+#include "gfxfader.h"
+#include "gfxhighlight.h"
 
 #include <QSettings>
 
@@ -20,7 +20,7 @@ int Tools::generate_ID(void) {
 QGraphicsItem *Tools::create_tool(const Settings& settings) {
     switch (settings.tool) {
         case TOOL_ORTHO: {
-           auto *ortho = new KromitOrtho(nullptr,
+           auto *ortho = new GfxOrtho(nullptr,
                                          settings.color,
                                          settings.width,
                                          settings.arrow_type,
@@ -30,82 +30,82 @@ QGraphicsItem *Tools::create_tool(const Settings& settings) {
                                          settings.radius_ortho,
                                          settings.minlen_ortho,
                                          settings.maxangle_ortho);
-            ortho->setData(KromitItem::KeyID, generate_ID());
+            ortho->setData(GfxItem::KeyID, generate_ID());
             return ortho;
         }
 
         case TOOL_SMOOTH: {
-           auto *pen = new KromitSmooth(nullptr,
+           auto *pen = new GfxSmooth(nullptr,
                                          settings.color,
                                          settings.width,
                                          settings.arrow_type,
                                          settings.arrow_size,
                                          settings.simplify_smooth,
                                          settings.snapdist_smooth);
-            pen->setData(KromitItem::KeyID, generate_ID());
+            pen->setData(GfxItem::KeyID, generate_ID());
             return pen;
         }
 
         case TOOL_PEN: {
-            auto *pen = new KromitPath(nullptr,
+            auto *pen = new GfxPath(nullptr,
                                        settings.color,
                                        settings.width,
                                        settings.arrow_type,
                                        settings.arrow_size);
-            pen->setData(KromitItem::KeyID, generate_ID());
+            pen->setData(GfxItem::KeyID, generate_ID());
             return pen;
         }
 
         case TOOL_FADER: {
-            auto *fader = new KromitFader(nullptr,
+            auto *fader = new GfxFader(nullptr,
                                         settings.color,
                                         settings.width,
                                         settings.arrow_type,
                                         settings.arrow_size,
                                         settings.sustain_fader,
                                         settings.fade_fader);
-            fader->setData(KromitItem::KeyID, generate_ID());
+            fader->setData(GfxItem::KeyID, generate_ID());
             return fader;
         }
 
         case TOOL_HIGHLIGHT: {
-            auto *highlight = new KromitHighlight(nullptr,
+            auto *highlight = new GfxHighlight(nullptr,
                                                   settings.color,
                                                   settings.highlight_width,
                                                   settings.arrow_type,
                                                   settings.arrow_size,
                                                   settings.sustain_highlight,
                                                   settings.fade_highlight);
-            highlight->setData(KromitItem::KeyID, generate_ID());
+            highlight->setData(GfxItem::KeyID, generate_ID());
             return highlight;
         }
 
         case TOOL_LINE: {
-            auto *line = new KromitLine(nullptr,
+            auto *line = new GfxLine(nullptr,
                                         settings.color,
                                         settings.width,
                                         settings.arrow_type,
                                         settings.arrow_size);
-            line->setData(KromitItem::KeyID, generate_ID());
+            line->setData(GfxItem::KeyID, generate_ID());
             return line;
         }
 
         case TOOL_RECT: {
-            auto *rect = new KromitRect(
+            auto *rect = new GfxRect(
                 nullptr, settings.color, settings.width, settings.radius_rect);
-            rect->setData(KromitItem::KeyID, generate_ID());
+            rect->setData(GfxItem::KeyID, generate_ID());
             return rect;
         }
 
         case TOOL_TEXT: {
-            auto *text = new KromitText(nullptr, settings.color, settings.font);
-            text->setData(KromitItem::KeyID, generate_ID());
+            auto *text = new GfxText(nullptr, settings.color, settings.font);
+            text->setData(GfxItem::KeyID, generate_ID());
             return text;
         }
 
         case TOOL_PIXMAP: {
-            auto *image = new KromitPixmap(nullptr, settings.color, 2);
-            image->setData(KromitItem::KeyID, generate_ID());
+            auto *image = new GfxPixmap(nullptr, settings.color, 2);
+            image->setData(GfxItem::KeyID, generate_ID());
             return image;
         }
 

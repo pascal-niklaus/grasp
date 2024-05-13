@@ -14,10 +14,10 @@
 #include <chrono>
 
 #include "colors.h"
-#include "kromitdash.h"
-#include "kromitpath.h"
-#include "kromitpixmap.h"
-#include "kromittext.h"
+#include "gfxdash.h"
+#include "gfxpath.h"
+#include "gfxpixmap.h"
+#include "gfxtext.h"
 #include "selectkey.h"
 #include "settings.h"
 #include "utility.h"
@@ -36,7 +36,7 @@ DrawingScene::DrawingScene(QSettings &qset, QObject *parent) :
     _settings.retrieve(_qset);
 
     // create selection frame
-    _selection_frame = new KromitFrame(nullptr, Qt::gray, 1);
+    _selection_frame = new GfxFrame(nullptr, Qt::gray, 1);
     addItem(_selection_frame);
     _selection_frame->hide();
 
@@ -99,7 +99,7 @@ DrawingScene::DrawingScene(QSettings &qset, QObject *parent) :
             &DrawingScene::slot_delete_scene,
             Qt::QueuedConnection);
 
-    _dash = new KromitDash(nullptr, sceneRect().width(), 25, _settings);
+    _dash = new GfxDash(nullptr, sceneRect().width(), 25, _settings);
     _dash->setPos(0, 0);
     addItem(_dash);
 
@@ -124,12 +124,12 @@ DrawingScene::~DrawingScene() {
     delete _rmb_menu;
 }
 
-KromitItem *DrawingScene::find_item(int ID) const {
+GfxItem *DrawingScene::find_item(int ID) const {
     for (auto &item : items()) {
         if (item->type() > GFX_SELECTABLE) {
             bool ok;
-            auto id = item->data(KromitItem::KeyID).toInt(&ok);
-            if (ok && id == ID) return static_cast<KromitItem *>(item);
+            auto id = item->data(GfxItem::KeyID).toInt(&ok);
+            if (ok && id == ID) return static_cast<GfxItem *>(item);
         }
     }
     return nullptr;
@@ -244,17 +244,17 @@ void DrawingScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *ev) {
 }
 
 void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
-    KromitItem *kitem = static_cast<KromitItem *>(_current_item);
+    GfxItem *kitem = static_cast<GfxItem *>(_current_item);
 
     if (kitem && _feed_keystrokes) {
         auto result =
             kitem->keystroke(keyEvent->keyCombination(), keyEvent->text());
-        if (result == KromitItem::KEY_STOP) {
+        if (result == GfxItem::KEY_STOP) {
             _feed_keystrokes = false;
             _current_item = nullptr;
             return;
         }
-        if (result == KromitItem::KEY_PROCESSED) return;
+        if (result == GfxItem::KEY_PROCESSED) return;
     }
 
     const auto key = keyEvent->keyCombination();
@@ -268,7 +268,7 @@ void DrawingScene::slot_pointerPressed(QPointF p,
                                        Qt::MouseButtons buttons,
                                        Qt::KeyboardModifiers mods) {
     if (_current_item && _current_item->type() == GFX_TEXT) {
-        KromitText *textitem = static_cast<KromitText *>(_current_item);
+        GfxText *textitem = static_cast<GfxText *>(_current_item);
 
         if (textitem->text().isEmpty()) {
             textitem->deselect();
@@ -277,6 +277,7 @@ void DrawingScene::slot_pointerPressed(QPointF p,
         } else {
             textitem->finalize();
         }
+        _current_item = nullptr;
     }
 
     if (handle_dash_clicks(p, buttons, mods)) {
@@ -290,7 +291,7 @@ void DrawingScene::slot_pointerPressed(QPointF p,
         if (!handle_transformation_clicks(p)) handle_selection_clicks(p, sel);
     } else {
         _current_item = Tools::create_tool(_settings);
-        KromitItem *kitem = static_cast<KromitItem *>(_current_item);
+        GfxItem *kitem = static_cast<GfxItem *>(_current_item);
 
         _feed_keystrokes = (kitem->caps() & CAP_KEYSTROKES);
 
@@ -300,7 +301,7 @@ void DrawingScene::slot_pointerPressed(QPointF p,
         garbage_collect();
 
         UndoRecord rec;
-        rec.ids_to_remove.insert(kitem->data(KromitItem::KeyID).toInt());
+        rec.ids_to_remove.insert(kitem->data(GfxItem::KeyID).toInt());
         _undo_records.emplace_back(rec);
 
         addItem(_current_item);
@@ -314,7 +315,7 @@ void DrawingScene::slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods) {
         if (_trans.is_ongoing()) { handle_transformation_move(p, mods); }
     } else {
         if (_current_item) {
-            KromitItem *kitem = static_cast<KromitItem *>(_current_item);
+            GfxItem *kitem = static_cast<GfxItem *>(_current_item);
             kitem->move(p);
         }
     }
@@ -325,16 +326,15 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
         if (_trans.is_ongoing()) { handle_transformation_release(p); }
     } else {
         if (_current_item) {
-            KromitItem *kitem = static_cast<KromitItem *>(_current_item);
+            GfxItem *kitem = static_cast<GfxItem *>(_current_item);
             kitem->stop(p);
             switch (kitem->type()) {
                 case GFX_TEXT:
                     // special case of text item: keep item after mouse released
                     break;
                 case GFX_PIXMAP: {
-                    KromitPixmap *kpixmap = static_cast<KromitPixmap *>(kitem);
+                    GfxPixmap *kpixmap = static_cast<GfxPixmap *>(kitem);
                     const QRect rect = kpixmap->sel_rect().toRect();
-                    qDebug() << "requesting " << rect;
                     emit take_partial_screenshot(rect);
                 } break;
 
@@ -390,15 +390,15 @@ void DrawingScene::slot_keyPressed(QKeyCombination kc, QString text) {
         qDebug() << "---------- items ----------";
         for (const auto &item : items()) {
             if (item->type() > GFX_SELECTABLE) {
-                std::cerr << static_cast<KromitItem &>(*item) << "\n";
+                std::cerr << static_cast<GfxItem &>(*item) << "\n";
             } else {
-                qDebug() << "  " << KromitItem::type_txt(item->type())
+                qDebug() << "  " << GfxItem::type_txt(item->type())
                          << item->isVisible() << item;
             }
         }
         qDebug() << "-------- undo_store -------";
         for (const auto &it : _undo_store) {
-            std::cerr << static_cast<KromitUndoItem &>(*it.second) << "\n";
+            std::cerr << static_cast<GfxUndoItem &>(*it.second) << "\n";
         }
         qDebug() << "------ undo_records -------";
         for (const auto &rec : _undo_records) { std::cerr << rec; }
@@ -438,7 +438,7 @@ void DrawingScene::update_selection_frame() {
     _selected_items.clear();
     for (auto &item : items()) {
         if (item->isSelected()) {
-            auto kitem = static_cast<KromitItem *>(item);
+            auto kitem = static_cast<GfxItem *>(item);
             _selected_items.append(kitem);
             if (n_selected == 0) {
                 bbox = kitem->selectionBox();
@@ -470,8 +470,8 @@ void DrawingScene::delete_selection() {
     if (_selection_frame) {
         UndoRecord rec;
         for (auto &item : _selected_items) {
-            int id = item->data(KromitFrame::KeyID).toInt();
-            KromitUndoItem *undo_item = item->create_undo_item();
+            int id = item->data(GfxFrame::KeyID).toInt();
+            GfxUndoItem *undo_item = item->create_undo_item();
             item->deselect();
             item->pgc();
             removeItemSafely(item);
@@ -499,7 +499,7 @@ void DrawingScene::clear_selection() {
 void DrawingScene::handle_selection_clicks(const QPointF &p, SelectType sel) {
     for (auto &item : items()) {
         if (item->type() > GfxItemType::GFX_SELECTABLE) {
-            auto *kitem = static_cast<KromitItem *>(item);
+            auto *kitem = static_cast<GfxItem *>(item);
             if (item->contains(p)) {
                 if (sel == SEL_ADD || sel == SEL_SINGLE)
                     kitem->select();
@@ -528,10 +528,10 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
             if (itype > GFX_DASH_MIN && itype < GFX_DASH_MAX) {
                 auto *ditem = static_cast<DashIcon *>(item);
                 if (ditem->contains(ditem->mapFromScene(p))) {
-                    const auto type = ditem->data(KromitItem::KeyDash).toInt() &
+                    const auto type = ditem->data(GfxItem::KeyDash).toInt() &
                                       DashIcon::DashMask;
                     const auto data =
-                        ditem->data(KromitItem::KeyDashAux).toInt();
+                        ditem->data(GfxItem::KeyDashAux).toInt();
                     switch (type) {
                         case DashIcon::DashCol:
                             emit set_color(Color::qcolor_from_uint32(data));
@@ -616,16 +616,16 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
 // if yes, store cursor position and operation type and return true
 //
 bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
-    _trans.handle = KromitFrame::POS_NONE;
+    _trans.handle = GfxFrame::POS_NONE;
     for (auto &item : items()) {
         const auto itype = item->type();
         if (itype == GfxItemType::GFX_HANDLE ||
             itype == GfxItemType::GFX_ROTATEHANDLE ||
             itype == GfxItemType::GFX_MOVEHANDLE) {
-            auto *kitem = static_cast<KromitItem *>(item);
+            auto *kitem = static_cast<GfxItem *>(item);
             if (kitem->contains(kitem->mapFromScene(p))) {
-                _trans.handle = static_cast<KromitFrame::HandlePos>(
-                    kitem->data(KromitItem::KeyHandle).toUInt());
+                _trans.handle = static_cast<GfxFrame::HandlePos>(
+                    kitem->data(GfxItem::KeyHandle).toUInt());
                 _trans.pos_ref = _selection_frame->opposite_pos(_trans.handle);
                 _trans.pos_cur = _selection_frame->handle_pos(_trans.handle);
                 _trans.pos_start = p;
@@ -633,10 +633,10 @@ bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
 
                 UndoRecord rec;
                 for (auto &item : _selected_items) {
-                    KromitUndoItem *undo_item = item->create_undo_item();
-                    const int old_id = item->data(KromitItem::KeyID).toInt();
+                    GfxUndoItem *undo_item = item->create_undo_item();
+                    const int old_id = item->data(GfxItem::KeyID).toInt();
                     item->set_new_ID();
-                    const int new_id = item->data(KromitItem::KeyID).toInt();
+                    const int new_id = item->data(GfxItem::KeyID).toInt();
                     _undo_store.insert({old_id, undo_item});
                     rec.ids_to_add.insert(old_id);
                     rec.ids_to_remove.insert(new_id);
@@ -656,25 +656,25 @@ void DrawingScene::handle_transformation_move(const QPointF &p,
     _trans.m.reset();
     _trans.m.translate(_trans.pos_ref.x(), _trans.pos_ref.y());
 
-    if (_trans.handle & KromitFrame::POS_MOVE) {
+    if (_trans.handle & GfxFrame::POS_MOVE) {
         _trans.m.translate(delta.x(), delta.y());
-    } else if (_trans.handle & KromitFrame::POS_ISOSCALE) {
+    } else if (_trans.handle & GfxFrame::POS_ISOSCALE) {
         delta += (_trans.pos_cur - _trans.pos_ref);
         double kx = (delta.x() / (_trans.pos_cur.x() - _trans.pos_ref.x()));
         double ky = (delta.y() / (_trans.pos_cur.y() - _trans.pos_ref.y()));
         if (mods & Qt::ShiftModifier) { kx = ky = max<double>(kx, ky); }
         _trans.m.scale(kx, ky);
-    } else if (_trans.handle & KromitFrame::POS_ANISOSCALE) {
+    } else if (_trans.handle & GfxFrame::POS_ANISOSCALE) {
         delta += (_trans.pos_cur - _trans.pos_ref);
         double kx = delta.x() / (_trans.pos_cur.x() - _trans.pos_ref.x());
         double ky = delta.y() / (_trans.pos_cur.y() - _trans.pos_ref.y());
-        auto which = _trans.handle & KromitFrame::POS_WHICHMASK;
-        if (which == KromitFrame::POS_LEFT || which == KromitFrame::POS_RIGHT)
+        auto which = _trans.handle & GfxFrame::POS_WHICHMASK;
+        if (which == GfxFrame::POS_LEFT || which == GfxFrame::POS_RIGHT)
             ky = 1.0;
         else
             kx = 1.0;
         _trans.m.scale(kx, ky);
-    } else if (_trans.handle & KromitFrame::POS_ROTATE) {
+    } else if (_trans.handle & GfxFrame::POS_ROTATE) {
         double alpha0 = atan2(_trans.pos_cur.y() - _trans.pos_ref.y(),
                               _trans.pos_cur.x() - _trans.pos_ref.x());
         double alpha1 =
@@ -691,7 +691,7 @@ void DrawingScene::handle_transformation_move(const QPointF &p,
 //
 void DrawingScene::handle_transformation_release(const QPointF &p) {
     _trans.m.reset();
-    _trans.handle = KromitFrame::POS_NONE;
+    _trans.handle = GfxFrame::POS_NONE;
     update_selection_frame();
 }
 
@@ -704,10 +704,10 @@ void DrawingScene::undo() {
     if (_undo_records.empty()) return;
     UndoRecord &rec = _undo_records.back();
     for (auto id : rec.ids_to_remove) {
-        KromitItem *ptr = find_item(id);
+        GfxItem *ptr = find_item(id);
         if (ptr) {
             ptr->deselect();
-            KromitUndoItem *undo_item = ptr->create_undo_item();
+            GfxUndoItem *undo_item = ptr->create_undo_item();
             ptr->pgc();
             removeItemSafely(ptr);
             _undo_store.insert({id, undo_item});
@@ -718,7 +718,7 @@ void DrawingScene::undo() {
     for (auto id : rec.ids_to_add) {
         auto it = _undo_store.find(id);
         if (it != _undo_store.end()) {
-            KromitItem *item = it->second->create_from_undo_item();
+            GfxItem *item = it->second->create_from_undo_item();
             addItem(item);
             delete it->second;
             _undo_store.erase(it);
@@ -741,10 +741,10 @@ void DrawingScene::redo() {
     if (_redo_records.empty()) return;
     UndoRecord &rec = _redo_records.back();
     for (auto id : rec.ids_to_add) {
-        KromitItem *ptr = find_item(id);
+        GfxItem *ptr = find_item(id);
         if (ptr) {
             ptr->deselect();
-            KromitUndoItem *redo_item = ptr->create_undo_item();
+            GfxUndoItem *redo_item = ptr->create_undo_item();
             ptr->pgc();
             removeItemSafely(ptr);
             _undo_store.insert({id, redo_item});
@@ -755,7 +755,7 @@ void DrawingScene::redo() {
     for (auto id : rec.ids_to_remove) {
         auto it = _undo_store.find(id);
         if (it != _undo_store.end()) {
-            KromitItem *item = it->second->create_from_undo_item();
+            GfxItem *item = it->second->create_from_undo_item();
             addItem(item);
             delete it->second;
             _undo_store.erase(it);
@@ -809,7 +809,7 @@ void DrawingScene::garbage_collect() {
         // longer exist in items() or undo_store
         std::unordered_set<int> ids_in_stores;
         for (const auto &item : items())
-            ids_in_stores.insert(item->data(KromitItem::KeyID).toInt());
+            ids_in_stores.insert(item->data(GfxItem::KeyID).toInt());
 
         for (const auto &item : _undo_store)
             ids_in_stores.insert(item.second->id);
@@ -834,8 +834,8 @@ void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
     if (_current_item) {
         switch (_current_item->type()) {
             case GFX_PIXMAP: {
-                KromitPixmap *kpixmap =
-                    static_cast<KromitPixmap *>(_current_item);
+                GfxPixmap *kpixmap =
+                    static_cast<GfxPixmap *>(_current_item);
                 kpixmap->set_pixmap(pixmap, kpixmap->sel_rect());
                 _current_item = nullptr;
                 unstash_scene();
@@ -857,9 +857,9 @@ void DrawingScene::stash_scene() {
 
     for (auto &it : items()) {
         if (it->type() > GFX_SELECTABLE) {
-            KromitItem *kitem = static_cast<KromitItem *>(it);
-            auto id = kitem->data(KromitItem::KeyID).toInt();
-            KromitUndoItem *undo_item = kitem->create_undo_item();
+            GfxItem *kitem = static_cast<GfxItem *>(it);
+            auto id = kitem->data(GfxItem::KeyID).toInt();
+            GfxUndoItem *undo_item = kitem->create_undo_item();
             kitem->pgc();
             removeItemSafely(kitem);
             _stash.stash.insert({id, undo_item});
@@ -875,7 +875,7 @@ void DrawingScene::unstash_scene() {
     if (!_stash.background.isNull()) slot_set_background(_stash.background);
 
     for (auto &it : _stash.stash) {
-        KromitItem *item = it.second->create_from_undo_item();
+        GfxItem *item = it.second->create_from_undo_item();
         addItem(item);
     }
     _stash.stash.clear();
@@ -910,11 +910,11 @@ void DrawingScene::slot_dynamic_updates() {
     bool selected_deleted = false;
     for (auto &it : items()) {
         if (it->type() > GFX_SELECTABLE) {
-            KromitItem *kitem = static_cast<KromitItem *>(it);
+            GfxItem *kitem = static_cast<GfxItem *>(it);
             if (kitem->caps() & CAP_DYNAMIC) {
                 any_remaining = true;
                 auto result = kitem->dynamic();
-                if (result == KromitItem::DYN_DELITEM) {
+                if (result == GfxItem::DYN_DELITEM) {
                     // any_deleted = true;
                     if (_selected_items.contains(kitem))
                         selected_deleted = true;
@@ -983,9 +983,9 @@ void DrawingScene::slot_save_scene(int id) {
     // construct records in gfxitems
     for (auto &it : items()) {
         if (it->type() > GFX_SELECTABLE) {
-            KromitItem *kitem = static_cast<KromitItem *>(it);
-            auto id = kitem->data(KromitItem::KeyID).toInt();
-            KromitUndoItem *undo_item = kitem->create_undo_item();
+            GfxItem *kitem = static_cast<GfxItem *>(it);
+            auto id = kitem->data(GfxItem::KeyID).toInt();
+            GfxUndoItem *undo_item = kitem->create_undo_item();
             kitem->pgc();
             removeItemSafely(kitem);
             scene.gfxitems.insert({id, undo_item});
@@ -1029,7 +1029,7 @@ void DrawingScene::slot_restore_scene(int id) {
 
     // reconstruct all visible items
     for (auto &it : scene.gfxitems) {
-        KromitItem *item = it.second->create_from_undo_item();
+        GfxItem *item = it.second->create_from_undo_item();
         addItem(item);
     }
 
@@ -1078,7 +1078,7 @@ void DrawingScene::clear_scene() {
     // remove all items
     for (auto &it : items()) {
         if (it->type() > GFX_SELECTABLE) {
-            KromitItem *kitem = static_cast<KromitItem *>(it);
+            GfxItem *kitem = static_cast<GfxItem *>(it);
             kitem->pgc();
             removeItemSafely(kitem);
         }

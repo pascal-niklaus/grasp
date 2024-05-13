@@ -21,7 +21,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS DBus)
 find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Widgets)
 
 qt_add_executable(grasp WIN32 MACOSX_BUNDLE
-  kromit.cpp kromit.h
+  grasp.cpp grasp.h
   singletonapplication.h
   dbus.cpp dbus.h
   main.cpp
@@ -40,23 +40,23 @@ qt_add_executable(grasp WIN32 MACOSX_BUNDLE
   doubleedit.cpp doubleedit.h
   intedit.cpp intedit.h
   settings.cpp settings.h
-  arrowitem.cpp arrowitem.h
-  kromitdash.cpp kromitdash.h
-  kromititem.cpp kromititem.h
-  kromitpath.cpp kromitpath.h
-  kromitsmooth.cpp kromitsmooth.h
-  kromitortho.cpp kromitortho.h
-  kromitline.cpp kromitline.h
-  kromitfader.cpp kromitfader.h
-  kromithighlight.cpp kromithighlight.h
-  kromitrect.cpp kromitrect.h
-  kromittext.cpp kromittext.h
-  kromitpixmap.cpp kromitpixmap.h
-  kromitarrow.cpp kromitarrow.h
-  kromitframe.cpp kromitframe.h
-  kromithandle.cpp kromithandle.h
-  kromitrotate.cpp kromitrotate.h
-  kromitmove.cpp kromitmove.h
+  gfxarrowitem.cpp gfxarrowitem.h
+  gfxdash.cpp gfxdash.h
+  gfxitem.cpp gfxitem.h
+  gfxpath.cpp gfxpath.h
+  gfxsmooth.cpp gfxsmooth.h
+  gfxortho.cpp gfxortho.h
+  gfxline.cpp gfxline.h
+  gfxfader.cpp gfxfader.h
+  gfxhighlight.cpp gfxhighlight.h
+  gfxrect.cpp gfxrect.h
+  gfxtext.cpp gfxtext.h
+  gfxpixmap.cpp gfxpixmap.h
+  gfxarrow.cpp gfxarrow.h
+  gfxframe.cpp gfxframe.h
+  gfxhandle.cpp gfxhandle.h
+  gfxrotate.cpp gfxrotate.h
+  gfxmove.cpp gfxmove.h
 )
 
 qt_add_resources(grasp "cursors"

@@ -2,7 +2,7 @@
 #define _DRAWINGVIEW_H
 
 #include <QGraphicsView>
-#include "kromit.h"
+#include "grasp.h"
 
 class DrawingScene;
 

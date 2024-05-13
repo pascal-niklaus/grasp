@@ -4,7 +4,7 @@
 #include <QColor>
 #include <QFont>
 
-#include "kromit.h"
+#include "grasp.h"
 #include "colors.h"
 
 class QGraphicsItem;
