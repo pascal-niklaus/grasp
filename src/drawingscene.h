@@ -1,14 +1,15 @@
 #ifndef DRAWINGSCENE_H
 #define DRAWINGSCENE_H
 
-#include "kromitframe.h"
-#include "kromitdash.h"
-#include "undo.h"
-
 #include <QGraphicsScene>
+
+#include "kromitdash.h"
+#include "kromitframe.h"
+#include "undo.h"
 
 class QGraphicsItemGroup;
 class QMenu;
+class QSettings;
 
 class Transformation {
   public:
@@ -71,7 +72,7 @@ class SavedScene {
     std::unordered_map<int, KromitUndoItem *> undo_store;
     std::vector<UndoRecord> undo_records;
     std::vector<UndoRecord> redo_records;
-    Tools::Settings settings;
+    Settings settings;
 };
 
 // DrawingScene
@@ -82,7 +83,7 @@ class DrawingScene : public QGraphicsScene {
     enum MenuItem : int { MENU_CANCEL = 0, MENU_DELETE, MENU_NEW, MENU_SAVE };
 
   public:
-    explicit DrawingScene(QObject *parent = nullptr);
+    explicit DrawingScene(QSettings &qset, QObject *parent = nullptr);
     ~DrawingScene();
 
     void fix_geometry(QRect real_rect);
@@ -111,7 +112,7 @@ class DrawingScene : public QGraphicsScene {
     virtual void keyPressEvent(QKeyEvent *keyEvent) override;
 
   signals:
-    void keyPressed(int, Qt::KeyboardModifiers, QString);
+    void keyPressed(QKeyCombination, QString);
     void pointerPressed(QPointF, Qt::MouseButtons, Qt::KeyboardModifiers);
     void pointerMoved(QPointF, Qt::KeyboardModifiers);
     void pointerReleased(QPointF, Qt::KeyboardModifiers);
@@ -124,6 +125,7 @@ class DrawingScene : public QGraphicsScene {
     void set_color(const QColor &color);
     void set_arrow(ArrowType type);
     void delete_scene(int id);
+    void setup();
 
   public slots:
     void slot_new();
@@ -136,9 +138,10 @@ class DrawingScene : public QGraphicsScene {
     void slot_set_tool(ToolType tool);
     void slot_set_arrow(ArrowType type);
     void slot_set_width(int width);
+    void slot_setup();
 
   private slots:
-    void slot_keyPressed(int key, Qt::KeyboardModifiers mods, QString text);
+    void slot_keyPressed(QKeyCombination kc, QString text);
     void slot_pointerPressed(QPointF p,
                              Qt::MouseButtons buttons,
                              Qt::KeyboardModifiers mods);
@@ -174,7 +177,8 @@ class DrawingScene : public QGraphicsScene {
     int new_scene_id(void);
 
   private:
-    Tools::Settings _settings;
+    QSettings& _qset;
+    Settings _settings;
     KromitDash *_dash;
 
     QGraphicsItem *_current_item = nullptr;

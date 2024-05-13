@@ -10,12 +10,14 @@
 #include "kromitfader.h"
 #include "kromithighlight.h"
 
+#include <QSettings>
+
 int Tools::generate_ID(void) {
     static int id = 0;
     return ++id;
 }
 
-QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
+QGraphicsItem *Tools::create_tool(const Settings& settings) {
     switch (settings.tool) {
         case TOOL_ORTHO: {
            auto *ortho = new KromitOrtho(nullptr,
@@ -24,10 +26,10 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
                                          settings.arrow_type,
                                          settings.arrow_size,
                                          settings.simplify_ortho,
-                                         settings.snapdist,
-                                         settings.radius,
-                                         settings.minlen,
-                                         settings.maxangle);
+                                         settings.snapdist_ortho,
+                                         settings.radius_ortho,
+                                         settings.minlen_ortho,
+                                         settings.maxangle_ortho);
             ortho->setData(KromitItem::KeyID, generate_ID());
             return ortho;
         }
@@ -38,8 +40,8 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
                                          settings.width,
                                          settings.arrow_type,
                                          settings.arrow_size,
-                                         settings.simplify,
-                                         settings.snapdist);
+                                         settings.simplify_smooth,
+                                         settings.snapdist_smooth);
             pen->setData(KromitItem::KeyID, generate_ID());
             return pen;
         }
@@ -60,8 +62,8 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
                                         settings.width,
                                         settings.arrow_type,
                                         settings.arrow_size,
-                                        settings.sustain,
-                                        settings.fade);
+                                        settings.sustain_fader,
+                                        settings.fade_fader);
             fader->setData(KromitItem::KeyID, generate_ID());
             return fader;
         }
@@ -69,11 +71,11 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
         case TOOL_HIGHLIGHT: {
             auto *highlight = new KromitHighlight(nullptr,
                                                   settings.color,
-                                                  settings.width,
+                                                  settings.highlight_width,
                                                   settings.arrow_type,
                                                   settings.arrow_size,
-                                                  settings.sustain,
-                                                  settings.fade);
+                                                  settings.sustain_highlight,
+                                                  settings.fade_highlight);
             highlight->setData(KromitItem::KeyID, generate_ID());
             return highlight;
         }
@@ -89,17 +91,14 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
         }
 
         case TOOL_RECT: {
-            auto *rect = new KromitRect(nullptr,
-                                        settings.color,
-                                        settings.width,
-                                        settings.radius);
+            auto *rect = new KromitRect(
+                nullptr, settings.color, settings.width, settings.radius_rect);
             rect->setData(KromitItem::KeyID, generate_ID());
             return rect;
         }
 
         case TOOL_TEXT: {
-            auto *text = new KromitText(
-                nullptr, settings.color, settings.fontsize);
+            auto *text = new KromitText(nullptr, settings.color, settings.font);
             text->setData(KromitItem::KeyID, generate_ID());
             return text;
         }
@@ -113,4 +112,261 @@ QGraphicsItem *Tools::create_tool(const Tools::Settings& settings) {
         default:
             return nullptr;
     }
+}
+
+Settings::Settings() {
+    color_table = {
+        {0xf0f0f0ff, 'W', Qt::NoModifier, 'W', Qt::ShiftModifier},
+        {0x909090ff, 'M', Qt::NoModifier, 'M', Qt::ShiftModifier},
+        {0x2f2f2fff, 'N', Qt::NoModifier, 'N', Qt::ShiftModifier},
+        {0x1e90ffff, 'B', Qt::NoModifier, 'B', Qt::ShiftModifier},
+        {0x00ffffff, 'C', Qt::NoModifier, 'C', Qt::ShiftModifier},
+        {0xff0000ff, 'R', Qt::ShiftModifier, 'I', Qt::NoModifier},
+        {0xffa500ff, 'O', Qt::ShiftModifier, 'A', Qt::NoModifier},
+        {0x32cd32ff, 'G', Qt::NoModifier, 'G', Qt::ShiftModifier},
+        {0x185d27ff, 'F', Qt::ShiftModifier, 0, Qt::NoModifier},
+        {0xff00ffff, 'V', Qt::NoModifier, 'V', Qt::ShiftModifier},
+        {0xffff00ff, 'Y', Qt::NoModifier, 'Y', Qt::ShiftModifier},
+        {0x662c15ff, 'K', Qt::NoModifier, 'K', Qt::ShiftModifier},
+    };
+
+    line_widths[0] = 1.0;
+    line_widths[1] = 2.0;
+    line_widths[2] = 3.0;
+    line_widths[3] = 5.0;
+    line_widths[4] = 8.0;
+    line_widths[5] = 12.0;
+    line_widths[6] = 25.0;
+    line_widths[7] = 40.0;
+    line_widths[8] = 60.0;
+
+    for (int i = 0; i < 9; i++) highlight_line_width[i] = 3.5 * line_widths[i];
+
+    // set default tool settings
+    tool = TOOL_SMOOTH;
+    color = Qt::yellow;
+    width = 5;
+    arrow_type = ARROW_END;
+    arrow_size = 3;
+    minwidth = 1;
+    maxwidth = 4;
+    radius_rect = 30;
+    radius_ortho = 30;
+    minlen_ortho = 70;
+    simplify_smooth = 15;
+    simplify_ortho = 25;
+    snapdist_ortho = 20;
+    snapdist_smooth = 20;
+    maxangle_ortho = 15;
+    font = QFont("Noto sans", 12);
+    sustain_fader = 5.0;
+    fade_fader = 5.0;
+    sustain_highlight = 5.0;
+    fade_highlight = 5.0;
+}
+
+void Settings::store(QSettings &qs) const {
+    qs.beginGroup("Keys");
+    qs.setValue("edit-key", Settings::to_string(edit_key));
+    qs.setValue("pen-key", Settings::to_string(pen_key));
+    qs.setValue("line-key", Settings::to_string(line_key));
+    qs.setValue("rect-key", Settings::to_string(rect_key));
+    qs.setValue("smooth-key", Settings::to_string(smooth_key));
+    qs.setValue("ortho-key", Settings::to_string(ortho_key));
+    qs.setValue("highlight-key", Settings::to_string(highlight_key));
+    qs.setValue("fader-key", Settings::to_string(fader_key));
+    qs.setValue("text-key", Settings::to_string(text_key));
+
+    qs.setValue("delete-key", Settings::to_string(del_key));
+    qs.setValue("delete-all-key", Settings::to_string(del_all_key));
+    qs.setValue("dash-key", Settings::to_string(dash_key));
+    qs.setValue("grab-key", Settings::to_string(grab_key));
+    qs.setValue("grab-partial-key", Settings::to_string(grab_partial_key));
+    qs.endGroup();
+
+    // ---------------------------- tools ----------------------------
+
+    qs.beginGroup("Tools");
+
+    qs.beginGroup("Rect");
+    qs.setValue("radius", radius_rect);
+    qs.endGroup();
+
+    qs.beginGroup("Smooth");
+    qs.setValue("simplify", simplify_smooth);
+    qs.setValue("snapdist", snapdist_smooth);
+    qs.endGroup();
+
+    qs.beginGroup("Ortho");
+    qs.setValue("simplify", simplify_ortho);
+    qs.setValue("snapdist", snapdist_ortho);
+    qs.setValue("radius", radius_ortho);
+    qs.setValue("minlen", minlen_ortho);
+    qs.setValue("maxangle", maxangle_ortho);
+    qs.endGroup();
+
+    qs.beginGroup("Highlight");
+    qs.setValue("sustain", sustain_highlight);
+    qs.setValue("fade", fade_highlight);
+    qs.endGroup();
+
+    qs.beginGroup("Fader");
+    qs.setValue("sustain", sustain_fader);
+    qs.setValue("fade", fade_fader);
+    qs.endGroup();
+
+    qs.beginGroup("Text");
+    qs.setValue("font", font.toString());
+    qs.endGroup();
+
+    qs.endGroup();
+
+    qs.beginGroup("Colors");
+    for (int i = 0; i < static_cast<int>(color_table.size()); i++) {
+        const Color &col = color_table[i];
+        qs.beginGroup(QString("%1").arg(i, 2, 10, QChar('0')));
+        qs.setValue("color", Color::qcolor_as_hex(color_table[i].color));
+        qs.setValue("key1", to_string(col.key1));
+        qs.setValue("key2", to_string(col.key2));
+
+        qs.endGroup();
+    }
+    qs.endGroup();
+
+    qs.beginGroup("Linewidths");
+    for (int i = 0; i < 9; i++) {
+        qs.beginGroup(QString("%1").arg(i, 2, 10, QChar('0')));
+        qs.setValue("width", line_widths[i]);
+        qs.setValue("highligher-width", highlight_line_width[i]);
+        qs.setValue("key", to_string(width_key[i]));
+        qs.endGroup();
+    }
+    qs.endGroup();
+
+    qs.beginGroup("Arrows");
+    qs.setValue("arrow-beginning", to_string(arrow_start_key));
+    qs.setValue("arrow-end", to_string(arrow_end_key));
+    qs.setValue("arrow-double", to_string(arrow_double_key));
+    qs.setValue("arrow-none", to_string(arrow_none_key));
+    qs.setValue("size", arrow_size);
+    qs.endGroup();
+
+    qs.beginGroup("Directories");
+    qs.setValue("save-dir", save_dir);
+    qs.endGroup();
+}
+
+void Settings::retrieve(QSettings &qs) {
+    qs.beginGroup("Keys");
+
+    edit_key = Settings::keycomb_from_string(qs.value("edit-key").toString());
+    pen_key = Settings::keycomb_from_string(qs.value("pen-key").toString());
+    line_key = Settings::keycomb_from_string(qs.value("line-key").toString());
+    rect_key = Settings::keycomb_from_string(qs.value("rect-key").toString());
+    smooth_key =
+        Settings::keycomb_from_string(qs.value("smooth-key").toString());
+    ortho_key = Settings::keycomb_from_string(qs.value("ortho-key").toString());
+    highlight_key =
+        Settings::keycomb_from_string(qs.value("highlight-key").toString());
+    fader_key = Settings::keycomb_from_string(qs.value("fader-key").toString());
+    text_key = Settings::keycomb_from_string(qs.value("text-key").toString());
+
+    del_key = Settings::keycomb_from_string(qs.value("delete-key").toString());
+    del_all_key =
+        Settings::keycomb_from_string(qs.value("delete-all-key").toString());
+    dash_key = Settings::keycomb_from_string(qs.value("dash-key").toString());
+    grab_key = Settings::keycomb_from_string(qs.value("grab-key").toString());
+    grab_partial_key =
+        Settings::keycomb_from_string(qs.value("grab-partial-key").toString());
+
+    qs.endGroup();
+
+    // ---------------------------- tools ----------------------------
+    qs.beginGroup("Tools");
+
+    qs.beginGroup("Rect");
+    radius_rect = qs.value("radius").toDouble();
+    qs.endGroup();
+
+    qs.beginGroup("Smooth");
+    simplify_smooth = qs.value("simplify").toDouble();
+    snapdist_smooth = qs.value("snapdist").toDouble();
+    qs.endGroup();
+
+    qs.beginGroup("Ortho");
+    simplify_ortho = qs.value("simplify").toDouble();
+    snapdist_ortho = qs.value("snapdist").toDouble();
+    radius_ortho = qs.value("radius").toDouble();
+    minlen_ortho = qs.value("minlen").toDouble();
+    maxangle_ortho = qs.value("maxangle").toDouble();
+    qs.endGroup();
+
+    qs.beginGroup("Highlight");
+    sustain_highlight = qs.value("sustain").toDouble();
+    fade_highlight = qs.value("fade").toDouble();
+    qs.endGroup();
+
+    qs.beginGroup("Fader");
+    sustain_fader = qs.value("sustain").toDouble();
+    fade_fader = qs.value("fade").toDouble();
+    qs.endGroup();
+
+    qs.beginGroup("Text");
+    font.fromString(qs.value("font").toString());
+    qs.endGroup();
+    qs.endGroup();
+
+    qs.beginGroup("Colors");
+    for (int i = 0; i < static_cast<int>(color_table.size()); i++) {
+        Color &col = color_table[i];
+        qs.beginGroup(QString("%1").arg(i, 2, 10, QChar('0')));
+        col.color = Color::qcolor_from_hex(qs.value("color").toString());
+        col.key1 = Settings::keycomb_from_string(qs.value("key1").toString());
+        col.key2 = Settings::keycomb_from_string(qs.value("key2").toString());
+        qs.endGroup();
+    }
+    qs.endGroup();
+
+    qs.beginGroup("Linewidths");
+    for (int i = 0; i < 9; i++) {
+        qs.beginGroup(QString("%1").arg(i, 2, 10, QChar('0')));
+        line_widths[i] = qs.value("width").toDouble();
+        highlight_line_width[i] = qs.value("highligher-width").toDouble();
+        width_key[i] =
+            Settings::keycomb_from_string(qs.value("key").toString());
+        qs.endGroup();
+    }
+    qs.endGroup();
+
+    qs.beginGroup("Arrows");
+    arrow_start_key = Settings::keycomb_from_string(
+        qs.value("arrow-beginning").toString());
+    arrow_end_key =
+        Settings::keycomb_from_string(qs.value("arrow-end").toString());
+    arrow_double_key = Settings::keycomb_from_string(
+        qs.value("arrow-double").toString());
+    arrow_none_key = Settings::keycomb_from_string(
+        qs.value("arrow-none").toString());
+    arrow_size = qs.value("size").toDouble();
+    qs.endGroup();
+
+    qs.beginGroup("Directories");
+    save_dir = qs.value("save-dir").toString();
+    qs.endGroup();
+}
+
+QColor Settings::get_color(const QKeyCombination &k) {
+    for (const auto &c : color_table) {
+        if (c.key1 == k || c.key2 == k) return c.color;
+    }
+    return QColor();
+}
+
+int Settings::qcolor_find_index(const QColor& color) const {
+    const auto it = std::find_if(
+        color_table.cbegin(),
+        color_table.cend(),
+        [&color](const Color& item) { return item.color == color; });
+    if (it == color_table.cend()) return -1;
+    return std::distance(color_table.cbegin(), it);
 }

@@ -5,14 +5,15 @@
 
 #include "colors.h"
 #include "kromititem.h"
+#include "tools.h"
 
 // ============================= NUMBER ==============================
 //
-// KromitScene
+// KromitNumber
 //
-// A marker with a single number
+// A marker with a single number indicating the scene
 
-KromitScene::KromitScene(QGraphicsItem *parent, int size) : DashIcon(parent) {
+KromitNumber::KromitNumber(QGraphicsItem *parent, int size) : DashIcon(parent) {
     _size = size / 2;
 
     _poly = new QGraphicsPolygonItem(this);
@@ -37,17 +38,17 @@ KromitScene::KromitScene(QGraphicsItem *parent, int size) : DashIcon(parent) {
     set_id(0);
 }
 
-KromitScene::~KromitScene() {}
+KromitNumber::~KromitNumber() {}
 
-void KromitScene::paint(QPainter *painter,
+void KromitNumber::paint(QPainter *painter,
                         const QStyleOptionGraphicsItem *option,
                         QWidget *widget) {}
 
-QRectF KromitScene::selectionBox() const {
+QRectF KromitNumber::selectionBox() const {
     return _poly->polygon().boundingRect().adjusted(-5, -5, 10, 10);
 }
 
-void KromitScene::set_id(int id) {
+void KromitNumber::set_id(int id) {
     _text->setFont(QFont("Noto Sans", 10, QFont::Normal));
     _poly->setPen(QPen(Qt::gray, 1));
     _text->setPlainText(QString("%1").arg(id));
@@ -60,7 +61,7 @@ void KromitScene::set_id(int id) {
     setData(KromitItem::KeyDashAux, id);
 }
 
-void KromitScene::set_selected(bool selected) {
+void KromitNumber::set_selected(bool selected) {
     _is_active = selected;
 
     if (_is_active) {
@@ -239,15 +240,15 @@ QRectF KromitColor::selectionBox() const {
     return _poly->polygon().boundingRect().adjusted(-5, -5, 10, 10);
 }
 
-void KromitColor::set_color(std::uint32_t color, const QString &shortcut) {
+void KromitColor::set_color(const QColor& color, const QString &shortcut) {
     _text->setPlainText(shortcut);
     _text->adjustSize();
     QRectF r = _text->boundingRect();
     _text->setPos(-r.center());
-    _poly->setBrush(Color::qcolor_from_uint32(color));
+    _poly->setBrush(color);
 
     setData(KromitItem::KeyDash, DashCol);
-    setData(KromitItem::KeyDashAux, static_cast<std::uint32_t>(color));
+    setData(KromitItem::KeyDashAux, Color::uint32_from_qcolor(color));
 }
 
 void KromitColor::set_selected(bool selected) {
@@ -260,8 +261,11 @@ void KromitColor::set_selected(bool selected) {
 //
 // The entire dashboard
 
-KromitDash::KromitDash(QGraphicsItem *parent, int width, int height) :
-    QGraphicsItem(parent) {
+KromitDash::KromitDash(QGraphicsItem *parent,
+                       int width,
+                       int height,
+                       Settings &settings) :
+    QGraphicsItem(parent), _settings(settings) {
     _height = height;
     _width = width;
     int x = width - height;
@@ -272,21 +276,23 @@ KromitDash::KromitDash(QGraphicsItem *parent, int width, int height) :
 
     auto *cogwheel = new KromitDashIcon(this, height, px, 1);
     cogwheel->setPos(x, 2.0 + static_cast<double>(height) / 2.0);
+    cogwheel->setData(KromitItem::KeyDash, DashIcon::DashSetup);
+    cogwheel->setData(KromitItem::KeyDashAux, 0);
 
     // add color boxes, right to left
     x -= height * 1.5 * 2;
-    for (auto it = Color::color_table.crbegin();
-         it != Color::color_table.crend();
+    for (auto it = _settings.color_table.crbegin();
+         it != _settings.color_table.crend();
          it++) {
         auto *icon = new KromitColor(this, height);
         icon->setPos(x, 2.0 + static_cast<double>(height) / 2.0);
         QString txt;
-        if (it->mod1 == Qt::ShiftModifier) {
-            txt = QString("\u21e7%1").arg(QChar(it->key1).toUpper());
+        if (it->key1.keyboardModifiers() == Qt::ShiftModifier) {
+            txt = QString("\u21e7%1").arg(QChar(it->key1.key()).toUpper());
         } else {
-            txt = QString("%1").arg(QChar(it->key1).toUpper());
+            txt = QString("%1").arg(QChar(it->key1.key()).toUpper());
         }
-        icon->set_color(it->numeric, txt);
+        icon->set_color(it->color, txt);
         x -= height * 1.5;
     }
 
@@ -357,7 +363,7 @@ void KromitDash::select_scene(int n){
 
 void KromitDash::add_scene(int id) {
     if (_scenes.find(id) == _scenes.end()) {
-        KromitScene *new_scene = new KromitScene(this, _height);
+        KromitNumber *new_scene = new KromitNumber(this, _height);
         new_scene->set_id(id);
         _scenes.insert({id, new_scene});
         reposition_scenes();

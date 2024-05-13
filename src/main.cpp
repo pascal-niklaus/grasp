@@ -6,9 +6,10 @@
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QCommandLineParser>
+#include <QSettings>
 
+#include "settings.h"
 
-#include "kromittext.h"
 #include <iostream>
 
 bool send_dbus_command(QDBusConnection& bus,
@@ -124,8 +125,11 @@ int main(int argc, char* argv[]) {
         if (parser.isSet(grabOption)) { send_dbus_command(bus, "grab"); }
         return 0;
     } else {
+        // QSettings qs("org.pascal-niklaus", "grasp");
+        QSettings qs("grasp.ini", QSettings::IniFormat, &a);
+
         Message msg(&a);
-        MainWindow w;
+        MainWindow w(qs);
 
         // ------------ connect DBus messages to signales ------------
 
@@ -138,8 +142,12 @@ int main(int argc, char* argv[]) {
         QObject::connect(
             &msg, &Message::toggle_received, &w, &MainWindow::slot_toggle);
 
-        QObject::connect(&msg, &Message::grab_received, &w, &MainWindow::slot_grab);
-        QObject::connect(&msg, &Message::grabnew_received, &w, &MainWindow::slot_grab_and_new);
+        QObject::connect(
+            &msg, &Message::grab_received, &w, &MainWindow::slot_grab);
+        QObject::connect(&msg,
+                         &Message::grabnew_received,
+                         &w,
+                         &MainWindow::slot_grab_and_new);
 
         QObject::connect(
             &msg, &Message::color_received, &w, &MainWindow::slot_change_color);
@@ -155,8 +163,8 @@ int main(int argc, char* argv[]) {
         w.setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
         w.setStyleSheet("background:transparent;");
         // w.setAttribute(Qt::WA_TranslucentBackground);
-        w.setWindowFlags(Qt::FramelessWindowHint); // TODO: | Qt::WindowStaysOnTopHint);
-
+        w.setWindowFlags(
+            Qt::FramelessWindowHint);  // TODO: | Qt::WindowStaysOnTopHint);
 
         w.show();
         w.setWindowOpacity(1.0);

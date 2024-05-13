@@ -22,6 +22,8 @@
 
 #include "kromit.h"
 
+class Settings;
+
 class DashIcon : public QGraphicsItem {
   public:
     DashIcon(QGraphicsItem* parent = nullptr) : QGraphicsItem(parent) {}
@@ -58,8 +60,8 @@ class KromitDashIcon : public DashIcon {
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget = nullptr) override;
     virtual int type() const override { return Type; }
-    virtual QRectF boundingRect() const { return QRectF(); };
-    virtual QRectF selectionBox() const;
+    virtual QRectF boundingRect() const override { return QRectF(); };
+    virtual QRectF selectionBox() const override;
 
   private:
     double _size;
@@ -68,13 +70,13 @@ class KromitDashIcon : public DashIcon {
 
 // ============================= NUMBER ==============================
 
-class KromitScene : public DashIcon {
+class KromitNumber : public DashIcon {
   public:
     enum { Type = GFX_SCENE };
 
   public:
-    KromitScene(QGraphicsItem* parent = nullptr, int size = 30);
-    ~KromitScene();
+    KromitNumber(QGraphicsItem* parent = nullptr, int size = 30);
+    ~KromitNumber();
 
     void set_id(int id);
     void set_selected(bool selected);
@@ -84,8 +86,8 @@ class KromitScene : public DashIcon {
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget = nullptr) override;
     virtual int type() const override { return Type; }
-    virtual QRectF boundingRect() const { return QRectF(); };
-    virtual QRectF selectionBox() const;
+    virtual QRectF boundingRect() const override { return QRectF(); };
+    virtual QRectF selectionBox() const override;
 
   private:
     QGraphicsTextItem* _text = nullptr;
@@ -105,7 +107,7 @@ class KromitColor : public DashIcon {
     KromitColor(QGraphicsItem* parent = nullptr, int size = 30);
     ~KromitColor();
 
-    void set_color(std::uint32_t color, const QString& shortcut);
+    void set_color(const QColor& color, const QString& shortcut);
     void set_selected(bool selected);
 
     // ----- QGraphicsItem methods
@@ -113,8 +115,8 @@ class KromitColor : public DashIcon {
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget = nullptr) override;
     virtual int type() const override { return Type; }
-    virtual QRectF boundingRect() const { return QRectF(); };
-    virtual QRectF selectionBox() const;
+    virtual QRectF boundingRect() const override { return QRectF(); };
+    virtual QRectF selectionBox() const override;
 
   private:
     QGraphicsTextItem* _text = nullptr;
@@ -140,8 +142,8 @@ class KromitArrowIcon : public DashIcon {
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget = nullptr) override;
     virtual int type() const override { return Type; }
-    virtual QRectF boundingRect() const { return QRectF(); };
-    virtual QRectF selectionBox() const;
+    virtual QRectF boundingRect() const override { return QRectF(); };
+    virtual QRectF selectionBox() const override;
 
   private:
     QGraphicsPolygonItem* _left = nullptr;
@@ -160,7 +162,10 @@ class KromitDash : public QGraphicsItem {
     enum { Type = GFX_DASH };
 
   public:
-    KromitDash(QGraphicsItem* parent, int width, int height);
+    KromitDash(QGraphicsItem* parent,
+               int width,
+               int height,
+               Settings& settings);
     ~KromitDash();
 
     void select_color(const QColor& color);
@@ -177,7 +182,7 @@ class KromitDash : public QGraphicsItem {
                        const QStyleOptionGraphicsItem* option,
                        QWidget* widget = nullptr) override;
     virtual int type() const override { return Type; }
-    virtual QRectF boundingRect() const { return QRectF(); };
+    virtual QRectF boundingRect() const override { return QRectF(); };
 
   private:
     void reposition_scenes();
@@ -186,8 +191,9 @@ class KromitDash : public QGraphicsItem {
     int _height;
     int _width;
     int _active_scene = 0;
+    Settings& _settings;
 
-    std::map<int, KromitScene*> _scenes;
+    std::map<int, KromitNumber*> _scenes;
 };
 
 #endif

@@ -170,7 +170,6 @@ void KromitLine::dump(std::ostream& os) const {
 //
 KromitUndoLine::KromitUndoLine(const KromitLine* kline) :
     KromitUndoItem(static_cast<const KromitItem*>(kline)) {
-    std::cerr << "KUL ctor" << static_cast<void*>(this) << " id=" << id << "\n";
     pen = kline->pen();
     arrow_type = kline->arrow_type();
     arrow_size = kline->arrow_size();
@@ -178,7 +177,6 @@ KromitUndoLine::KromitUndoLine(const KromitLine* kline) :
 }
 
 KromitUndoLine::~KromitUndoLine() {
-    std::cerr << "KUL dtor" << static_cast<void*>(this) << " id=" << id << "\n";
 }
 
 // KromitUndoLine::create_from_undo_item

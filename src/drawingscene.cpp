@@ -1,26 +1,31 @@
 #include "drawingscene.h"
 
+#include <QAction>
 #include <QApplication>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QGraphicsSceneMouseEvent>
+#include <QMenu>
+#include <QMessageBox>
+#include <QPainter>
 #include <QScreen>
 #include <QTabletEvent>
 #include <QTimer>
-#include <QMenu>
-#include <QAction>
-#include <QMessageBox>
-
 #include <chrono>
 
 #include "colors.h"
+#include "kromitdash.h"
 #include "kromitpath.h"
 #include "kromitpixmap.h"
 #include "kromittext.h"
-#include "kromitdash.h"
+#include "selectkey.h"
+#include "settings.h"
 #include "utility.h"
 
 // DrawingScene::DrawingScene
 //
-DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
+DrawingScene::DrawingScene(QSettings &qset, QObject *parent) :
+    QGraphicsScene{parent}, _qset(qset) {
     // fix geometry, otherwise scene moves around when items are added
     QRectF r = QGuiApplication::primaryScreen()->geometry();
     const double k = QGuiApplication::primaryScreen()->devicePixelRatio();
@@ -28,30 +33,12 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
     r.setHeight(round(r.height() * k));
 
     setSceneRect(r);
-
-    // set default tool settings
-    _settings.tool = TOOL_SMOOTH;
-    _settings.color = Qt::yellow;
-    _settings.width = 5;
-    _settings.arrow_type = ARROW_END;
-    _settings.arrow_size = 3;
-    _settings.minwidth = 1;
-    _settings.maxwidth = 4;
-    _settings.radius = 30;
-    _settings.minlen = 70;
-    _settings.simplify = 15;
-    _settings.simplify_ortho = 25;
-    _settings.snapdist = 20;
-    _settings.maxangle = 15;
-    _settings.fontsize = 20;
-    _settings.sustain = 5.0;
-    _settings.fade = 5.0;
+    _settings.retrieve(_qset);
 
     // create selection frame
     _selection_frame = new KromitFrame(nullptr, Qt::gray, 1);
     addItem(_selection_frame);
     _selection_frame->hide();
-
 
     // prepare RMB menu
     _rmb_menu = new QMenu();
@@ -112,14 +99,15 @@ DrawingScene::DrawingScene(QObject *parent) : QGraphicsScene{parent} {
             &DrawingScene::slot_delete_scene,
             Qt::QueuedConnection);
 
-    _dash = new KromitDash(nullptr, sceneRect().width(), 25);
-    _dash->setPos(0,0);
+    _dash = new KromitDash(nullptr, sceneRect().width(), 25, _settings);
+    _dash->setPos(0, 0);
     addItem(_dash);
 
     connect(
         this, &DrawingScene::set_color, this, &DrawingScene::slot_set_color);
     connect(
         this, &DrawingScene::set_arrow, this, &DrawingScene::slot_set_arrow);
+    connect(this, &DrawingScene::setup, this, &DrawingScene::slot_setup);
 
     emit set_arrow(ARROW_END);
 
@@ -269,10 +257,9 @@ void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
         if (result == KromitItem::KEY_PROCESSED) return;
     }
 
-    const auto key = keyEvent->key();
-    const auto mods = keyEvent->modifiers();
+    const auto key = keyEvent->keyCombination();
     const auto text = keyEvent->text();
-    emit keyPressed(key, mods, text);
+    emit keyPressed(key, text);
 }
 
 // DrawingScene::pointerPressed
@@ -358,152 +345,85 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
     }
 }
 
-void DrawingScene::slot_keyPressed(int key,
-                                   Qt::KeyboardModifiers mods,
-                                   QString text) {
-    if (text == "<") {
+void DrawingScene::slot_keyPressed(QKeyCombination kc, QString text) {
+    kc = SelectKey::canonicalize(kc);
+    if (kc == _settings.arrow_start_key) {
         emit set_arrow(ARROW_START);
-    } else if (text == ">") {
+    } else if (kc == _settings.arrow_end_key) {
         emit set_arrow(ARROW_END);
-    } else if (text == "=") {
+    } else if (kc == _settings.arrow_double_key) {
         emit set_arrow(ARROW_DOUBLE);
-    } else if (text == "-") {
+    } else if (kc == _settings.arrow_none_key) {
         emit set_arrow(ARROW_NONE);
-    }
+    } else if (kc == _settings.grab_partial_key) {
+        slot_set_tool(TOOL_PIXMAP);
+        emit set_transparent();
+        stash_scene();
+    } else if (kc == _settings.dash_key) {
+        if (_dash->isVisible())
+            _dash->hide();
+        else
+            _dash->show();
+    } else if (kc == _settings.del_key) {
+        delete_selection();
+    } else if (kc == _settings.del_all_key) {
+        clear_scene();
+    } else if (kc == _settings.line_key) {
+        slot_set_tool(TOOL_LINE);
+    } else if (kc == _settings.rect_key) {
+        slot_set_tool(TOOL_RECT);
+    } else if (kc == _settings.pen_key) {
+        slot_set_tool(TOOL_PEN);
+    } else if (kc == _settings.fader_key) {
+        slot_set_tool(TOOL_FADER);
+    } else if (kc == _settings.highlight_key) {
+        slot_set_tool(TOOL_HIGHLIGHT);
+    } else if (kc == _settings.smooth_key) {
+        slot_set_tool(TOOL_SMOOTH);
+    } else if (kc == _settings.ortho_key) {
+        slot_set_tool(TOOL_ORTHO);
+    } else if (kc == _settings.edit_key) {
+        slot_set_tool(TOOL_SELECT);
+    } else if (kc == _settings.text_key) {
+        slot_set_tool(TOOL_TEXT);
+    } else if (kc.key() == Qt::Key_D) {
+        qDebug() << "---------- items ----------";
+        for (const auto &item : items()) {
+            if (item->type() > GFX_SELECTABLE) {
+                std::cerr << static_cast<KromitItem &>(*item) << "\n";
+            } else {
+                qDebug() << "  " << KromitItem::type_txt(item->type())
+                         << item->isVisible() << item;
+            }
+        }
+        qDebug() << "-------- undo_store -------";
+        for (const auto &it : _undo_store) {
+            std::cerr << static_cast<KromitUndoItem &>(*it.second) << "\n";
+        }
+        qDebug() << "------ undo_records -------";
+        for (const auto &rec : _undo_records) { std::cerr << rec; }
+        qDebug() << "------ redo_records -------";
+        for (const auto &rec : _redo_records) { std::cerr << rec; }
+        qDebug() << "---------------------------";
+    } else {
+        // check for line width keystrokes
+        const int nw =
+            sizeof(_settings.width_key) / sizeof(_settings.width_key[0]);
+        for (int i = 0; i < nw; i++) {
+            if (_settings.width_key[i] == kc) {
+                _settings.width = _settings.line_widths[i];
+                _settings.highlight_width = _settings.highlight_line_width[i];
+                return;
+            }
+        }
 
-    if (mods == (Qt::ShiftModifier | Qt::ControlModifier)) {
-        switch (key) {
-            case Qt::Key_Delete: {
-                clear_scene();
-            } break;
+        // check for color keystrokes
+        QColor col = _settings.get_color(kc);
+        if (col.isValid()) {
+            slot_set_color(col);
+            return;
         }
     }
-
-    if (mods == Qt::ShiftModifier) {
-        switch (key) {
-            case Qt::Key_G: {
-                slot_set_tool(TOOL_PIXMAP);
-                emit set_transparent();
-                stash_scene();
-            } break;
-        }
-    }
-
-    if (mods == Qt::NoModifier) {
-        switch (key) {
-            case Qt::Key_F1:
-                if (_dash->isVisible())
-                    _dash->hide();
-                else
-                    _dash->show();
-                break;
-
-            case Qt::Key_Delete: {
-                delete_selection();
-            } break;
-
-            case Qt::Key_1:
-                _settings.width = 1;
-                break;
-
-            case Qt::Key_2:
-                _settings.width = 2;
-                break;
-
-            case Qt::Key_3:
-                _settings.width = 3;
-                break;
-
-            case Qt::Key_4:
-                _settings.width = 5;
-                break;
-
-            case Qt::Key_5:
-                _settings.width = 8;
-                break;
-
-            case Qt::Key_6:
-                _settings.width = 12;
-                break;
-
-            case Qt::Key_7:
-                _settings.width = 25;
-                break;
-
-            case Qt::Key_8:
-                _settings.width = 40;
-                break;
-
-            case Qt::Key_9:
-                _settings.width = 60;
-                break;
-
-            case Qt::Key_L:
-                slot_set_tool(TOOL_LINE);
-                break;
-
-            case Qt::Key_R:
-                slot_set_tool(TOOL_RECT);
-                break;
-
-            case Qt::Key_P:
-                slot_set_tool(TOOL_PEN);
-                break;
-
-            case Qt::Key_F:
-                slot_set_tool(TOOL_FADER);
-                break;
-
-            case Qt::Key_H:
-                slot_set_tool(TOOL_HIGHLIGHT);
-                break;
-
-            case Qt::Key_S:
-                slot_set_tool(TOOL_SMOOTH);
-                break;
-
-            case Qt::Key_O:
-                slot_set_tool(TOOL_ORTHO);
-                break;
-
-            case Qt::Key_E:
-                slot_set_tool(TOOL_SELECT);
-                break;
-
-            case Qt::Key_T:
-                slot_set_tool(TOOL_TEXT);
-                break;
-
-            case Qt::Key_D: {
-                qDebug() << "---------- items ----------";
-                for (const auto &item : items()) {
-                    if (item->type() > GFX_SELECTABLE) {
-                        std::cerr << static_cast<KromitItem &>(*item) << "\n";
-                    } else {
-                        qDebug() << "  " << KromitItem::type_txt(item->type())
-                                 << item->isVisible() << item;
-                    }
-                }
-                qDebug() << "-------- undo_store -------";
-                for (const auto &it : _undo_store) {
-                    std::cerr << static_cast<KromitUndoItem &>(*it.second)
-                              << "\n";
-                }
-                qDebug() << "------ undo_records -------";
-                for (const auto &rec : _undo_records) { std::cerr << rec; }
-                qDebug() << "------ redo_records -------";
-                for (const auto &rec : _redo_records) { std::cerr << rec; }
-                qDebug() << "---------------------------";
-
-            } break;
-
-            default:
-                break;
-        }
-    }
-
-    if (std::uint32_t col = Color::get_color(key, mods))
-        slot_set_color(Color::qcolor_from_uint32(col));
 }
 
 // DrawingScene::update_selection_frame
@@ -608,35 +528,56 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
             if (itype > GFX_DASH_MIN && itype < GFX_DASH_MAX) {
                 auto *ditem = static_cast<DashIcon *>(item);
                 if (ditem->contains(ditem->mapFromScene(p))) {
-                  const auto type = ditem->data(KromitItem::KeyDash).toInt() & DashIcon::DashMask;
-                  const auto data = ditem->data(KromitItem::KeyDashAux).toInt();
-                  switch (type) {
-                      case DashIcon::DashCol:
-                          emit set_color(Color::qcolor_from_uint32(data));
-                          break;
-                      case DashIcon::DashScene: {
-                          if (buttons & Qt::RightButton) {
-                              auto chosen = _rmb_menu->exec(QCursor::pos());
-                              if (chosen && chosen->data().isValid()) {
-                                  auto item = chosen->data().toInt();
-                                  if (item == MENU_SAVE) {
-                                      // make active (if not), hide dash, then
-                                      // call save
-                                  } else if (item == MENU_NEW) {
-                                      // store scene in current id, load other
-                                      // id and make it active !
-                                      slot_new();
-                                  } else if (item == MENU_DELETE) {
-                                      if (data == _current_scene) {
-                                          QMessageBox::warning(
-                                              nullptr,
-                                              "Cannot delete",
-                                              "Cannot delete currently "
-                                              "active sketch",
-                                              QMessageBox::Ok,
-                                              QMessageBox::Ok);
-                                      } else {
-                                          emit delete_scene(data);
+                    const auto type = ditem->data(KromitItem::KeyDash).toInt() &
+                                      DashIcon::DashMask;
+                    const auto data =
+                        ditem->data(KromitItem::KeyDashAux).toInt();
+                    switch (type) {
+                        case DashIcon::DashCol:
+                            emit set_color(Color::qcolor_from_uint32(data));
+                            break;
+                        case DashIcon::DashScene: {
+                            if (buttons & Qt::RightButton) {
+                                auto chosen = _rmb_menu->exec(QCursor::pos());
+                                if (chosen && chosen->data().isValid()) {
+                                    auto item = chosen->data().toInt();
+                                    if (item == MENU_SAVE) {
+                                        QString filename =
+                                            QFileDialog::getSaveFileName(
+                                                nullptr,
+                                                tr("Save sketch..."),
+                                                _settings.save_dir,
+                                                tr("PNG images (*.png)"));
+                                        if (!filename.isEmpty()) {
+                                            QFileInfo fi(filename);
+                                            if (fi.suffix().toLower() != ".png")
+                                                filename += ".png";
+                                            bool visibility =
+                                                _dash->isVisible();
+                                            _dash->hide();
+                                            QImage image(
+                                                sceneRect().size().toSize(),
+                                                QImage::Format_RGB32);
+                                            QPainter painter(&image);
+                                            painter.setRenderHint(
+                                                QPainter::Antialiasing);
+                                            render(&painter);
+                                            _dash->setVisible(visibility);
+                                            image.save(filename);
+                                        }
+                                    } else if (item == MENU_NEW) {
+                                        slot_new();
+                                    } else if (item == MENU_DELETE) {
+                                        if (data == _current_scene) {
+                                            QMessageBox::warning(
+                                                nullptr,
+                                                "Cannot delete",
+                                                "Cannot delete currently "
+                                                "active sketch",
+                                                QMessageBox::Ok,
+                                                QMessageBox::Ok);
+                                        } else {
+                                            emit delete_scene(data);
                                         }
                                     }
                                 }
@@ -657,9 +598,9 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
                             emit set_arrow(static_cast<ArrowType>(data));
                             break;
                         case DashIcon::DashSetup:
-                            // show setup !
+                            emit setup();
                             break;
-                    }
+                    }  // switch(type)
 
                     return true;
                 }  // ditem->contains(...)
@@ -945,7 +886,7 @@ void DrawingScene::fix_geometry(QRect real_rect) {
     // QRect r = QGuiApplication::primaryScreen()->geometry();
     // real_rect.adjust(-r.left(), -r.top(), -r.left(), -r.top());
     // setSceneRect(real_rect);
-  qDebug() << "real rect" << real_rect << " scene_rect " << sceneRect();
+    qDebug() << "real rect" << real_rect << " scene_rect " << sceneRect();
 }
 
 void DrawingScene::slot_set_background(QPixmap px) {
@@ -1110,7 +1051,7 @@ void DrawingScene::slot_delete_scene(int id) {
     }
 
     // remove saved scene
-    SavedScene& saved = it->second;
+    SavedScene &saved = it->second;
     saved.free_items();
     _saved_scenes.erase(id);
 
@@ -1151,16 +1092,16 @@ void DrawingScene::slot_new() {
     _dash->select_scene(_current_scene);
 }
 
-void DrawingScene::slot_set_color(const QColor& color) {
+void DrawingScene::slot_set_color(const QColor &color) {
     _settings.color = color;
     _dash->select_color(color);
 }
 
 void DrawingScene::slot_set_color_from_index(int index) {
-  if (index >= 0 && index < static_cast<int>(Color::color_table.size())) {
-      slot_set_color(
-          Color::qcolor_from_uint32(Color::color_table[index].numeric));
-  }
+    // if (index >= 0 && index < static_cast<int>(Color::color_table.size())) {
+    //     slot_set_color(
+    //         Color::qcolor_from_uint32(Color::color_table[index].numeric));
+    // }
 }
 
 void DrawingScene::slot_set_tool(ToolType tool) {
@@ -1175,10 +1116,15 @@ void DrawingScene::slot_set_arrow(ArrowType type) {
 }
 
 void DrawingScene::slot_set_width(int width) {
-  _settings.width = width;
+    _settings.width = width;
 }
 
 int DrawingScene::new_scene_id(void) {
     static int id = 0;
     return ++id;
+}
+
+void DrawingScene::slot_setup() {
+    SettingsDialog settings(_settings);
+    if (settings.exec() == QDialog::Accepted) _settings.store(_qset);
 }

@@ -20,9 +20,9 @@
 
 // MainWindow::MainWindow
 //
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QSettings& qset, QWidget *parent) : QMainWindow(parent) {
     // graphics scene
-    _scene = new DrawingScene;
+    _scene = new DrawingScene(qset);
     _view = new DrawingView(_scene);
     setCentralWidget(_view);
 
@@ -67,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     addAction(grabAction);
     grabAction->setShortcut(Qt::CTRL | Qt::Key_G);
     connect(grabAction, &QAction::triggered, [this]() { this->slot_grab(); });
-  
+
     QAction *opaqAction = new QAction(tr("Opacity"), this);
     addAction(opaqAction);
     opaqAction->setShortcut(Qt::CTRL | Qt::Key_O);

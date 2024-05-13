@@ -1,12 +1,14 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
-#include <QGraphicsItem>
 #include <QColor>
+#include <QFont>
 
 #include "kromit.h"
+#include "colors.h"
 
-namespace Tools {
+class QGraphicsItem;
+class QSettings;
 
 // Tool::Settings
 //
@@ -14,29 +16,95 @@ namespace Tools {
 //
 class Settings {
   public:
+    Settings();
+    // settings that change
     ToolType tool;
     QColor color;
     double width;
+    double highlight_width;
     double minwidth;
     double maxwidth;
-    double arrow_size;
     ArrowType arrow_type;
-    double radius;
-    double minlen;
-    double maxangle;
-    double simplify;
+
+    // tool parameter
+    double arrow_size;
+    double radius_rect;
+    double radius_ortho;
+    double minlen_ortho;
+    double maxangle_ortho;
+    double simplify_smooth;
     double simplify_ortho;
-    double snapdist;
-    double fontsize;
-    double sustain;
-    double fade;
+    double snapdist_smooth;
+    double snapdist_ortho;
+    QFont font;
+    double sustain_fader;
+    double fade_fader;
+    double sustain_highlight;
+    double fade_highlight;
+
+    // shortcuts
+    QKeyCombination edit_key;
+    QKeyCombination pen_key;
+    QKeyCombination smooth_key;
+    QKeyCombination ortho_key;
+    QKeyCombination line_key;
+    QKeyCombination rect_key;
+    QKeyCombination text_key;
+    QKeyCombination highlight_key;
+    QKeyCombination fader_key;
+
+    QKeyCombination del_key;
+    QKeyCombination del_all_key;
+    QKeyCombination dash_key;
+    QKeyCombination grab_key;
+    QKeyCombination grab_partial_key;
+
+    QKeyCombination arrow_start_key;
+    QKeyCombination arrow_end_key;
+    QKeyCombination arrow_double_key;
+    QKeyCombination arrow_none_key;
+
+    // widths
+    QKeyCombination width_key[9];
+    double line_widths[9];
+    double highlight_line_width[9];
+
+    // color table
+    std::vector<Color> color_table;
+
+    QColor get_color(const QKeyCombination& key);
+    static int qcolor_find_index(std::uint32_t color);
+    QColor qcolor_at_index(int index) const;
+    int qcolor_find_index(const QColor& color) const;
+
+    // directories
+    QString save_dir;
+
+  public:
+    static QString to_string(const QKeyCombination& kc) {
+        return QString("%1,%2").arg(kc.key()).arg(kc.keyboardModifiers());
+    }
+    static QKeyCombination keycomb_from_string(const QString& str) {
+        QStringList parts = str.split(",");
+        if (parts.size() != 2)
+            return QKeyCombination();
+        else
+            return QKeyCombination(
+                static_cast<Qt::KeyboardModifier>(parts.at(1).toUInt()),
+                static_cast<Qt::Key>(parts.at(0).toUInt()));
+    }
+
+  void store(QSettings& qs) const;
+  void retrieve(QSettings& qs);
 };
+
+namespace Tools {
 
     // Tool::create_tool
     //
     // factory function
     //
-QGraphicsItem* create_tool(const Tools::Settings& settings);
+QGraphicsItem* create_tool(const Settings& settings);
 
 int generate_ID(void);
 

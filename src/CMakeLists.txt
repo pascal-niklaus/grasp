@@ -34,6 +34,12 @@ qt_add_executable(grasp WIN32 MACOSX_BUNDLE
   colors.cpp colors.h
   undo.cpp undo.h
   utility.cpp utility.h
+  selectkey.cpp selectkey.h
+  selectcolor.cpp selectcolor.h
+  selectfont.cpp selectfont.h
+  doubleedit.cpp doubleedit.h
+  intedit.cpp intedit.h
+  settings.cpp settings.h
   arrowitem.cpp arrowitem.h
   kromitdash.cpp kromitdash.h
   kromititem.cpp kromititem.h

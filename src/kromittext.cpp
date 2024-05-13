@@ -11,12 +11,12 @@
 //
 KromitText::KromitText(QGraphicsItem* parent,
                        const QColor& color,
-                       double size) :
+                       QFont font) :
     KromitItem(parent) {
-    _size = size;
+    _size = font.pointSizeF();
     _color = color;
     _crsr_pos = 0;
-    _font = QFont("Noto Sans", size);
+    _font = font;
     setFlag(QGraphicsItem::ItemIsSelectable);
 }
 
@@ -259,7 +259,7 @@ void KromitText::dump_fonts() {
 KromitUndoText::KromitUndoText(const KromitText* ktext) :
     KromitUndoItem(static_cast<const KromitItem*>(ktext)) {
     color = ktext->color();
-    size = ktext->size();
+    font = ktext->font();
     path = ktext->path();
 }
 
@@ -269,7 +269,7 @@ KromitUndoText::~KromitUndoText() {}
 //
 KromitItem* KromitUndoText::create_from_undo_item() const {
     KromitText* ktext =
-        new KromitText(nullptr, color, size);
+        new KromitText(nullptr, color, font);
     ktext->setData(KromitText::KeyID, id);
     ktext->set_path(path);
     return ktext;

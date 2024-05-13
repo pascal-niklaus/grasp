@@ -15,9 +15,9 @@ class KromitText : public KromitItem {
     enum { Type = GFX_TEXT };
 
   public:
-    KromitText(QGraphicsItem* parent = nullptr,
-               const QColor& color = Qt::yellow,
-               double size = 12);
+    KromitText(QGraphicsItem* parent,
+               const QColor& color,
+               QFont font);
     ~KromitText();
 
     // ----- KromitItem methods
@@ -62,7 +62,7 @@ class KromitText : public KromitItem {
   public:
     // ----- item accessors
     QColor color() const { return _color; }
-    double size() const { return _size; }
+    QFont font() const { return _font; }
     const QString& text() const { return _text; }
     const QPainterPath& path() const { return _path; }
     void set_size(double size);
@@ -95,7 +95,7 @@ class KromitUndoText : public KromitUndoItem {
     virtual KromitItem* create_from_undo_item() const override;
 
     QColor color;
-    double size;
+    QFont font;
     QPainterPath path;
 };
 
