@@ -24,6 +24,8 @@ qt_add_executable(grasp WIN32 MACOSX_BUNDLE
   grasp.cpp grasp.h
   singletonapplication.h
   dbus.cpp dbus.h
+  signalblocker.h
+  screenres.cpp screenres.h
   main.cpp
   mainwindow.cpp mainwindow.h
   drawingscene.cpp drawingscene.h

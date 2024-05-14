@@ -35,6 +35,16 @@ bool GfxItem::toggleselect() {
 
 QString GfxItem::type_txt(int item) {
     switch (item) {
+        case GFX_DASH:
+            return "Dash";
+        case GFX_SCENE:
+            return "Dash-SceneNo";
+        case GFX_DASHICON:
+            return "Dash-Icon";
+        case GFX_ARROWICON:
+            return "Dash-Arrow";
+        case GFX_COLOR:
+            return "Dash-Color";
         case GFX_ARROWITEM:
             return "ArrowItem";
         case GFX_ARROW:

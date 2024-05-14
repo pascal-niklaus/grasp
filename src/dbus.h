@@ -7,13 +7,13 @@
 
 class Message : public QObject {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.pascal-niklaus.grasp")
+    Q_CLASSINFO("D-Bus Interface", "org.pascalniklaus.grasp")
 
   public:
     Message(QObject* parent);
     ~Message();
 
-    static QString service_name() { return "org.pascal-niklaus.grasp"; }
+    static QString service_name() { return "org.pascalniklaus.grasp"; }
     static QString service_path() { return "/exec"; }
 
  signals:

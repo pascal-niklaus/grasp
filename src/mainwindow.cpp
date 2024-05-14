@@ -1,6 +1,7 @@
 #include "drawingscene.h"
 #include "drawingview.h"
 #include "mainwindow.h"
+#include "screenres.h"
 
 #include <QAction>
 #include <QFile>
@@ -26,7 +27,10 @@ MainWindow::MainWindow(QSettings& qset, QWidget *parent) : QMainWindow(parent) {
     _view = new DrawingView(_scene);
     setCentralWidget(_view);
 
-    slot_screen_changed(nullptr);
+
+    new ScreenChangeDetector(this);
+
+    slot_screen_changed();
 
     // setup timer for snapshot delay
     _snapshot_timer = new QTimer(this);
@@ -92,6 +96,11 @@ MainWindow::MainWindow(QSettings& qset, QWidget *parent) : QMainWindow(parent) {
     addAction(toggleAction);
     toggleAction->setShortcut(Qt::CTRL | Qt::Key_T);
     connect(toggleAction, &QAction::triggered, this, &MainWindow::slot_toggle);
+
+    QAction *resizeAction = new QAction(tr("Resize"), this);
+    addAction(resizeAction);
+    resizeAction->setShortcut(Qt::Key_F2);
+    connect(resizeAction, &QAction::triggered, this, &MainWindow::slot_screen_changed);
 }
 
 MainWindow::~MainWindow() {
@@ -101,12 +110,17 @@ MainWindow::~MainWindow() {
     delete _partial_snapshot_timer;
 }
 
-void MainWindow::slot_screen_changed(QScreen *) {
+void MainWindow::slot_screen_changed() {
     _screen_rect = QGuiApplication::primaryScreen()->geometry();
     _pixel_ratio = QGuiApplication::primaryScreen()->devicePixelRatio();
     qDebug() << "Screen changed:" << _screen_rect
-             << " pixelRatio=" << _pixel_ratio
+             << "pixelRatio=" << _pixel_ratio
              << "view rect: " << _view->rect();
+    _screen_rect.translate(-_screen_rect.topLeft());
+    // qDebug() << "translated: " << _screen_rect;
+    _screen_rect.setWidth(_screen_rect.width() * _pixel_ratio + 0.2);
+    _screen_rect.setHeight(_screen_rect.height() * _pixel_ratio + 0.2);
+    qDebug() << "scaled: " << _screen_rect;
     _view->slot_screen_rect_changed(_screen_rect);
 }
 
@@ -178,8 +192,7 @@ void MainWindow::slot_change_arrow(const QString &arrow) {
 }
 
 void MainWindow::slot_change_width(int width) {
-  if (width > 0 && width < 80)
-    _scene->slot_set_width(width);
+    if (width > 0 && width < 80) _scene->slot_set_width(width);
 }
 
 void MainWindow::slot_grab_and_new() {
@@ -201,47 +214,48 @@ void MainWindow::slot_grab_partial(const QRect &geometry) {
     // 50 ms seems to work
     // we use 100ms for safety
     _shot_rect = geometry;
+    qDebug() << "_shot rect=" << geometry;
     _partial_snapshot_timer->start(200);
 }
 
 void MainWindow::slot_screenshot_step1() {
     QPixmap px = screen()->grabWindow();
-    auto rect = px.rect().adjusted(1,1,-1,-1);
-    qDebug() << "screenshot step 1:" << rect;
     _scene->slot_set_background(px);
     setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
     slot_show();
 }
 
 void MainWindow::slot_partial_screenshot_step1() {
-    QRect screenRect = screen()->geometry();
-    _shot_rect.adjust(-screenRect.left(),
-                     -screenRect.top(),
-                     -screenRect.left(),
-                     -screenRect.top());
+    // QRect screenRect = screen()->geometry();
+    // _shot_rect.adjust(-screenRect.left(),
+    //                  -screenRect.top(),
+    //                  -screenRect.left(),
+    //                  -screenRect.top());
     QPixmap px = screen()->grabWindow().copy(_shot_rect);
+    qDebug() << "partial " << px.rect();
     show();
     setWindowOpacity(1.0);
     setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
-    //    setStyleSheet("background:black;");
     emit send_pixmap(px);
 }
 
 void MainWindow::slot_toggle() {
     if (_on_top) {
+        qDebug() << "slot_toggle: hiding";
         // ------------------------ hide window ------------------------
         setWindowState(Qt::WindowMinimized);
         setWindowFlags(
             (windowFlags() | Qt::FramelessWindowHint) &
             ~(Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint));
+        hide();
     } else {
+        qDebug() << "slot_toggle: showing";
         // -------------- show window maximized, on top --------------
         setWindowFlags(windowFlags() | Qt::FramelessWindowHint |
                        Qt::WindowStaysOnTopHint);
         setWindowState(Qt::WindowMaximized | Qt::WindowFullScreen);
         show();
     }
-    show();
     _on_top = !_on_top;
 }
 

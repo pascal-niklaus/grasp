@@ -16,7 +16,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
   public:
-  MainWindow(QSettings& qset, QWidget *parent = nullptr);
+    MainWindow(QSettings &qset, QWidget *parent = nullptr);
     ~MainWindow();
 
   signals:
@@ -50,7 +50,7 @@ class MainWindow : public QMainWindow {
   private slots:
     void slot_screenshot_step1();
     void slot_partial_screenshot_step1();
-    void slot_screen_changed(QScreen *);
+    void slot_screen_changed();
 
   private:
     DrawingScene *_scene = nullptr;
@@ -67,3 +67,4 @@ class MainWindow : public QMainWindow {
 };
 
 #endif // MAINWINDOW_H
+

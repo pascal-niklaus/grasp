@@ -5,6 +5,7 @@
 #include "grasp.h"
 
 class DrawingScene;
+class ScreenChangeDetector;
 
 class DrawingView : public QGraphicsView {
     Q_OBJECT
@@ -21,18 +22,19 @@ class DrawingView : public QGraphicsView {
     virtual void resizeEvent(QResizeEvent *event);
 
   private:
-    QRect screen_rect;
+    DrawingScene *_scene;
+    ScreenChangeDetector *_screen_watcher;
 
-    QCursor cursor_text;
-    QCursor cursor_smooth;
-    QCursor cursor_line;
-    QCursor cursor_ortho;
-    QCursor cursor_pen;
-    QCursor cursor_rect;
-    QCursor cursor_fader;
-    QCursor cursor_highlight;
-    QCursor cursor_grab;
-    QCursor cursor_select;
+    QCursor _cursor_text;
+    QCursor _cursor_smooth;
+    QCursor _cursor_line;
+    QCursor _cursor_ortho;
+    QCursor _cursor_pen;
+    QCursor _cursor_rect;
+    QCursor _cursor_fader;
+    QCursor _cursor_highlight;
+    QCursor _cursor_grab;
+    QCursor _cursor_select;
 };
 
 #endif

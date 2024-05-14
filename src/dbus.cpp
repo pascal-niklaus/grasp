@@ -5,8 +5,9 @@
 
 Message::Message(QObject *parent)
   : QObject(parent){
-    QDBusConnection::sessionBus().registerService("org.pascal.grasp");
-    QDBusConnection::sessionBus().registerObject("/exec", this, QDBusConnection::ExportScriptableContents);
+    QDBusConnection::sessionBus().registerService(service_name());
+    QDBusConnection::sessionBus().registerObject(
+        service_path(), this, QDBusConnection::ExportScriptableContents);
 }
 
 Message::~Message() {}

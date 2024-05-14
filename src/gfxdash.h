@@ -162,12 +162,10 @@ class GfxDash : public QGraphicsItem {
     enum { Type = GFX_DASH };
 
   public:
-    GfxDash(QGraphicsItem* parent,
-               int width,
-               int height,
-               Settings& settings);
+    GfxDash(QGraphicsItem* parent, int width, int height, Settings& settings);
     ~GfxDash();
 
+    void reposition(int width);
     void select_color(const QColor& color);
     void select_arrow(ArrowType type);
     void select_tool(ToolType type);
@@ -192,6 +190,10 @@ class GfxDash : public QGraphicsItem {
     int _width;
     int _active_scene = 0;
     Settings& _settings;
+
+    GfxDashIcon* _cogwheel;
+    std::vector<GfxColor*> _colors;
+    std::vector<GfxArrowIcon*> _arrows;
 
     std::map<int, GfxNumber*> _scenes;
 };

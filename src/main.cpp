@@ -38,27 +38,27 @@ void print_dbus_help() {
 One of the easier options to list the availbale DBus commands and invoke these
 is to use 'qdbus'. The available commands can be listed like so:
 
-    > qdbus org.pascal.grasp /exec
-    method void org.pascal.grasp.arrow(QString arrow)
-    method void org.pascal.grasp.color(QString color)
-    method void org.pascal.grasp.grab()
-    method void org.pascal.grasp.grabnew()
-    method void org.pascal.grasp.hide()
-    method void org.pascal.grasp.quit()
-    method void org.pascal.grasp.show()
-    method void org.pascal.grasp.toggle()
-    method void org.pascal.grasp.tool(QString tool)
-    method void org.pascal.grasp.width(int width)
+    > qdbus org.pascalniklaus.grasp /exec
+    method void org.pascalniklaus.grasp.arrow(QString arrow)
+    method void org.pascalniklaus.grasp.color(QString color)
+    method void org.pascalniklaus.grasp.grab()
+    method void org.pascalniklaus.grasp.grabnew()
+    method void org.pascalniklaus.grasp.hide()
+    method void org.pascalniklaus.grasp.quit()
+    method void org.pascalniklaus.grasp.show()
+    method void org.pascalniklaus.grasp.toggle()
+    method void org.pascalniklaus.grasp.tool(QString tool)
+    method void org.pascalniklaus.grasp.width(int width)
 
 These commands are then invoked like so:
 
-    > qdbus org.pascal.grasp /exec quit
-    > qdbus org.pascal.grasp /exec arrow "->"
+    > qdbus org.pascalniklaus.grasp /exec quit
+    > qdbus org.pascalniklaus.grasp /exec arrow "->"
 
 Another alternative is to use 'dbus-send':
 
-    > dbus-send --session --dest=org.pascal.grasp --type=method_call /exec org.pascal.grasp.quit
-    > dbus-send --session --dest=org.pascal.grasp --type=method_call /exec org.pascal.grasp.arrow "->"
+    > dbus-send --session --dest=org.pascalniklaus.grasp --type=method_call /exec org.pascalniklaus.grasp.quit
+    > dbus-send --session --dest=org.pascalniklaus.grasp --type=method_call /exec org.pascalniklaus.grasp.arrow "->"
 )END";
 }
 
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
         if (parser.isSet(grabOption)) { send_dbus_command(bus, "grab"); }
         return 0;
     } else {
-        // QSettings qs("org.pascal-niklaus", "grasp");
+        // QSettings qs("org.pascalniklaus", "grasp");
         QSettings qs("grasp.ini", QSettings::IniFormat, &a);
 
         Message msg(&a);
@@ -162,12 +162,10 @@ int main(int argc, char* argv[]) {
 
         w.setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
         w.setStyleSheet("background:transparent;");
-        // w.setAttribute(Qt::WA_TranslucentBackground);
-        w.setWindowFlags(
-            Qt::FramelessWindowHint);  // TODO: | Qt::WindowStaysOnTopHint);
-
+        w.setWindowFlags(Qt::FramelessWindowHint);
         w.show();
-        w.setWindowOpacity(1.0);
+        // w.setWindowOpacity(1.0);
+        w.setWindowOpacity(0.5);
 
         return a.exec();
     }

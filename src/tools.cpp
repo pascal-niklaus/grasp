@@ -146,6 +146,7 @@ Settings::Settings() {
     tool = TOOL_SMOOTH;
     color = Qt::yellow;
     width = 5;
+    highlight_width = 30;
     arrow_type = ARROW_END;
     arrow_size = 3;
     minwidth = 1;

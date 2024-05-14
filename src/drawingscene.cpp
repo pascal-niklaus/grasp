@@ -33,6 +33,7 @@ DrawingScene::DrawingScene(QSettings &qset, QObject *parent) :
     r.setHeight(round(r.height() * k));
 
     setSceneRect(r);
+
     _settings.retrieve(_qset);
 
     // create selection frame
@@ -122,6 +123,11 @@ DrawingScene::~DrawingScene() {
     _undo_records.clear();
     _redo_records.clear();
     delete _rmb_menu;
+}
+
+void DrawingScene::slot_reposition_dash(int width) {
+  qDebug() << "DrawingScene::slot_reposition_dash" << width;
+    _dash->reposition(width);
 }
 
 GfxItem *DrawingScene::find_item(int ID) const {
@@ -839,6 +845,7 @@ void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
                 kpixmap->set_pixmap(pixmap, kpixmap->sel_rect());
                 _current_item = nullptr;
                 unstash_scene();
+                slot_set_tool(_pre_grab_tool);
             } break;
         }
     }
@@ -894,6 +901,7 @@ void DrawingScene::slot_set_background(QPixmap px) {
     if (px.isNull()) return;
     _background_item = addPixmap(px);
     _background_item->setOffset(0, 0);
+    _background_item->setScale(QGuiApplication::primaryScreen()->devicePixelRatio());
     _background_item->setZValue(-1000.0);
 }
 
@@ -1105,6 +1113,9 @@ void DrawingScene::slot_set_color_from_index(int index) {
 }
 
 void DrawingScene::slot_set_tool(ToolType tool) {
+    if (tool == TOOL_PIXMAP) {
+        if (_settings.tool != TOOL_PIXMAP) _pre_grab_tool = _settings.tool;
+    }
     _settings.tool = tool;
     init_tool();
     clear_selection();

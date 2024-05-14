@@ -139,6 +139,7 @@ class DrawingScene : public QGraphicsScene {
     void slot_set_arrow(ArrowType type);
     void slot_set_width(int width);
     void slot_setup();
+    void slot_reposition_dash(int width);
 
   private slots:
     void slot_keyPressed(QKeyCombination kc, QString text);
@@ -177,13 +178,13 @@ class DrawingScene : public QGraphicsScene {
     int new_scene_id(void);
 
   private:
-    QSettings& _qset;
+    QSettings &_qset;
     Settings _settings;
     GfxDash *_dash;
 
     QGraphicsItem *_current_item = nullptr;
-
     QGraphicsPixmapItem *_background_item = nullptr;
+    ToolType _pre_grab_tool;
 
     bool _feed_keystrokes = false;
     QTimer *_dyn_tick = nullptr;

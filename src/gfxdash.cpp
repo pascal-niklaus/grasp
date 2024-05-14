@@ -41,8 +41,8 @@ GfxNumber::GfxNumber(QGraphicsItem *parent, int size) : DashIcon(parent) {
 GfxNumber::~GfxNumber() {}
 
 void GfxNumber::paint(QPainter *painter,
-                        const QStyleOptionGraphicsItem *option,
-                        QWidget *widget) {}
+                      const QStyleOptionGraphicsItem *option,
+                      QWidget *widget) {}
 
 QRectF GfxNumber::selectionBox() const {
     return _poly->polygon().boundingRect().adjusted(-5, -5, 10, 10);
@@ -82,9 +82,9 @@ void GfxNumber::set_selected(bool selected) {
 // A marker with a single number
 
 GfxDashIcon::GfxDashIcon(QGraphicsItem *parent,
-                               int size,
-                               const QPixmap &px,
-                               int id) :
+                         int size,
+                         const QPixmap &px,
+                         int id) :
     DashIcon(parent) {
     _size = size / 2.0;
 
@@ -100,8 +100,8 @@ GfxDashIcon::GfxDashIcon(QGraphicsItem *parent,
 GfxDashIcon::~GfxDashIcon() {}
 
 void GfxDashIcon::paint(QPainter *painter,
-                           const QStyleOptionGraphicsItem *option,
-                           QWidget *widget) {}
+                        const QStyleOptionGraphicsItem *option,
+                        QWidget *widget) {}
 
 QRectF GfxDashIcon::selectionBox() const {
     return _icon->boundingRect().adjusted(-5, -5, 10, 10);
@@ -113,8 +113,7 @@ QRectF GfxDashIcon::selectionBox() const {
 //
 // A marker with a single number
 
-GfxArrowIcon::GfxArrowIcon(QGraphicsItem *parent, int size) :
-    DashIcon(parent) {
+GfxArrowIcon::GfxArrowIcon(QGraphicsItem *parent, int size) : DashIcon(parent) {
     size = size / 2;
 
     _box = new QGraphicsPolygonItem(this);
@@ -168,8 +167,8 @@ GfxArrowIcon::GfxArrowIcon(QGraphicsItem *parent, int size) :
 GfxArrowIcon::~GfxArrowIcon() {}
 
 void GfxArrowIcon::paint(QPainter *painter,
-                            const QStyleOptionGraphicsItem *option,
-                            QWidget *widget) {
+                         const QStyleOptionGraphicsItem *option,
+                         QWidget *widget) {
     // draw scene number, and fill if selected (current scene)
 }
 
@@ -233,14 +232,14 @@ GfxColor::GfxColor(QGraphicsItem *parent, int size) : DashIcon(parent) {
 GfxColor::~GfxColor() {}
 
 void GfxColor::paint(QPainter *painter,
-                        const QStyleOptionGraphicsItem *option,
-                        QWidget *widget) {}
+                     const QStyleOptionGraphicsItem *option,
+                     QWidget *widget) {}
 
 QRectF GfxColor::selectionBox() const {
     return _poly->polygon().boundingRect().adjusted(-5, -5, 10, 10);
 }
 
-void GfxColor::set_color(const QColor& color, const QString &shortcut) {
+void GfxColor::set_color(const QColor &color, const QString &shortcut) {
     _text->setPlainText(shortcut);
     _text->adjustSize();
     QRectF r = _text->boundingRect();
@@ -262,9 +261,9 @@ void GfxColor::set_selected(bool selected) {
 // The entire dashboard
 
 GfxDash::GfxDash(QGraphicsItem *parent,
-                       int width,
-                       int height,
-                       Settings &settings) :
+                 int width,
+                 int height,
+                 Settings &settings) :
     QGraphicsItem(parent), _settings(settings) {
     _height = height;
     _width = width;
@@ -274,10 +273,10 @@ GfxDash::GfxDash(QGraphicsItem *parent,
 
     auto px = QPixmap(":/icons/icons/settings.png");
 
-    auto *cogwheel = new GfxDashIcon(this, height, px, 1);
-    cogwheel->setPos(x, 2.0 + static_cast<double>(height) / 2.0);
-    cogwheel->setData(GfxItem::KeyDash, DashIcon::DashSetup);
-    cogwheel->setData(GfxItem::KeyDashAux, 0);
+    _cogwheel = new GfxDashIcon(this, height, px, 1);
+    _cogwheel->setPos(x, 2.0 + static_cast<double>(height) / 2.0);
+    _cogwheel->setData(GfxItem::KeyDash, DashIcon::DashSetup);
+    _cogwheel->setData(GfxItem::KeyDashAux, 0);
 
     // add color boxes, right to left
     x -= height * 1.5 * 2;
@@ -285,6 +284,7 @@ GfxDash::GfxDash(QGraphicsItem *parent,
          it != _settings.color_table.crend();
          it++) {
         auto *icon = new GfxColor(this, height);
+        _colors.emplace_back(icon);
         icon->setPos(x, 2.0 + static_cast<double>(height) / 2.0);
         QString txt;
         if (it->key1.keyboardModifiers() == Qt::ShiftModifier) {
@@ -300,6 +300,7 @@ GfxDash::GfxDash(QGraphicsItem *parent,
     x -= height * 1.5;
     for (int i = 0; i < 4; i++) {
         auto *icon = new GfxArrowIcon(this, height);
+        _arrows.emplace_back(icon);
         icon->setPos(x, 2.0 + static_cast<double>(height) / 2.0);
         ArrowType type = ARROW_NONE;
         switch (i) {
@@ -320,12 +321,30 @@ GfxDash::GfxDash(QGraphicsItem *parent,
         x -= height * 1.5;
     }
 
-    // tool icons
-
     // scene numbers
 }
 
 GfxDash::~GfxDash() {}
+
+void GfxDash::reposition(int width) {
+    _width = width;
+    int x = _width - _height;
+    const int y = 2.0 + static_cast<double>(_height) / 2.0;
+
+    _cogwheel->setPos(x,y);
+
+    x -= _height * 1.5 * 2;
+    for (auto &c : _colors) {
+        c->setPos(x, y);
+        x -= _height * 1.5;
+    }
+
+    x -= _height * 1.5;
+    for (auto &a : _arrows) {
+        a->setPos(x, y);
+        x -= _height * 1.5;
+    }
+}
 
 void GfxDash::paint(QPainter *painter,
                        const QStyleOptionGraphicsItem *option,
