@@ -1,9 +1,15 @@
 #ifndef GRASP_H
 #define GRASP_H
 
+#include <qnamespace.h>
 #include <QGraphicsItem>
 
 #include <cstdint>
+
+enum : std::uint32_t {
+    AllModifiers = Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier |
+                   Qt::MetaModifier
+};
 
 enum SelectType { SEL_NONE = 0, SEL_SINGLE = 1, SEL_TOGGLE = 2, SEL_ADD = 3 };
 

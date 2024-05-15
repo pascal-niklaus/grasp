@@ -3,7 +3,18 @@
 #include <QDebug>
 #include <QEvent>
 
-SelectKey::SelectKey(QWidget *parent) : QKeySequenceEdit(parent) {
+SelectKey::SelectKey(Qt::KeyboardModifiers mods, QWidget *parent) :
+    QKeySequenceEdit(parent) {
+    setup(mods);
+}
+
+SelectKey::SelectKey(std::uint32_t mods, QWidget *parent) :
+    QKeySequenceEdit(parent) {
+    setup(static_cast<Qt::KeyboardModifiers>(mods));
+}
+
+void SelectKey::setup(Qt::KeyboardModifiers mods) {
+    set_allowed_modifiers(mods);
     connect(this,
             &SelectKey::editingFinished,
             this,

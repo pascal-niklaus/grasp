@@ -46,9 +46,10 @@ LinewidthTab::LinewidthTab(QWidget *parent, Qt::WindowFlags f) :
     row++;
 
     for (int w = 0; w < 9; w++) {
-        _width_key[w] = new SelectKey();
-        _width_key[w]->set_allowed_modifiers(Qt::AltModifier | Qt::MetaModifier |
-                                      Qt::ShiftModifier | Qt::ControlModifier);
+        _width_key[w] = new SelectKey(AllModifiers);
+        _width_key[w]->set_allowed_modifiers(
+            Qt::AltModifier | Qt::MetaModifier | Qt::ShiftModifier |
+            Qt::ControlModifier);
         lay->addWidget(_width_key[w], row + w, 0);
 
         _width[w] = new IntEdit(nullptr);
@@ -65,9 +66,10 @@ LinewidthTab::LinewidthTab(QWidget *parent, Qt::WindowFlags f) :
     //    fnt.setBold(true);
 
     for (int w = 0; w < 4; w++) {
-        _arrow_key[w] = new SelectKey();
-        _arrow_key[w]->set_allowed_modifiers(Qt::AltModifier | Qt::MetaModifier |
-                                      Qt::ShiftModifier | Qt::ControlModifier);
+        _arrow_key[w] = new SelectKey(AllModifiers);
+        _arrow_key[w]->set_allowed_modifiers(
+            Qt::AltModifier | Qt::MetaModifier | Qt::ShiftModifier |
+            Qt::ControlModifier);
         lay->addWidget(_arrow_key[w], row + w, 4);
 
         std::string arrow;
@@ -149,15 +151,57 @@ AuxTab::AuxTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
     _path_label = new QLineEdit();
     _path_label->setReadOnly(true);
     _path_label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
-    lay->addWidget(_path_label, row, 1);
-    _browse = new QPushButton(tr("Browse"));
-    lay->addWidget(_browse, row, 2);
+    lay->addWidget(_path_label, row, 1, 1, 3, Qt::AlignLeft | Qt::AlignVCenter);
 
+    _browse = new QPushButton(tr("Browse"));
+    lay->addWidget(_browse, row, 4);
     connect(_browse, &QPushButton::clicked, this, &AuxTab::slot_browse_clicked);
 
-    lay->setColumnMinimumWidth(1, 120);
-    lay->setRowStretch(row+1, 10);
-    lay->setColumnStretch(3, 10);
+    row++;
+    lay->addWidget(new QLabel(tr(" ")), row, 0);
+    row++;
+
+    lay->addWidget(new QLabel(tr("Application shortcuts")), row, 0);
+    row++;
+
+    lay->addWidget(new QLabel(tr("Quit shortcut")), row, 0);
+    lay->addWidget(    _quit_key = new SelectKey(AllModifiers), row, 1);
+
+    row++;
+    lay->addWidget(new QLabel(tr("Undo shortcut")), row, 0);
+    lay->addWidget(_undo_key = new SelectKey(AllModifiers), row, 1);
+
+    row++;
+    lay->addWidget(new QLabel(tr("Redo shortcut")), row, 0);
+    lay->addWidget(_redo_key = new SelectKey(AllModifiers), row, 1);
+
+    row++;
+    lay->addWidget(new QLabel(tr("Opacity shortcut")), row, 0);
+    lay->addWidget(_opacity_key = new SelectKey(AllModifiers), row, 1);
+
+    row++;
+    lay->addWidget(new QLabel(tr("Toggle shortcut")), row, 0);
+    lay->addWidget(_toggle_key = new SelectKey(AllModifiers), row, 1);
+
+    row++;
+    auto *help = new QLabel();
+    help->setWordWrap(true);
+    help->setText(tr(
+        "Note: The 'toggle' shortcut shows and hides the application; however, "
+        "since the keyboard shortcut is usually not received when the "
+        "applciation is already hidden, only hiding works. The recommended way "
+        "is to install a system-wide shortcut in the desktop settings that "
+        "sends a dbus command. See the corresponding help text for details. "
+        "The 'opacity' shortcut is mostly used for debugging and makes the "
+        "application transparent, allowing to see debug messages printed "
+        "below, at least as long as no screen has been grabbed. This may not "
+        "work under wayland."));
+    lay->addWidget(help, row, 0, 1, 5);
+    row++;
+
+    lay->setRowStretch(row + 1, 10);
+    lay->setColumnStretch(2, 3);
+    lay->setColumnStretch(5, 10);
 
     setLayout(lay);
 }
@@ -176,7 +220,6 @@ void AuxTab::slot_browse_clicked() {
 
 void AuxTab::set_path(const QString &path) {
     _path_label->setText(path);
-    qDebug() << _path_label->sizeHint();
 
     QFontMetrics fm(_path_label->font());
     int width = cap<int>(fm.horizontalAdvance(path), 100, rect().width()/2);
@@ -185,11 +228,21 @@ void AuxTab::set_path(const QString &path) {
 }
 
 void AuxTab::load_options(const Settings &settings) {
-  set_path(settings.save_dir);
+    set_path(settings.save_dir);
+    _quit_key->set_key(settings.quit_key);
+    _undo_key->set_key(settings.undo_key);
+    _redo_key->set_key(settings.redo_key);
+    _toggle_key->set_key(settings.toggle_key);
+    _opacity_key->set_key(settings.opacity_key);
 }
 
 void AuxTab::save_options(Settings &settings) const {
     settings.save_dir = _path;
+    settings.quit_key = _quit_key->get_key();
+    settings.undo_key = _undo_key->get_key();
+    settings.redo_key = _redo_key->get_key();
+    settings.toggle_key = _toggle_key->get_key();
+    settings.opacity_key = _opacity_key->get_key();
 }
 
 // ============================= ToolTab =============================
@@ -226,28 +279,28 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     // edit
     lay->addWidget(new QLabel("Select tool"), row, 0);
-    _edit_key = new SelectKey();
+    _edit_key = new SelectKey(AllModifiers);
     _edit_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_edit_key, row, 1);
     row++;
 
     // pen
     lay->addWidget(new QLabel("Pen tool"), row, 0);
-    _pen_key = new SelectKey();
+    _pen_key = new SelectKey(AllModifiers);
     _pen_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_pen_key, row, 1);
     row++;
 
     // line
     lay->addWidget(new QLabel("Line tool"), row, 0);
-    _line_key = new SelectKey();
+    _line_key = new SelectKey(AllModifiers);
     _line_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_line_key, row, 1);
     row++;
 
     // rect
     lay->addWidget(new QLabel("Rect tool"), row, 0);
-    _rect_key = new SelectKey();
+    _rect_key = new SelectKey(AllModifiers);
     _rect_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_rect_key, row, 1);
 
@@ -259,7 +312,7 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     // smooth
     lay->addWidget(new QLabel("Smooth tool"), row, 0);
-    _smooth_key = new SelectKey();
+    _smooth_key = new SelectKey(AllModifiers);
     _smooth_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_smooth_key, row, 1);
 
@@ -275,7 +328,7 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     // ortho
     lay->addWidget(new QLabel("Orthogonal tool"), row, 0);
-    _ortho_key = new SelectKey();
+    _ortho_key = new SelectKey(AllModifiers);
     _ortho_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_ortho_key, row, 1);
 
@@ -303,7 +356,7 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     // highlight
     lay->addWidget(new QLabel("Highlight tool"), row, 0);
-    _highlight_key = new SelectKey();
+    _highlight_key = new SelectKey(AllModifiers);
     _highlight_key->set_allowed_modifiers(Qt::ShiftModifier |
                                           Qt::ControlModifier);
     lay->addWidget(_highlight_key, row, 1);
@@ -320,7 +373,7 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     // fader
     lay->addWidget(new QLabel("Fader tool"), row, 0);
-    _fader_key = new SelectKey();
+    _fader_key = new SelectKey(AllModifiers);
     _fader_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_fader_key, row, 1);
 
@@ -336,7 +389,7 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     // text
     lay->addWidget(new QLabel("Text tool"), row, 0);
-    _text_key = new SelectKey();
+    _text_key = new SelectKey(AllModifiers);
     _text_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_text_key, row, 1);
 
@@ -348,7 +401,7 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     // grab
     lay->addWidget(new QLabel("Grab screen section"), row, 0);
-    _grab_partial_key = new SelectKey();
+    _grab_partial_key = new SelectKey(AllModifiers);
     _grab_partial_key->set_allowed_modifiers(Qt::ShiftModifier |
                                              Qt::ControlModifier);
     lay->addWidget(_grab_partial_key, row, 1);
@@ -356,28 +409,28 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     // grab screen
     lay->addWidget(new QLabel("Grab entire screen"), row, 0);
-    _grab_key = new SelectKey();
+    _grab_key = new SelectKey(AllModifiers);
     _grab_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_grab_key, row, 1);
     row++;
 
     // delete
     lay->addWidget(new QLabel("Delete selection"), row, 0);
-    _delete_key = new SelectKey();
+    _delete_key = new SelectKey(AllModifiers);
     _delete_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_delete_key, row, 1);
     row++;
 
     // delete
     lay->addWidget(new QLabel("Delete scene"), row, 0);
-    _delete_all_key = new SelectKey();
+    _delete_all_key = new SelectKey(AllModifiers);
     _delete_all_key->set_allowed_modifiers(Qt::ShiftModifier | Qt::ControlModifier);
     lay->addWidget(_delete_all_key, row, 1);
     row++;
 
     // toggle dash
     lay->addWidget(new QLabel("Toggle dash"), row, 0);
-    _dash_toggle_key = new SelectKey();
+    _dash_toggle_key = new SelectKey(AllModifiers);
     _dash_toggle_key->set_allowed_modifiers(Qt::ShiftModifier |
                                             Qt::ControlModifier);
     lay->addWidget(_dash_toggle_key, row, 1);
@@ -536,24 +589,13 @@ ColorTab::ColorTab(int ncolors, QWidget *parent, Qt::WindowFlags f) : QWidget(pa
         lay->addWidget(btn, row + 1, colwidth * col + 1);
         _colbtn.emplace_back(btn);
 
-        auto *ks1 = new SelectKey();
-        ks1->set_allowed_modifiers(Qt::ShiftModifier);
+        auto *ks1 = new SelectKey(Qt::ShiftModifier);
         ks1->set_del_key(Qt::Key_Delete);
         _keyseq1.emplace_back(ks1);
 
-        auto *ks2 = new SelectKey();
-        ks2->set_allowed_modifiers(Qt::ShiftModifier);
+        auto *ks2 = new SelectKey(Qt::ShiftModifier);
         ks2->set_del_key(Qt::Key_Delete);
         _keyseq2.emplace_back(ks2);
-
-        // if (color.key1 > 0)
-        //     keyseq1->setKeySequence(QKeySequence(
-        //         QKeyCombination(static_cast<Qt::KeyboardModifiers>(color.mod1),
-        //                         static_cast<Qt::Key>(color.key1))));
-        // if (color.key2 > 0)
-        //     keyseq2->setKeySequence(QKeySequence(
-        //         QKeyCombination(static_cast<Qt::KeyboardModifiers>(color.mod2),
-        //                         static_cast<Qt::Key>(color.key2))));
 
         connect(ks1,
                 &SelectKey::status_message,
@@ -628,16 +670,16 @@ SettingsDialog::SettingsDialog(Settings &settings,
     vblay->addWidget(tabs);
 
     _tooltab = new ToolTab;
-    tabs->addTab(_tooltab, tr("&Tools && Shortcuts"));
+    tabs->addTab(_tooltab, tr("&Tool Setup"));
 
     _colortab = new ColorTab(_settings.color_table.size());
     tabs->addTab(_colortab, tr("&Colors"));
 
     _linewidthtab = new LinewidthTab;
-    tabs->addTab(_linewidthtab, tr("Line &widths && Arrows"));
+    tabs->addTab(_linewidthtab, tr("Line &Widths && Arrows"));
 
     _auxtab = new AuxTab;
-    tabs->addTab(_auxtab, tr("&Auxiliary settings"));
+    tabs->addTab(_auxtab, tr("&Other Shortcuts && Ssettings"));
 
     auto bbox =
         new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);

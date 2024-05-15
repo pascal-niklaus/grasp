@@ -21,12 +21,11 @@
 
 // MainWindow::MainWindow
 //
-MainWindow::MainWindow(QSettings& qset, QWidget *parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QSettings &qset, QWidget *parent) : QMainWindow(parent) {
     // graphics scene
     _scene = new DrawingScene(qset);
     _view = new DrawingView(_scene);
     setCentralWidget(_view);
-
 
     new ScreenChangeDetector(this);
 
@@ -45,62 +44,38 @@ MainWindow::MainWindow(QSettings& qset, QWidget *parent) : QMainWindow(parent) {
     _partial_snapshot_timer = new QTimer(this);
     _partial_snapshot_timer->setSingleShot(true);
     _partial_snapshot_timer->setInterval(10);
-    connect(_partial_snapshot_timer,
-            &QTimer::timeout,
-            this,
-            &MainWindow::slot_partial_screenshot_step1);
+
+    // clang-format off
+
+    connect(_partial_snapshot_timer, &QTimer::timeout,
+            this, &MainWindow::slot_partial_screenshot_step1);
     connect(this, &MainWindow::send_pixmap, _scene, &DrawingScene::slot_pixmap);
-    connect(_scene,
-            &DrawingScene::take_partial_screenshot,
-            this,
-            &MainWindow::slot_grab_partial);
-    connect(_scene, &DrawingScene::set_transparent, [this]() {
-        this->setWindowOpacity(.3);
-    });
-    connect(_scene, &DrawingScene::set_opaque, [this]() {
-        this->setWindowOpacity(1);
-    });
 
-    // set up keyboard shortcut actions
-    QAction *quitAction = new QAction(tr("Quit"), this);
-    addAction(quitAction);
-    quitAction->setShortcut(Qt::CTRL | Qt::Key_Q);
-    connect(quitAction, &QAction::triggered, this, &MainWindow::slot_quit);
+    connect(_scene, &DrawingScene::take_partial_screenshot,
+            this, &MainWindow::slot_grab_partial);
 
-    QAction *grabAction = new QAction(tr("Grab"), this);
-    addAction(grabAction);
-    grabAction->setShortcut(Qt::CTRL | Qt::Key_G);
-    connect(grabAction, &QAction::triggered, [this]() { this->slot_grab(); });
+    connect(_scene, &DrawingScene::take_screenshot,
+            this, &MainWindow::slot_grab);
 
-    QAction *opaqAction = new QAction(tr("Opacity"), this);
-    addAction(opaqAction);
-    opaqAction->setShortcut(Qt::CTRL | Qt::Key_O);
-    connect(
-        opaqAction, &QAction::triggered, this, &MainWindow::slot_cycle_opacity);
+    connect(_scene, &DrawingScene::opacity,
+            this, &MainWindow::slot_cycle_opacity);
 
-    QAction *undoAction = new QAction(tr("Undo"), this);
-    addAction(undoAction);
-    undoAction->setShortcut(Qt::CTRL | Qt::Key_Z);
-    connect(undoAction, &QAction::triggered, this, &MainWindow::slot_undo);
+    connect(_scene, &DrawingScene::toggle,
+            this, &MainWindow::slot_toggle);
 
-    QAction *redoAction = new QAction(tr("Redo"), this);
-    addAction(redoAction);
-    redoAction->setShortcut(Qt::CTRL | Qt::Key_Y);
-    connect(redoAction, &QAction::triggered, this, &MainWindow::slot_redo);
+    connect(_scene, &DrawingScene::set_transparent,
+            [this]() { this->setWindowOpacity(.3); });
 
+    connect(_scene, &DrawingScene::set_opaque,
+            [this]() { this->setWindowOpacity(1); });
 
-    // this action is questionable and better set up as system-wide
-    // shortcut, because it obviously only works when the application
-    // has focus
-    QAction *toggleAction = new QAction(tr("Toggle"), this);
-    addAction(toggleAction);
-    toggleAction->setShortcut(Qt::CTRL | Qt::Key_T);
-    connect(toggleAction, &QAction::triggered, this, &MainWindow::slot_toggle);
+    connect(_scene, &DrawingScene::take_screenshot,
+            [this]() { this->slot_grab(); });
 
-    QAction *resizeAction = new QAction(tr("Resize"), this);
-    addAction(resizeAction);
-    resizeAction->setShortcut(Qt::Key_F2);
-    connect(resizeAction, &QAction::triggered, this, &MainWindow::slot_screen_changed);
+    connect(_scene, &DrawingScene::quit,
+            this, &MainWindow::slot_quit);
+
+    // clang-format on
 }
 
 MainWindow::~MainWindow() {
@@ -113,14 +88,9 @@ MainWindow::~MainWindow() {
 void MainWindow::slot_screen_changed() {
     _screen_rect = QGuiApplication::primaryScreen()->geometry();
     _pixel_ratio = QGuiApplication::primaryScreen()->devicePixelRatio();
-    qDebug() << "Screen changed:" << _screen_rect
-             << "pixelRatio=" << _pixel_ratio
-             << "view rect: " << _view->rect();
     _screen_rect.translate(-_screen_rect.topLeft());
-    // qDebug() << "translated: " << _screen_rect;
     _screen_rect.setWidth(_screen_rect.width() * _pixel_ratio + 0.2);
     _screen_rect.setHeight(_screen_rect.height() * _pixel_ratio + 0.2);
-    qDebug() << "scaled: " << _screen_rect;
     _view->slot_screen_rect_changed(_screen_rect);
 }
 
@@ -241,7 +211,6 @@ void MainWindow::slot_partial_screenshot_step1() {
 
 void MainWindow::slot_toggle() {
     if (_on_top) {
-        qDebug() << "slot_toggle: hiding";
         // ------------------------ hide window ------------------------
         setWindowState(Qt::WindowMinimized);
         setWindowFlags(
@@ -249,7 +218,6 @@ void MainWindow::slot_toggle() {
             ~(Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint));
         hide();
     } else {
-        qDebug() << "slot_toggle: showing";
         // -------------- show window maximized, on top --------------
         setWindowFlags(windowFlags() | Qt::FramelessWindowHint |
                        Qt::WindowStaysOnTopHint);

@@ -64,6 +64,12 @@ class Settings {
     QKeyCombination arrow_double_key;
     QKeyCombination arrow_none_key;
 
+    QKeyCombination quit_key;
+    QKeyCombination undo_key;
+    QKeyCombination redo_key;
+    QKeyCombination opacity_key;
+    QKeyCombination toggle_key;
+
     // widths
     QKeyCombination width_key[9];
     double line_widths[9];
@@ -95,7 +101,7 @@ class Settings {
     }
 
   void store(QSettings& qs) const;
-  void retrieve(QSettings& qs);
+  bool retrieve(QSettings& qs);
 };
 
 namespace Tools {

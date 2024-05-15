@@ -16,7 +16,7 @@ GfxHighlight::GfxHighlight(QGraphicsItem* parent,
                          double arrowsize,
                          double sustain,
                          double fade) :
-  GfxPath(parent, color, width * 4, ARROW_NONE, 0.0) {
+  GfxPath(parent, color, width, ARROW_NONE, 0.0) {
     _sustain_secs = sustain;
     _fading_secs = fade;
     update_time();

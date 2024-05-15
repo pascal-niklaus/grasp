@@ -11,6 +11,7 @@
 #include "settings.h"
 
 #include <iostream>
+#include <memory>
 
 bool send_dbus_command(QDBusConnection& bus,
                        const QString& cmd,
@@ -93,6 +94,10 @@ int main(int argc, char* argv[]) {
     QCommandLineOption hideOption("hide", "hide application (minimize it)");
     parser.addOption(hideOption);
 
+    QCommandLineOption configOption(
+        "config", "use given config file for settings", "CONFIG-FILE");
+    parser.addOption(configOption);
+
     QCommandLineOption grabOption(QStringList{"grab", "g"},
                                   "take screenshot and show it as new drawing");
     parser.addOption(grabOption);
@@ -125,38 +130,40 @@ int main(int argc, char* argv[]) {
         if (parser.isSet(grabOption)) { send_dbus_command(bus, "grab"); }
         return 0;
     } else {
-        // QSettings qs("org.pascalniklaus", "grasp");
-        QSettings qs("grasp.ini", QSettings::IniFormat, &a);
+        QSettings* qs;
+        if (parser.isSet(configOption)) {
+            qs = new QSettings(parser.value(configOption), QSettings::IniFormat, &a);
+        } else {
+            qs = new QSettings("org.pascalniklaus", "grasp", &a);
+        }
 
         Message msg(&a);
-        MainWindow w(qs);
+        MainWindow w(*qs);
 
         // ------------ connect DBus messages to signales ------------
 
-        QObject::connect(&msg, &Message::quit_received, &w, &MainWindow::close);
-
-        QObject::connect(
-            &msg, &Message::show_received, &w, &MainWindow::slot_show);
-        QObject::connect(
-            &msg, &Message::hide_received, &w, &MainWindow::slot_hide);
-        QObject::connect(
-            &msg, &Message::toggle_received, &w, &MainWindow::slot_toggle);
-
-        QObject::connect(
-            &msg, &Message::grab_received, &w, &MainWindow::slot_grab);
-        QObject::connect(&msg,
-                         &Message::grabnew_received,
-                         &w,
-                         &MainWindow::slot_grab_and_new);
-
-        QObject::connect(
-            &msg, &Message::color_received, &w, &MainWindow::slot_change_color);
-        QObject::connect(
-            &msg, &Message::tool_received, &w, &MainWindow::slot_change_tool);
-        QObject::connect(
-            &msg, &Message::arrow_received, &w, &MainWindow::slot_change_arrow);
-        QObject::connect(
-            &msg, &Message::width_received, &w, &MainWindow::slot_change_width);
+        // clang-format off
+        QObject::connect(&msg, &Message::quit_received,
+                         &w, &MainWindow::close);
+        QObject::connect(&msg, &Message::show_received,
+                         &w, &MainWindow::slot_show);
+        QObject::connect(&msg, &Message::hide_received,
+                         &w, &MainWindow::slot_hide);
+        QObject::connect(&msg, &Message::toggle_received,
+                         &w, &MainWindow::slot_toggle);
+        QObject::connect(&msg, &Message::grab_received,
+                         &w, &MainWindow::slot_grab);
+        QObject::connect(&msg,&Message::grabnew_received,
+                         &w, &MainWindow::slot_grab_and_new);
+        QObject::connect(&msg, &Message::color_received,
+                         &w, &MainWindow::slot_change_color);
+        QObject::connect(&msg, &Message::tool_received,
+                         &w, &MainWindow::slot_change_tool);
+        QObject::connect(&msg, &Message::arrow_received,
+                         &w, &MainWindow::slot_change_arrow);
+        QObject::connect(&msg, &Message::width_received,
+                         &w, &MainWindow::slot_change_width);
+        // clang-format on
 
         // -------------------- set window params --------------------
 

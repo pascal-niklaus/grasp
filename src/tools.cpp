@@ -70,22 +70,22 @@ QGraphicsItem *Tools::create_tool(const Settings& settings) {
 
         case TOOL_HIGHLIGHT: {
             auto *highlight = new GfxHighlight(nullptr,
-                                                  settings.color,
-                                                  settings.highlight_width,
-                                                  settings.arrow_type,
-                                                  settings.arrow_size,
-                                                  settings.sustain_highlight,
-                                                  settings.fade_highlight);
+                                               settings.color,
+                                               settings.highlight_width,
+                                               settings.arrow_type,
+                                               settings.arrow_size,
+                                               settings.sustain_highlight,
+                                               settings.fade_highlight);
             highlight->setData(GfxItem::KeyID, generate_ID());
             return highlight;
         }
 
         case TOOL_LINE: {
             auto *line = new GfxLine(nullptr,
-                                        settings.color,
-                                        settings.width,
-                                        settings.arrow_type,
-                                        settings.arrow_size);
+                                     settings.color,
+                                     settings.width,
+                                     settings.arrow_type,
+                                     settings.arrow_size);
             line->setData(GfxItem::KeyID, generate_ID());
             return line;
         }
@@ -114,7 +114,12 @@ QGraphicsItem *Tools::create_tool(const Settings& settings) {
     }
 }
 
+// Settings::Settings
+//
+// set sensible default values
+//
 Settings::Settings() {
+    // colors
     color_table = {
         {0xf0f0f0ff, 'W', Qt::NoModifier, 'W', Qt::ShiftModifier},
         {0x909090ff, 'M', Qt::NoModifier, 'M', Qt::ShiftModifier},
@@ -130,17 +135,54 @@ Settings::Settings() {
         {0x662c15ff, 'K', Qt::NoModifier, 'K', Qt::ShiftModifier},
     };
 
-    line_widths[0] = 1.0;
-    line_widths[1] = 2.0;
-    line_widths[2] = 3.0;
-    line_widths[3] = 5.0;
-    line_widths[4] = 8.0;
-    line_widths[5] = 12.0;
-    line_widths[6] = 25.0;
-    line_widths[7] = 40.0;
-    line_widths[8] = 60.0;
+    // line widths
+    double w0 = 1.0;
+    double delta = 1.0;
+    for (int i = 0; i < 9; i++) {
+        width_key[i] = QKeyCombination(Qt::NoModifier,
+                                       static_cast<Qt::Key>(Qt::Key_1 + i));
+        line_widths[i] = round(w0);
+        w0 += delta;
+        delta = pow(delta, 1.1) + 1.1;
+    }
 
-    for (int i = 0; i < 9; i++) highlight_line_width[i] = 3.5 * line_widths[i];
+    w0 = 8;
+    delta = 5;
+    for (int i = 0; i < 9; i++) {
+        highlight_line_width[i] = round(w0);
+        w0 += delta;
+        delta = pow(delta, 1.02) + 5;
+    }
+
+    // tool keys
+    edit_key = QKeyCombination(Qt::NoModifier, Qt::Key_E);
+    pen_key = QKeyCombination(Qt::NoModifier, Qt::Key_P);
+    smooth_key = QKeyCombination(Qt::NoModifier, Qt::Key_S);
+    ortho_key = QKeyCombination(Qt::NoModifier, Qt::Key_O);
+    line_key = QKeyCombination(Qt::NoModifier, Qt::Key_L);
+    rect_key = QKeyCombination(Qt::NoModifier, Qt::Key_R);
+    text_key = QKeyCombination(Qt::NoModifier, Qt::Key_T);
+    highlight_key = QKeyCombination(Qt::NoModifier, Qt::Key_H);
+    fader_key = QKeyCombination(Qt::NoModifier, Qt::Key_F);
+
+    del_key = QKeyCombination(Qt::NoModifier, Qt::Key_Delete);
+    del_all_key = QKeyCombination(Qt::ControlModifier | Qt::ShiftModifier,
+                                  Qt::Key_Delete);
+    dash_key = QKeyCombination(Qt::NoModifier, Qt::Key_F1);
+    grab_key = QKeyCombination(Qt::ControlModifier, Qt::Key_G);
+    grab_partial_key = QKeyCombination(Qt::ShiftModifier, Qt::Key_G);
+
+    arrow_start_key = QKeyCombination(Qt::NoModifier, Qt::Key_Less);
+    arrow_end_key = QKeyCombination(Qt::NoModifier, Qt::Key_Greater);
+    arrow_double_key = QKeyCombination(Qt::NoModifier, Qt::Key_Equal);
+    arrow_none_key = QKeyCombination(Qt::NoModifier, Qt::Key_Minus);
+
+    // other keys
+    quit_key = QKeyCombination(Qt::ControlModifier, Qt::Key_Q);
+    undo_key = QKeyCombination(Qt::ControlModifier, Qt::Key_Z);
+    redo_key = QKeyCombination(Qt::ControlModifier, Qt::Key_Y);
+    opacity_key = QKeyCombination(Qt::ControlModifier, Qt::Key_O);
+    toggle_key = QKeyCombination(Qt::ControlModifier, Qt::Key_T);
 
     // set default tool settings
     tool = TOOL_SMOOTH;
@@ -168,6 +210,7 @@ Settings::Settings() {
 
 void Settings::store(QSettings &qs) const {
     qs.beginGroup("Keys");
+
     qs.setValue("edit-key", Settings::to_string(edit_key));
     qs.setValue("pen-key", Settings::to_string(pen_key));
     qs.setValue("line-key", Settings::to_string(line_key));
@@ -183,6 +226,13 @@ void Settings::store(QSettings &qs) const {
     qs.setValue("dash-key", Settings::to_string(dash_key));
     qs.setValue("grab-key", Settings::to_string(grab_key));
     qs.setValue("grab-partial-key", Settings::to_string(grab_partial_key));
+
+    qs.setValue("quit-key", Settings::to_string(quit_key));
+    qs.setValue("undo-key", Settings::to_string(undo_key));
+    qs.setValue("redo-key", Settings::to_string(redo_key));
+    qs.setValue("toggle-key", Settings::to_string(toggle_key));
+    qs.setValue("opacity-key", Settings::to_string(opacity_key));
+
     qs.endGroup();
 
     // ---------------------------- tools ----------------------------
@@ -257,7 +307,9 @@ void Settings::store(QSettings &qs) const {
     qs.endGroup();
 }
 
-void Settings::retrieve(QSettings &qs) {
+bool Settings::retrieve(QSettings &qs) {
+    if (!qs.contains("Keys/edit-key")) return false;
+
     qs.beginGroup("Keys");
 
     edit_key = Settings::keycomb_from_string(qs.value("edit-key").toString());
@@ -279,6 +331,14 @@ void Settings::retrieve(QSettings &qs) {
     grab_key = Settings::keycomb_from_string(qs.value("grab-key").toString());
     grab_partial_key =
         Settings::keycomb_from_string(qs.value("grab-partial-key").toString());
+
+    quit_key = Settings::keycomb_from_string(qs.value("quit-key").toString());
+    undo_key = Settings::keycomb_from_string(qs.value("undo-key").toString());
+    redo_key = Settings::keycomb_from_string(qs.value("redo-key").toString());
+    toggle_key =
+        Settings::keycomb_from_string(qs.value("toggle-key").toString());
+    opacity_key =
+        Settings::keycomb_from_string(qs.value("opacity-key").toString());
 
     qs.endGroup();
 
@@ -354,6 +414,7 @@ void Settings::retrieve(QSettings &qs) {
     qs.beginGroup("Directories");
     save_dir = qs.value("save-dir").toString();
     qs.endGroup();
+    return true;
 }
 
 QColor Settings::get_color(const QKeyCombination &k) {

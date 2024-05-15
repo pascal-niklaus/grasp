@@ -11,6 +11,7 @@
 #include <QScreen>
 #include <QTabletEvent>
 #include <QTimer>
+
 #include <chrono>
 
 #include "colors.h"
@@ -58,57 +59,46 @@ DrawingScene::DrawingScene(QSettings &qset, QObject *parent) :
     // dynamic update timer
     _dyn_tick = new QTimer();
     _dyn_tick->setInterval(100);  // 100 milliseconds
-    connect(_dyn_tick,
-            &QTimer::timeout,
-            this,
-            &DrawingScene::slot_dynamic_updates,
-            Qt::QueuedConnection);
 
-    connect(this,
-            &DrawingScene::pointerPressed,
-            this,
-            &DrawingScene::slot_pointerPressed,
+    // clang-format off
+    connect(_dyn_tick, &QTimer::timeout,
+            this, &DrawingScene::slot_dynamic_updates,
             Qt::QueuedConnection);
-    connect(this,
-            &DrawingScene::pointerMoved,
-            this,
-            &DrawingScene::slot_pointerMoved,
+    connect(this, &DrawingScene::pointerPressed,
+            this, &DrawingScene::slot_pointerPressed,
             Qt::QueuedConnection);
-    connect(this,
-            &DrawingScene::pointerReleased,
-            this,
-            &DrawingScene::slot_pointerReleased,
+    connect(this, &DrawingScene::pointerMoved,
+            this, &DrawingScene::slot_pointerMoved,
             Qt::QueuedConnection);
-    connect(this,
-            &DrawingScene::keyPressed,
-            this,
-            &DrawingScene::slot_keyPressed,
+    connect(this, &DrawingScene::pointerReleased,
+            this, &DrawingScene::slot_pointerReleased,
             Qt::QueuedConnection);
-    connect(this,
-            &DrawingScene::save_scene,
-            this,
-            &DrawingScene::slot_save_scene,
+    connect(this, &DrawingScene::keyPressed,
+            this, &DrawingScene::slot_keyPressed,
             Qt::QueuedConnection);
-    connect(this,
-            &DrawingScene::restore_scene,
-            this,
-            &DrawingScene::slot_restore_scene,
+    connect(this, &DrawingScene::save_scene,
+            this, &DrawingScene::slot_save_scene,
             Qt::QueuedConnection);
-    connect(this,
-            &DrawingScene::delete_scene,
-            this,
-            &DrawingScene::slot_delete_scene,
+    connect(this, &DrawingScene::restore_scene,
+            this, &DrawingScene::slot_restore_scene,
             Qt::QueuedConnection);
+    connect(this, &DrawingScene::delete_scene,
+            this, &DrawingScene::slot_delete_scene,
+            Qt::QueuedConnection);
+    // clang-format on
 
     _dash = new GfxDash(nullptr, sceneRect().width(), 25, _settings);
     _dash->setPos(0, 0);
     addItem(_dash);
 
-    connect(
-        this, &DrawingScene::set_color, this, &DrawingScene::slot_set_color);
-    connect(
-        this, &DrawingScene::set_arrow, this, &DrawingScene::slot_set_arrow);
-    connect(this, &DrawingScene::setup, this, &DrawingScene::slot_setup);
+    // clang-format off
+    connect(this, &DrawingScene::set_color,
+            this, &DrawingScene::slot_set_color);
+    connect(this, &DrawingScene::set_arrow,
+            this, &DrawingScene::slot_set_arrow);
+    connect(this, &DrawingScene::setup,
+            this, &DrawingScene::slot_setup);
+    // clang-format on
 
     emit set_arrow(ARROW_END);
 
@@ -126,7 +116,6 @@ DrawingScene::~DrawingScene() {
 }
 
 void DrawingScene::slot_reposition_dash(int width) {
-  qDebug() << "DrawingScene::slot_reposition_dash" << width;
     _dash->reposition(width);
 }
 
@@ -353,7 +342,19 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
 
 void DrawingScene::slot_keyPressed(QKeyCombination kc, QString text) {
     kc = SelectKey::canonicalize(kc);
-    if (kc == _settings.arrow_start_key) {
+    if (kc == _settings.grab_key) {
+        emit take_screenshot();
+    } else if (kc == _settings.quit_key) {
+        emit quit();
+    } else if (kc == _settings.undo_key) {
+        emit undo();
+    } else if (kc == _settings.redo_key) {
+        emit redo();
+    } else if (kc == _settings.toggle_key) {
+        emit toggle();
+    } else if (kc == _settings.opacity_key) {
+        emit opacity();
+    } else if (kc == _settings.arrow_start_key) {
         emit set_arrow(ARROW_START);
     } else if (kc == _settings.arrow_end_key) {
         emit set_arrow(ARROW_END);

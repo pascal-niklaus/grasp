@@ -91,6 +91,12 @@ class AuxTab : public QWidget {
     void set_path(const QString &path);
 
   private:
+    SelectKey *_quit_key;
+    SelectKey *_undo_key;
+    SelectKey *_redo_key;
+    SelectKey *_toggle_key;
+    SelectKey *_opacity_key;
+
     QString _path;
     QLineEdit *_path_label;
     QPushButton *_browse;

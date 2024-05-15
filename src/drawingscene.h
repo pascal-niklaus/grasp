@@ -126,6 +126,10 @@ class DrawingScene : public QGraphicsScene {
     void set_arrow(ArrowType type);
     void delete_scene(int id);
     void setup();
+    void take_screenshot();
+    void quit();
+    void toggle();
+    void opacity();
 
   public slots:
     void slot_new();

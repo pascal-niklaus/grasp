@@ -6,7 +6,10 @@
 class SelectKey : public QKeySequenceEdit {
     Q_OBJECT
   public:
-    SelectKey(QWidget *parent = nullptr);
+    SelectKey(Qt::KeyboardModifiers allowed_mods = Qt::NoModifier,
+              QWidget* parent = nullptr);
+    SelectKey(std::uint32_t allowed_mods = Qt::NoModifier,
+              QWidget* parent = nullptr);
 
     void set_key(const QKeyCombination& keycomb);
     void set_del_key(const QKeyCombination& delcomb);
@@ -26,6 +29,9 @@ class SelectKey : public QKeySequenceEdit {
 
   private slots:
     void slot_check_key_combi();
+
+  private:
+    void setup(Qt::KeyboardModifiers mods);
 
   private:
     QKeyCombination _combi;
