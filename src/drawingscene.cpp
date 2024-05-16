@@ -120,9 +120,12 @@ DrawingScene::~DrawingScene() {
     _undo_records.clear();
     _redo_records.clear();
     delete _rmb_menu;
+    delete _dyn_tick;
 }
 
 void DrawingScene::slot_reposition_dash(int width) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_reposition_dash" << width;
     _dash->reposition(width);
 }
 
@@ -481,6 +484,7 @@ void DrawingScene::update_selection_frame() {
 // delete all items selected (and create an undo record)
 //
 void DrawingScene::delete_selection() {
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::delete_selection";
     if (_selection_frame) {
         UndoRecord rec;
         for (auto &item : _selected_items) {
@@ -715,6 +719,7 @@ void DrawingScene::handle_transformation_release(const QPointF &p) {
 // execute last undo record and place it in redo
 //
 void DrawingScene::undo() {
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::undo";
     clearSelection();
     if (_undo_records.empty()) return;
     UndoRecord &rec = _undo_records.back();
@@ -754,6 +759,7 @@ void DrawingScene::undo() {
 // execute last redo record and place it in undo
 //
 void DrawingScene::redo() {
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::redo";
     clearSelection();
     if (_redo_records.empty()) return;
     UndoRecord &rec = _redo_records.back();
@@ -798,6 +804,7 @@ void DrawingScene::redo() {
 // the implementation is not really efficient, but this should not be important
 //
 void DrawingScene::garbage_collect() {
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::garbage_collect";
     int last_n = 0;
     return;
     for (;;) {
@@ -842,19 +849,37 @@ void DrawingScene::garbage_collect() {
     }
 }
 
+
+static int rem_level = 0;
+
 void DrawingScene::removeItemSafely(QGraphicsItem *item) {
+    rem_level++;
+    if (_verbosity >= VerboseAll) {
+        qDebug() << "DrawingScene::removeItemSafely..."
+                 << "level =" << rem_level << item;
+
+        if (item->childItems().size())
+            qDebug() << "- removing" << item->childItems().size() << "children";
+    }
+
     while (item->childItems().size() > 0)
         removeItemSafely(item->childItems().first());
+
     removeItem(item);
     delete item;
+    if (_verbosity >= VerboseAll) {
+      qDebug() << "DrawingScene::removeItemSafely level =" << rem_level << "done ";
+    }
+    rem_level--;
 }
 
 void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::slot_pixmap";
+
     if (_current_item) {
         switch (_current_item->type()) {
             case GFX_PIXMAP: {
-                GfxPixmap *kpixmap =
-                    static_cast<GfxPixmap *>(_current_item);
+                GfxPixmap *kpixmap = static_cast<GfxPixmap *>(_current_item);
                 kpixmap->set_pixmap(pixmap, kpixmap->sel_rect());
                 _current_item = nullptr;
                 unstash_scene();
@@ -865,6 +890,8 @@ void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
 }
 
 void DrawingScene::stash_scene() {
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::stash_scene...";
+
     clearSelection();
 
     _stash.stash.clear();
@@ -883,12 +910,14 @@ void DrawingScene::stash_scene() {
             kitem->pgc();
             removeItemSafely(kitem);
             _stash.stash.insert({id, undo_item});
-        } else {
         }
     }
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::stash_scene... done";
 }
 
 void DrawingScene::unstash_scene() {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::unstash_scene...";
     clear_selection();
 
     slot_clear_background();
@@ -899,9 +928,13 @@ void DrawingScene::unstash_scene() {
         addItem(item);
     }
     _stash.stash.clear();
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::unstash_scene... done";
 }
 
 void DrawingScene::slot_set_background(QPixmap px) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_set_background";
     slot_clear_background();
     if (px.isNull()) return;
     _background_item = addPixmap(px);
@@ -911,6 +944,8 @@ void DrawingScene::slot_set_background(QPixmap px) {
 }
 
 void DrawingScene::slot_clear_background() {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_clear_background";
     if (_background_item) {
         removeItem(_background_item);
         _background_item = nullptr;
@@ -961,6 +996,9 @@ void DrawingScene::init_tool() {
 // places, otherwise this will eventually cause a double deletion!
 
 void DrawingScene::slot_save_scene(int id) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_save_scene" << id;
+
     clear_selection();
 
     {  // delete saved scene if it already exists
@@ -1010,6 +1048,9 @@ void DrawingScene::slot_save_scene(int id) {
 }
 
 void DrawingScene::slot_restore_scene(int id) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_restore_scene" << id;
+
     clear_selection();
     // find the stored scene, and return if it does not exist
     auto it = _saved_scenes.find(id);
@@ -1056,6 +1097,9 @@ void DrawingScene::slot_restore_scene(int id) {
 }
 
 void DrawingScene::slot_delete_scene(int id) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_delete_scene" << id;
+
     // find the stored scene, and return if it does not exist
     auto it = _saved_scenes.find(id);
     if (it == _saved_scenes.end()) {
@@ -1077,6 +1121,9 @@ void DrawingScene::slot_delete_scene(int id) {
 // remove everything, cannot be undone
 //
 void DrawingScene::clear_scene() {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_clear_scene";
+
     clearSelection();
 
     // remove background, if any
@@ -1099,6 +1146,9 @@ void DrawingScene::clear_scene() {
 }
 
 void DrawingScene::slot_new() {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_new";
+
     slot_save_scene(_current_scene);
     _current_scene = new_scene_id();
     _dash->add_scene(_current_scene);
@@ -1106,15 +1156,22 @@ void DrawingScene::slot_new() {
 }
 
 void DrawingScene::slot_set_color(const QColor &color) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_set_color" << color;
+
     _settings.color = color;
     _dash->select_color(color);
 }
 
 void DrawingScene::slot_set_color_from_index(int index) {
-    // if (index >= 0 && index < static_cast<int>(Color::color_table.size())) {
-    //     slot_set_color(
-    //         Color::qcolor_from_uint32(Color::color_table[index].numeric));
-    // }
+    if (index < 0 || index >= static_cast<int>(_settings.color_table.size())) {
+        qDebug()
+            << "DrawingScene::slot_set_color_from_index: illegal color index"
+            << index;
+        return;
+    }
+    _settings.color = _settings.color_table[index].color;
+    _dash->select_color(_settings.color);
 }
 
 void DrawingScene::slot_set_tool(ToolType tool) {

@@ -15,6 +15,10 @@ include(GNUInstallDirs)
 
 add_definitions(-DAPP_VERSION="${CMAKE_PROJECT_VERSION}" -DAPP_NAME="${CMAKE_PROJECT_NAME}")
 
+# --- keep this
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
+
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS DBus)
