@@ -6,6 +6,9 @@
 
 #include <cstdint>
 
+// verbosity levels
+enum : int { VerboseOff = 0, VerboseLow, VerboseHigh, VerboseAll };
+
 enum : std::uint32_t {
     AllModifiers = Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier |
                    Qt::MetaModifier

@@ -21,10 +21,12 @@
 
 // MainWindow::MainWindow
 //
-MainWindow::MainWindow(QSettings &qset, QWidget *parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QSettings &qset, int verbosity, QWidget *parent) :
+    QMainWindow(parent) {
     // graphics scene
-    _scene = new DrawingScene(qset);
-    _view = new DrawingView(_scene);
+    _verbosity = verbosity;
+    _scene = new DrawingScene(qset, verbosity);
+    _view = new DrawingView(_scene, verbosity);
     setCentralWidget(_view);
 
     new ScreenChangeDetector(this);
@@ -106,24 +108,34 @@ void MainWindow::slot_cycle_opacity() {
         _opacity = 0.3;
         setStyleSheet("background:transparent;");
     }
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_cycle_opacity: setting to" << _opacity;
     setWindowOpacity(_opacity);
 }
 
 void MainWindow::slot_undo() {
+    if (_verbosity >= VerboseAll) qDebug() << "MainWindow::slot_undo";
     _scene->undo();
 }
 
 void MainWindow::slot_redo() {
+    if (_verbosity >= VerboseAll) qDebug() << "MainWindow::slot_redo";
     _scene->redo();
 }
 
 // ------------------- commands received via dbus --------------------
 
 void MainWindow::slot_change_color(int index) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_chance_color" << index;
+
     _scene->slot_set_color_from_index(index);
 }
 
 void MainWindow::slot_change_tool(const QString &tool) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_chance_tool" << tool;
+
     if (tool == "pen") {
         _scene->slot_set_tool(TOOL_PEN);
     } else if (tool == "smooth") {
@@ -150,6 +162,9 @@ void MainWindow::slot_change_tool(const QString &tool) {
 }
 
 void MainWindow::slot_change_arrow(const QString &arrow) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_chance_arrow" << arrow;
+
     if (arrow == "->") {
         _scene->slot_set_arrow(ARROW_END);
     } else if (arrow == "<-") {
@@ -162,15 +177,21 @@ void MainWindow::slot_change_arrow(const QString &arrow) {
 }
 
 void MainWindow::slot_change_width(int width) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_chance_width" << width;
     if (width > 0 && width < 80) _scene->slot_set_width(width);
 }
 
 void MainWindow::slot_grab_and_new() {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_grab_and_new";
     _scene->slot_new();
     slot_grab();
 }
 
 void MainWindow::slot_grab() {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_grab";
     hide();
     // 10 ms is too short
     // 50 ms seems to work
@@ -179,13 +200,14 @@ void MainWindow::slot_grab() {
 }
 
 void MainWindow::slot_grab_partial(const QRect &geometry) {
-    hide();
-    // 10 ms is too short
-    // 50 ms seems to work
-    // we use 100ms for safety
-    _shot_rect = geometry;
-    qDebug() << "_shot rect=" << geometry;
-    _partial_snapshot_timer->start(200);
+  if (_verbosity >= VerboseAll)
+      qDebug() << "MainWindow::slot_grab_partial" << geometry;
+  hide();
+  // 10 ms is too short
+  // 50 ms seems to work
+  // we use 100ms for safety
+  _shot_rect = geometry;
+  _partial_snapshot_timer->start(200);
 }
 
 void MainWindow::slot_screenshot_step1() {
@@ -196,11 +218,6 @@ void MainWindow::slot_screenshot_step1() {
 }
 
 void MainWindow::slot_partial_screenshot_step1() {
-    // QRect screenRect = screen()->geometry();
-    // _shot_rect.adjust(-screenRect.left(),
-    //                  -screenRect.top(),
-    //                  -screenRect.left(),
-    //                  -screenRect.top());
     QPixmap px = screen()->grabWindow().copy(_shot_rect);
     qDebug() << "partial " << px.rect();
     show();
@@ -210,6 +227,8 @@ void MainWindow::slot_partial_screenshot_step1() {
 }
 
 void MainWindow::slot_toggle() {
+    if (_verbosity >= VerboseAll) qDebug() << "MainWindow::slot_toggle";
+
     if (_on_top) {
         // ------------------------ hide window ------------------------
         setWindowState(Qt::WindowMinimized);
@@ -228,16 +247,23 @@ void MainWindow::slot_toggle() {
 }
 
 void MainWindow::slot_show() {
+    if (_verbosity >= VerboseAll) qDebug() << "MainWindow::slot_show";
+
     _on_top = false;
     slot_toggle();
 }
 
 void MainWindow::slot_hide() {
+    if (_verbosity >= VerboseAll) qDebug() << "MainWindow::slot_hide";
+
     _on_top = true;
     slot_toggle();
 }
 
 void MainWindow::slot_save(const QString &filename) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_save" << filename;
+
     setWindowOpacity(1.0);
     setStyleSheet("background:black;");
     QPixmap px(size());

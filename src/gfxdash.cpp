@@ -279,7 +279,6 @@ GfxDash::GfxDash(QGraphicsItem *parent,
     _cogwheel->setData(GfxItem::KeyDashAux, 0);
 
     // add color boxes, right to left
-    x -= height * 1.5 * 2;
     for (auto it = _settings.color_table.crbegin();
          it != _settings.color_table.crend();
          it++) {
@@ -293,11 +292,9 @@ GfxDash::GfxDash(QGraphicsItem *parent,
             txt = QString("%1").arg(QChar(it->key1.key()).toUpper());
         }
         icon->set_color(it->color, txt);
-        x -= height * 1.5;
     }
 
     // arrow icons
-    x -= height * 1.5;
     for (int i = 0; i < 4; i++) {
         auto *icon = new GfxArrowIcon(this, height);
         _arrows.emplace_back(icon);
@@ -318,9 +315,9 @@ GfxDash::GfxDash(QGraphicsItem *parent,
                 break;
         }
         icon->set_type(type);
-        x -= height * 1.5;
     }
 
+    reposition(width);
     // scene numbers
 }
 
@@ -407,7 +404,7 @@ void GfxDash::clear_scenes() {
 }
 
 void GfxDash::reposition_scenes() {
-    int x = _height * 2;
+    int x = _height * 4;
     for (auto &item : _scenes) {
         item.second->setPos(x, _height);
         item.second->set_selected(item.first == _active_scene);

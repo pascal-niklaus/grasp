@@ -10,7 +10,9 @@ class ScreenChangeDetector;
 class DrawingView : public QGraphicsView {
     Q_OBJECT
   public:
-    explicit DrawingView(DrawingScene *scene, QWidget *parent = nullptr);
+    explicit DrawingView(DrawingScene *scene,
+                         int verbosity = 0,
+                         QWidget *parent = nullptr);
     ~DrawingView();
 
   public slots:
@@ -22,6 +24,7 @@ class DrawingView : public QGraphicsView {
     virtual void resizeEvent(QResizeEvent *event);
 
   private:
+    int _verbosity;
     DrawingScene *_scene;
     ScreenChangeDetector *_screen_watcher;
 

@@ -5,6 +5,8 @@
 #include <qtmetamacros.h>
 #include <QObject>
 
+#include <iostream>
+
 class Message : public QObject {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.pascalniklaus.grasp")
@@ -13,10 +15,14 @@ class Message : public QObject {
     Message(QObject* parent);
     ~Message();
 
+    void set_verbose(bool v) { _verbose = v; }
+    bool verbose() const { return _verbose; }
+    void log(const std::string& msg) const;
+
     static QString service_name() { return "org.pascalniklaus.grasp"; }
     static QString service_path() { return "/exec"; }
 
- signals:
+  signals:
     void quit_received();
 
     void toggle_received();
@@ -45,6 +51,9 @@ class Message : public QObject {
     Q_SCRIPTABLE void arrow(const QString& arrow);
     Q_SCRIPTABLE void color(int index);
     Q_SCRIPTABLE void width(int width);
+
+  private:
+    bool _verbose = false;
 };
 
 #endif

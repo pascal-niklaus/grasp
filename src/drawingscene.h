@@ -83,7 +83,9 @@ class DrawingScene : public QGraphicsScene {
     enum MenuItem : int { MENU_CANCEL = 0, MENU_DELETE, MENU_NEW, MENU_SAVE };
 
   public:
-    explicit DrawingScene(QSettings &qset, QObject *parent = nullptr);
+    explicit DrawingScene(QSettings &qset,
+                          int verbosity = 0,
+                          QObject *parent = nullptr);
     ~DrawingScene();
 
     void fix_geometry(QRect real_rect);
@@ -182,9 +184,11 @@ class DrawingScene : public QGraphicsScene {
     int new_scene_id(void);
 
   private:
+    int _verbosity;
     QSettings &_qset;
     Settings _settings;
     GfxDash *_dash;
+    QGraphicsPixmapItem *_icon;
 
     QGraphicsItem *_current_item = nullptr;
     QGraphicsPixmapItem *_background_item = nullptr;

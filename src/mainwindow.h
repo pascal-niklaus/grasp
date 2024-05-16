@@ -16,7 +16,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
   public:
-    MainWindow(QSettings &qset, QWidget *parent = nullptr);
+  MainWindow(QSettings &qset, int verbosity = 0, QWidget *parent = nullptr);
     ~MainWindow();
 
   signals:
@@ -57,6 +57,7 @@ class MainWindow : public QMainWindow {
     DrawingView *_view = nullptr;
 
     bool _on_top = true;
+    int _verbosity;
     double _opacity;
     QRect _screen_rect;
     QRect _shot_rect;

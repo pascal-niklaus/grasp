@@ -102,6 +102,9 @@ int main(int argc, char* argv[]) {
                                   "take screenshot and show it as new drawing");
     parser.addOption(grabOption);
 
+    QCommandLineOption verboseOption("verbose", "print messages, higher 'LEVEL' = more messages", "LEVEL", "1");
+    parser.addOption(verboseOption);
+
     QCommandLineOption dbusOption(
         "help-dbus", "show detailed help about using the dbus interface");
     parser.addOption(dbusOption);
@@ -130,6 +133,13 @@ int main(int argc, char* argv[]) {
         if (parser.isSet(grabOption)) { send_dbus_command(bus, "grab"); }
         return 0;
     } else {
+        bool ok;
+        int verbosity = parser.value(verboseOption).toInt(&ok);
+        if (!ok) {
+            std::cerr << "Illegal verbosity value, turning off\n";
+            verbosity = 0;
+        }
+
         QSettings* qs;
         if (parser.isSet(configOption)) {
             qs = new QSettings(parser.value(configOption), QSettings::IniFormat, &a);
@@ -138,7 +148,8 @@ int main(int argc, char* argv[]) {
         }
 
         Message msg(&a);
-        MainWindow w(*qs);
+        msg.set_verbose(verbosity > 0);
+        MainWindow w(*qs, verbosity);
 
         // ------------ connect DBus messages to signales ------------
 

@@ -25,8 +25,9 @@
 
 // DrawingScene::DrawingScene
 //
-DrawingScene::DrawingScene(QSettings &qset, QObject *parent) :
+DrawingScene::DrawingScene(QSettings &qset, int verbosity, QObject *parent) :
     QGraphicsScene{parent}, _qset(qset) {
+    _verbosity = verbosity;
     // fix geometry, otherwise scene moves around when items are added
     QRectF r = QGuiApplication::primaryScreen()->geometry();
     const double k = QGuiApplication::primaryScreen()->devicePixelRatio();
@@ -101,6 +102,12 @@ DrawingScene::DrawingScene(QSettings &qset, QObject *parent) :
     // clang-format on
 
     emit set_arrow(ARROW_END);
+
+    auto px = QPixmap(":/icons/icons/grasp.png");
+    _icon = new QGraphicsPixmapItem(px);
+    addItem(_icon);
+    _icon->setScale(50.0 / px.width());
+    _icon->setPos(5, 5);
 
     _current_scene = new_scene_id();
     _dash->add_scene(_current_scene);
@@ -537,8 +544,7 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
                 if (ditem->contains(ditem->mapFromScene(p))) {
                     const auto type = ditem->data(GfxItem::KeyDash).toInt() &
                                       DashIcon::DashMask;
-                    const auto data =
-                        ditem->data(GfxItem::KeyDashAux).toInt();
+                    const auto data = ditem->data(GfxItem::KeyDashAux).toInt();
                     switch (type) {
                         case DashIcon::DashCol:
                             emit set_color(Color::qcolor_from_uint32(data));
@@ -562,6 +568,7 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
                                             bool visibility =
                                                 _dash->isVisible();
                                             _dash->hide();
+                                            _icon->hide();
                                             QImage image(
                                                 sceneRect().size().toSize(),
                                                 QImage::Format_RGB32);
@@ -569,6 +576,7 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
                                             painter.setRenderHint(
                                                 QPainter::Antialiasing);
                                             render(&painter);
+                                            _icon->show();
                                             _dash->setVisible(visibility);
                                             image.save(filename);
                                         }
@@ -719,7 +727,8 @@ void DrawingScene::undo() {
             removeItemSafely(ptr);
             _undo_store.insert({id, undo_item});
         } else {
-            qDebug() << "undo: Could not find item" << id << "ptr=" << ptr;
+            if (_verbosity >= VerboseLow)
+                qDebug() << "undo: Could not find item" << id << "ptr=" << ptr;
         }
     }
     for (auto id : rec.ids_to_add) {
@@ -730,7 +739,8 @@ void DrawingScene::undo() {
             delete it->second;
             _undo_store.erase(it);
         } else {
-            qDebug() << "undo: Could not find item" << id;
+            if (_verbosity >= VerboseLow)
+                qDebug() << "undo: Could not find item" << id;
         }
     }
     _redo_records.emplace_back(rec);
@@ -756,7 +766,8 @@ void DrawingScene::redo() {
             removeItemSafely(ptr);
             _undo_store.insert({id, redo_item});
         } else {
-            qDebug() << "redo: Could not find item" << id << "ptr=" << ptr;
+            if (_verbosity >= VerboseLow)
+                qDebug() << "redo: Could not find item" << id << "ptr=" << ptr;
         }
     }
     for (auto id : rec.ids_to_remove) {
@@ -767,7 +778,8 @@ void DrawingScene::redo() {
             delete it->second;
             _undo_store.erase(it);
         } else {
-            qDebug() << "redo: Could not find item" << id;
+            if (_verbosity >= VerboseLow)
+                qDebug() << "redo: Could not find item" << id;
         }
     }
     _undo_records.emplace_back(rec);
@@ -889,14 +901,6 @@ void DrawingScene::unstash_scene() {
     _stash.stash.clear();
 }
 
-void DrawingScene::fix_geometry(QRect real_rect) {
-    // this only yields the top left corner correctly...
-    // QRect r = QGuiApplication::primaryScreen()->geometry();
-    // real_rect.adjust(-r.left(), -r.top(), -r.left(), -r.top());
-    // setSceneRect(real_rect);
-    qDebug() << "real rect" << real_rect << " scene_rect " << sceneRect();
-}
-
 void DrawingScene::slot_set_background(QPixmap px) {
     slot_clear_background();
     if (px.isNull()) return;
@@ -1010,7 +1014,7 @@ void DrawingScene::slot_restore_scene(int id) {
     // find the stored scene, and return if it does not exist
     auto it = _saved_scenes.find(id);
     if (it == _saved_scenes.end()) {
-        std::cerr << "- scene not found !\n";
+        if (_verbosity >= VerboseLow) std::cerr << "- scene not found !\n";
         return;
     }
 
@@ -1055,7 +1059,7 @@ void DrawingScene::slot_delete_scene(int id) {
     // find the stored scene, and return if it does not exist
     auto it = _saved_scenes.find(id);
     if (it == _saved_scenes.end()) {
-        std::cerr << "ERROR: scene not found !\n";
+        if (_verbosity >= VerboseLow) std::cerr << "ERROR: scene not found !\n";
         return;
     }
 

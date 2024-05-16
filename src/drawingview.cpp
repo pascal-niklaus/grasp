@@ -7,9 +7,9 @@
 #include <QDirIterator>
 #include <QResizeEvent>
 
-DrawingView::DrawingView(DrawingScene *scene, QWidget *parent) :
+DrawingView::DrawingView(DrawingScene *scene, int verbosity, QWidget *parent) :
   QGraphicsView(scene, parent) , _scene(scene) {
-
+    _verbosity = verbosity;
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 

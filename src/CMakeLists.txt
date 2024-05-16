@@ -77,6 +77,7 @@ qt_add_resources(grasp "cursors"
 qt_add_resources(grasp "icons"
     PREFIX "/icons"
     FILES ../icons/settings.png
+    FILES ../icons/grasp.png
 )
 
 target_link_libraries(grasp PRIVATE
