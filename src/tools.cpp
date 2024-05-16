@@ -119,6 +119,19 @@ QGraphicsItem *Tools::create_tool(const Settings& settings) {
 // set sensible default values
 //
 Settings::Settings() {
+    reset_defaults();
+
+    tool = TOOL_SMOOTH;
+    color = Qt::yellow;
+    width = 5;
+    highlight_width = 30;
+    arrow_type = ARROW_END;
+    arrow_size = 3;
+    minwidth = 1;
+    maxwidth = 4;
+}
+
+void Settings::reset_defaults() {
     // colors
     color_table = {
         {0xf0f0f0ff, 'W', Qt::NoModifier, 'W', Qt::ShiftModifier},
@@ -185,14 +198,6 @@ Settings::Settings() {
     toggle_key = QKeyCombination(Qt::ControlModifier, Qt::Key_T);
 
     // set default tool settings
-    tool = TOOL_SMOOTH;
-    color = Qt::yellow;
-    width = 5;
-    highlight_width = 30;
-    arrow_type = ARROW_END;
-    arrow_size = 3;
-    minwidth = 1;
-    maxwidth = 4;
     radius_rect = 30;
     radius_ortho = 30;
     minlen_ortho = 70;
@@ -206,6 +211,7 @@ Settings::Settings() {
     fade_fader = 5.0;
     sustain_highlight = 5.0;
     fade_highlight = 5.0;
+    grab_delay = 0.25;
 }
 
 void Settings::store(QSettings &qs) const {

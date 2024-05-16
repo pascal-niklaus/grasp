@@ -16,7 +16,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
   public:
-  MainWindow(QSettings &qset, int verbosity = 0, QWidget *parent = nullptr);
+    MainWindow(QSettings &qset, int verbosity = 0, QWidget *parent = nullptr);
     ~MainWindow();
 
   signals:

@@ -273,7 +273,7 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
     lay->addWidget(new QLabel("Simplify"), row, COL_SIMPLIFY);
     lay->addWidget(new QLabel("Max. angle"), row, COL_MAXANGLE);
     lay->addWidget(new QLabel("Min. length"), row, COL_MINLEN);
-    lay->addWidget(new QLabel("Sustain"), row, COL_SUSTAIN);
+    lay->addWidget(new QLabel("Delay"), row, COL_SUSTAIN);
     lay->addWidget(new QLabel("Fade"), row, COL_FADE);
     row++;
 
@@ -405,6 +405,10 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
     _grab_partial_key->set_allowed_modifiers(Qt::ShiftModifier |
                                              Qt::ControlModifier);
     lay->addWidget(_grab_partial_key, row, 1);
+
+    _grab_delay = new DoubleEdit(nullptr);
+    _grab_delay->set_range(0.1, 1.0, 1);
+    lay->addWidget(_grab_delay, row, COL_SUSTAIN);
     row++;
 
     // grab screen
@@ -461,15 +465,18 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 <tr><td>radius</td>
     <td>radius of arcs connecting straight sections</td></tr>
 <tr><td>simplify</td>
-    <td>during line simplification, the maximum distance of points from straight line approximation</td></tr>
+    <td>during line simplification, the maximum distance of points from
+        straight line approximation</td></tr>
 <tr><td>snap</td>
     <td>distance between ends below which ends are joined</td></tr>
 <tr><td>max. angle</td>
-    <td>maximum angular deviation in degrees within which a path section is still recognized as orthogonal</td></tr>
+    <td>maximum angular deviation in degrees within which a path section
+        is still recognized as orthogonal</td></tr>
 <tr><td>minlen</td>
     <td>minimum length of orthogonal section; must exceed 2x radius</td></tr>
-<tr><td>sustain</td>
-    <td>time in seconds before an element starts fading away</td></tr>
+<tr><td>delay</td>
+    <td>time in seconds before an element starts fading away (highlight, fader),
+        or the screen is grabbed (grab commands)</td></tr>
 <tr><td>fade</td>
     <td>time in seconds an element takes to fade away</td></tr>
 </tbody>
@@ -502,6 +509,8 @@ void ToolTab::load_options(const Settings &settings) {
     _highlight_fade->set_value(settings.fade_highlight);
 
     _font->set_font(settings.font);
+
+    _grab_delay->set_value(settings.grab_delay);
 
     _edit_key->set_key(settings.edit_key);
 
@@ -541,6 +550,8 @@ void ToolTab::save_options(Settings &settings) const {
     settings.fade_highlight = _highlight_fade->text().toDouble();
 
     settings.font = _font->get_font();
+
+    settings.grab_delay = _grab_delay->text().toDouble();
 
     settings.edit_key = _edit_key->get_key();
     settings.pen_key = _pen_key->get_key();
@@ -681,21 +692,36 @@ SettingsDialog::SettingsDialog(Settings &settings,
     _auxtab = new AuxTab;
     tabs->addTab(_auxtab, tr("&Other Shortcuts && Ssettings"));
 
-    auto bbox =
-        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    bbox->button(QDialogButtonBox::Ok)->setDefault(false);
+    _bbox =
+        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel |
+                             QDialogButtonBox::RestoreDefaults);
+    _bbox->button(QDialogButtonBox::Ok)->setDefault(false);
 
-    vblay->addWidget(bbox);
+    vblay->addWidget(_bbox);
 
     setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-    connect(bbox, &QDialogButtonBox::accepted, this, &SettingsDialog::slot_accept);
-    connect(bbox, &QDialogButtonBox::rejected, this, &SettingsDialog::slot_reject);
+    connect(
+        _bbox, &QDialogButtonBox::accepted, this, &SettingsDialog::slot_accept);
+    connect(
+        _bbox, &QDialogButtonBox::rejected, this, &SettingsDialog::slot_reject);
+    connect(
+        _bbox, &QDialogButtonBox::clicked, this, &SettingsDialog::slot_clicked);
 
-    retrieve_settings();
+    load_all();
+}
+
+void SettingsDialog::load_all() {
     _auxtab->load_options(_settings);
     _colortab->load_options(_settings);
     _tooltab->load_options(_settings);
     _linewidthtab->load_options(_settings);
+}
+
+void SettingsDialog::save_all() {
+    _tooltab->save_options(_settings);
+    _linewidthtab->save_options(_settings);
+    _colortab->save_options(_settings);
+    _auxtab->save_options(_settings);
 }
 
 void SettingsDialog::keyPressEvent(QKeyEvent *event) {
@@ -707,20 +733,18 @@ void SettingsDialog::keyPressEvent(QKeyEvent *event) {
 }
 
 void SettingsDialog::slot_accept() {
-    _tooltab->save_options(_settings);
-    _linewidthtab->save_options(_settings);
-    _colortab->save_options(_settings);
-    _auxtab->save_options(_settings);
-    store_settings();
+    save_all();
     accept();
+}
+
+void SettingsDialog::slot_clicked(QAbstractButton *button) {
+    if (_bbox->buttonRole(button) == QDialogButtonBox::ResetRole) {
+        _settings.reset_defaults();
+        load_all();
+    }
 }
 
 void SettingsDialog::slot_reject() {
     reject();
 }
 
-void SettingsDialog::store_settings() {
-}
-
-void SettingsDialog::retrieve_settings() {
-}

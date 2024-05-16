@@ -88,7 +88,7 @@ class DrawingScene : public QGraphicsScene {
                           QObject *parent = nullptr);
     ~DrawingScene();
 
-    void fix_geometry(QRect real_rect);
+    double grab_delay() const { return _settings.grab_delay; }
 
     void redo();
     void undo();

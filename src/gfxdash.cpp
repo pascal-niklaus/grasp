@@ -79,7 +79,7 @@ void GfxNumber::set_selected(bool selected) {
 //
 // GfxDashIcon
 //
-// A marker with a single number
+// A pixmap
 
 GfxDashIcon::GfxDashIcon(QGraphicsItem *parent,
                          int size,
@@ -104,7 +104,7 @@ void GfxDashIcon::paint(QPainter *painter,
                         QWidget *widget) {}
 
 QRectF GfxDashIcon::selectionBox() const {
-    return _icon->boundingRect().adjusted(-5, -5, 10, 10);
+    return _icon->boundingRect().adjusted(-25, -25, 25, 25);
 }
 
 // ============================= ARROW ==============================

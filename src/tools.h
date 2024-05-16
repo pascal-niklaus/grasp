@@ -41,6 +41,7 @@ class Settings {
     double fade_fader;
     double sustain_highlight;
     double fade_highlight;
+    double grab_delay;
 
     // shortcuts
     QKeyCombination edit_key;
@@ -100,8 +101,9 @@ class Settings {
                 static_cast<Qt::Key>(parts.at(0).toUInt()));
     }
 
-  void store(QSettings& qs) const;
-  bool retrieve(QSettings& qs);
+    void reset_defaults();
+    void store(QSettings& qs) const;
+    bool retrieve(QSettings& qs);
 };
 
 namespace Tools {

@@ -15,7 +15,7 @@ class QSettings;
 class QStatusBar;
 class QLabel;
 class QLineEdit;
-
+class QDialogButtonBox;
 // ----------------------------- ToolTab -----------------------------
 
 class ToolTab : public QWidget {
@@ -56,6 +56,7 @@ class ToolTab : public QWidget {
     DoubleEdit *_highlight_fade;
     DoubleEdit *_fader_sustain;
     DoubleEdit *_fader_fade;
+    DoubleEdit *_grab_delay;
     SelectFont *_font;
 };
 
@@ -68,6 +69,7 @@ class LinewidthTab : public QWidget {
                  Qt::WindowFlags f = Qt::WindowFlags());
     void load_options(const Settings &settings);
     void save_options(Settings &settings) const;
+
   private:
     IntEdit *_width[9];
     IntEdit *_highlighter_width[9];
@@ -137,15 +139,17 @@ class SettingsDialog : public QDialog {
   private slots:
     void slot_accept();
     void slot_reject();
+    void slot_clicked(QAbstractButton *button);
 
   private:
-    void store_settings();
-    void retrieve_settings();
+    void load_all();
+    void save_all();
 
   protected:
     virtual void keyPressEvent(QKeyEvent *event) override;
 
   private:
+    QDialogButtonBox *_bbox;
     Settings& _settings;
     ToolTab *_tooltab;
     LinewidthTab *_linewidthtab;

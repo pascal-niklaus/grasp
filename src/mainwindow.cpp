@@ -196,7 +196,7 @@ void MainWindow::slot_grab() {
     // 10 ms is too short
     // 50 ms seems to work
     // we use 100ms for safety
-    _snapshot_timer->start(200);
+    _snapshot_timer->start(1000 * _scene->grab_delay());
 }
 
 void MainWindow::slot_grab_partial(const QRect &geometry) {
@@ -207,7 +207,7 @@ void MainWindow::slot_grab_partial(const QRect &geometry) {
   // 50 ms seems to work
   // we use 100ms for safety
   _shot_rect = geometry;
-  _partial_snapshot_timer->start(200);
+  _partial_snapshot_timer->start(1000 *_scene->grab_delay());
 }
 
 void MainWindow::slot_screenshot_step1() {
