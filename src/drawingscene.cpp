@@ -1,3 +1,25 @@
+/*
+ * Grasp -- a program to GRAb the screen and Sketch on top during Presentations
+ *
+ * Copyright (C) 2024 Pascal Niklaus <pascal@niklaus.org>
+ *
+ * This file is part of 'Grasp'.
+ *
+ * 'Grasp' is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * 'Grasp' is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 'Grasp'. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 #include "drawingscene.h"
 
 #include <QAction>
@@ -19,6 +41,7 @@
 #include "gfxpath.h"
 #include "gfxpixmap.h"
 #include "gfxtext.h"
+#include "gfxrect.h"
 #include "selectkey.h"
 #include "settings.h"
 #include "utility.h"
@@ -119,6 +142,11 @@ DrawingScene::~DrawingScene() {
     _undo_store.clear();
     _undo_records.clear();
     _redo_records.clear();
+
+    for (auto& sc : _saved_scenes) {
+      sc.second.free_items();
+    }
+
     delete _rmb_menu;
     delete _dyn_tick;
 }
@@ -641,10 +669,9 @@ bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
         if (itype == GfxItemType::GFX_HANDLE ||
             itype == GfxItemType::GFX_ROTATEHANDLE ||
             itype == GfxItemType::GFX_MOVEHANDLE) {
-            auto *kitem = static_cast<GfxItem *>(item);
-            if (kitem->contains(kitem->mapFromScene(p))) {
+            if (item->contains(item->mapFromScene(p))) {
                 _trans.handle = static_cast<GfxFrame::HandlePos>(
-                    kitem->data(GfxItem::KeyHandle).toUInt());
+                    item->data(GfxItem::KeyHandle).toUInt());
                 _trans.pos_ref = _selection_frame->opposite_pos(_trans.handle);
                 _trans.pos_cur = _selection_frame->handle_pos(_trans.handle);
                 _trans.pos_start = p;
@@ -925,6 +952,7 @@ void DrawingScene::unstash_scene() {
 
     for (auto &it : _stash.stash) {
         GfxItem *item = it.second->create_from_undo_item();
+        delete it.second;
         addItem(item);
     }
     _stash.stash.clear();
@@ -1200,4 +1228,21 @@ int DrawingScene::new_scene_id(void) {
 void DrawingScene::slot_setup() {
     SettingsDialog settings(_settings);
     if (settings.exec() == QDialog::Accepted) _settings.store(_qset);
+}
+
+// --------------- add items without user interaction ----------------
+
+// These are some items that can be added via dbus commands. the idea
+// is not to make all functions available, and these actions are not
+// undoable.
+
+void DrawingScene::slot_add_rect(const QRectF &rect, int radius) {
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::slot_add_rect" << rect;
+    auto *rectitem = new GfxRect(
+        nullptr, _settings.color, _settings.width, radius);
+    addItem(rectitem);
+    rectitem->setData(GfxItem::KeyID, Tools::generate_ID());
+    rectitem->start(rect.topLeft());
+    rectitem->stop(rect.bottomRight());
 }

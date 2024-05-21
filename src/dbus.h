@@ -1,11 +1,35 @@
+/*
+ * Grasp -- a program to GRAb the screen and Sketch on top during Presentations
+ *
+ * Copyright (C) 2024 Pascal Niklaus <pascal@niklaus.org>
+ *
+ * This file is part of 'Grasp'.
+ *
+ * 'Grasp' is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * 'Grasp' is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 'Grasp'. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 #ifndef _DBUS_H
 #define _DBUS_H
 
 #include <qstringconverter.h>
 #include <qtmetamacros.h>
-#include <QObject>
 
+#include <QObject>
 #include <iostream>
+
+class QRectF;
 
 class Message : public QObject {
     Q_OBJECT
@@ -37,6 +61,8 @@ class Message : public QObject {
     void tool_received(const QString&);
     void width_received(int);
 
+    void rect_received(const QRectF&, int);
+
   public Q_SLOTS:
     Q_SCRIPTABLE void quit();
 
@@ -51,6 +77,8 @@ class Message : public QObject {
     Q_SCRIPTABLE void arrow(const QString& arrow);
     Q_SCRIPTABLE void color(int index);
     Q_SCRIPTABLE void width(int width);
+
+    Q_SCRIPTABLE void rect(int x0, int y0, int x1, int y1, int r = 0);
 
   private:
     bool _verbose = false;

@@ -1,3 +1,25 @@
+/*
+ * Grasp -- a program to GRAb the screen and Sketch on top during Presentations
+ *
+ * Copyright (C) 2024 Pascal Niklaus <pascal@niklaus.org>
+ *
+ * This file is part of 'Grasp'.
+ *
+ * 'Grasp' is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * 'Grasp' is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 'Grasp'. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 #include "drawingscene.h"
 #include "drawingview.h"
 #include "mainwindow.h"
@@ -182,16 +204,21 @@ void MainWindow::slot_change_width(int width) {
     if (width > 0 && width < 80) _scene->slot_set_width(width);
 }
 
-void MainWindow::slot_grab_and_new() {
+void MainWindow::slot_rect(const QRectF& rect, int radius) {
     if (_verbosity >= VerboseAll)
-        qDebug() << "MainWindow::slot_grab_and_new";
+        qDebug() << "MainWindow::slot_rect" << rect;
+    if (_screen_rect.contains(rect.toRect()) && radius >= 0 && radius <= 100)
+        _scene->slot_add_rect(rect, radius);
+}
+
+void MainWindow::slot_grab_and_new() {
+    if (_verbosity >= VerboseAll) qDebug() << "MainWindow::slot_grab_and_new";
     _scene->slot_new();
     slot_grab();
 }
 
 void MainWindow::slot_grab() {
-    if (_verbosity >= VerboseAll)
-        qDebug() << "MainWindow::slot_grab";
+    if (_verbosity >= VerboseAll) qDebug() << "MainWindow::slot_grab";
     hide();
     // 10 ms is too short
     // 50 ms seems to work
@@ -200,14 +227,14 @@ void MainWindow::slot_grab() {
 }
 
 void MainWindow::slot_grab_partial(const QRect &geometry) {
-  if (_verbosity >= VerboseAll)
-      qDebug() << "MainWindow::slot_grab_partial" << geometry;
-  hide();
-  // 10 ms is too short
-  // 50 ms seems to work
-  // we use 100ms for safety
-  _shot_rect = geometry;
-  _partial_snapshot_timer->start(1000 *_scene->grab_delay());
+    if (_verbosity >= VerboseAll)
+        qDebug() << "MainWindow::slot_grab_partial" << geometry;
+    hide();
+    // 10 ms is too short
+    // 50 ms seems to work
+    // we use 100ms for safety
+    _shot_rect = geometry;
+    _partial_snapshot_timer->start(1000 * _scene->grab_delay());
 }
 
 void MainWindow::slot_screenshot_step1() {
