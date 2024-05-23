@@ -78,7 +78,10 @@ DrawingView::DrawingView(DrawingScene *scene, int verbosity, QWidget *parent) :
             &DrawingView::slot_screen_rect_changed);
 }
 
-DrawingView::~DrawingView() {}
+DrawingView::~DrawingView() {
+    // all allocated objects should be deleted automatically because the are
+    // child QObjects
+}
 
 // DrawingView::resizeEvent
 //
@@ -106,10 +109,16 @@ void DrawingView::slot_screen_rect_changed(QRect rect) {
     _scene->slot_reposition_dash(rect.width());
 }
 
+// DrawingView::event
+//
+// Forward tablet events to scene -- TODO: check if this is really needed?
+//
 bool DrawingView::event(QEvent *event) {
     switch (event->type()) {
         case QEvent::TabletPress:
+            [[fallthrough]];
         case QEvent::TabletRelease:
+            [[fallthrough]];
         case QEvent::TabletMove:
             QApplication::sendEvent(scene(), event);
             return true;

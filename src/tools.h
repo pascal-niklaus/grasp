@@ -102,6 +102,8 @@ class Settings {
     std::vector<Color> color_table;
 
     QColor get_color(const QKeyCombination& key);
+
+    [[deprecated("if used, check return value is non-negative")]]
     static int qcolor_find_index(std::uint32_t color);
     QColor qcolor_at_index(int index) const;
     int qcolor_find_index(const QColor& color) const;
@@ -110,18 +112,8 @@ class Settings {
     QString save_dir;
 
   public:
-    static QString to_string(const QKeyCombination& kc) {
-        return QString("%1,%2").arg(kc.key()).arg(kc.keyboardModifiers());
-    }
-    static QKeyCombination keycomb_from_string(const QString& str) {
-        QStringList parts = str.split(",");
-        if (parts.size() != 2)
-            return QKeyCombination();
-        else
-            return QKeyCombination(
-                static_cast<Qt::KeyboardModifier>(parts.at(1).toUInt()),
-                static_cast<Qt::Key>(parts.at(0).toUInt()));
-    }
+    static QString to_string(const QKeyCombination& kc);
+    static QKeyCombination keycomb_from_string(const QString& str);
 
     void reset_defaults();
     void store(QSettings& qs) const;
@@ -130,10 +122,11 @@ class Settings {
 
 namespace Tools {
 
-    // Tool::create_tool
-    //
-    // factory function
-    //
+// Tool::create_tool
+//
+// factory function
+//
+[[nodiscard("the returned item needs to be deleted later")]]
 QGraphicsItem* create_tool(const Settings& settings);
 
 int generate_ID(void);

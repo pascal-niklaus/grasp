@@ -138,14 +138,13 @@ DrawingScene::DrawingScene(QSettings &qset, int verbosity, QObject *parent) :
 }
 
 DrawingScene::~DrawingScene() {
+    slot_clear_background();
     for (auto &it : _undo_store) delete it.second;
     _undo_store.clear();
     _undo_records.clear();
     _redo_records.clear();
 
-    for (auto& sc : _saved_scenes) {
-      sc.second.free_items();
-    }
+    for (auto &sc : _saved_scenes) { sc.second.free_items(); }
 
     delete _rmb_menu;
     delete _dyn_tick;
@@ -314,7 +313,7 @@ void DrawingScene::slot_pointerPressed(QPointF p,
     }
 
     if (handle_dash_clicks(p, buttons, mods)) {
-        //
+        // event is processed by handle_dash_clicks, do nothing here...
     } else if (_settings.tool == TOOL_SELECT) {
         SelectType sel = SEL_SINGLE;
         if (mods & Qt::ControlModifier)
@@ -322,7 +321,7 @@ void DrawingScene::slot_pointerPressed(QPointF p,
         else if (mods & Qt::ShiftModifier)
             sel = SEL_ADD;
         if (!handle_transformation_clicks(p)) handle_selection_clicks(p, sel);
-    } else {
+    } else if (!(buttons & Qt::RightButton)) {
         _current_item = Tools::create_tool(_settings);
         GfxItem *kitem = static_cast<GfxItem *>(_current_item);
 
@@ -343,17 +342,21 @@ void DrawingScene::slot_pointerPressed(QPointF p,
     }
 }
 
+// DrawingScene::pointerMoved
+//
 void DrawingScene::slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods) {
     if (_settings.tool == TOOL_SELECT) {
         if (_trans.is_ongoing()) { handle_transformation_move(p, mods); }
     } else {
         if (_current_item) {
             GfxItem *kitem = static_cast<GfxItem *>(_current_item);
-            kitem->move(p);
+            if (kitem->type() != GFX_TEXT) kitem->move(p);
         }
     }
 }
 
+// DrawingScene::pointerReleased
+//
 void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
     if (_settings.tool == TOOL_SELECT) {
         if (_trans.is_ongoing()) { handle_transformation_release(p); }
@@ -378,6 +381,8 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
     }
 }
 
+// DrawingScene::slot_keyPressed
+//
 void DrawingScene::slot_keyPressed(QKeyCombination kc, QString text) {
     kc = SelectKey::canonicalize(kc);
     if (kc == _settings.grab_key) {
@@ -431,25 +436,6 @@ void DrawingScene::slot_keyPressed(QKeyCombination kc, QString text) {
         slot_set_tool(TOOL_SELECT);
     } else if (kc == _settings.text_key) {
         slot_set_tool(TOOL_TEXT);
-    } else if (kc.key() == Qt::Key_D) {
-        qDebug() << "---------- items ----------";
-        for (const auto &item : items()) {
-            if (item->type() > GFX_SELECTABLE) {
-                std::cerr << static_cast<GfxItem &>(*item) << "\n";
-            } else {
-                qDebug() << "  " << GfxItem::type_txt(item->type())
-                         << item->isVisible() << item;
-            }
-        }
-        qDebug() << "-------- undo_store -------";
-        for (const auto &it : _undo_store) {
-            std::cerr << static_cast<GfxUndoItem &>(*it.second) << "\n";
-        }
-        qDebug() << "------ undo_records -------";
-        for (const auto &rec : _undo_records) { std::cerr << rec; }
-        qDebug() << "------ redo_records -------";
-        for (const auto &rec : _redo_records) { std::cerr << rec; }
-        qDebug() << "---------------------------";
     } else {
         // check for line width keystrokes
         const int nw =
@@ -877,9 +863,14 @@ void DrawingScene::garbage_collect() {
 }
 
 
-static int rem_level = 0;
-
+// DrawingScene::removeItemSafely
+//
+// remove an item from the scene, first deleting all childs, and
+// finally the item itself. Removing the item directly caused crashes,
+// not sure why, but this works.
+//
 void DrawingScene::removeItemSafely(QGraphicsItem *item) {
+    static int rem_level = 0;
     rem_level++;
     if (_verbosity >= VerboseAll) {
         qDebug() << "DrawingScene::removeItemSafely..."
@@ -895,11 +886,14 @@ void DrawingScene::removeItemSafely(QGraphicsItem *item) {
     removeItem(item);
     delete item;
     if (_verbosity >= VerboseAll) {
-      qDebug() << "DrawingScene::removeItemSafely level =" << rem_level << "done ";
+        qDebug() << "DrawingScene::removeItemSafely level =" << rem_level
+                 << "done ";
     }
     rem_level--;
 }
 
+// DrawingScene::slot_pixmap
+//
 void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
     if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::slot_pixmap";
 
@@ -912,10 +906,17 @@ void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
                 unstash_scene();
                 slot_set_tool(_pre_grab_tool);
             } break;
+
+            default: {
+                qDebug() << "DrawingScene::slot_pixmap called, but current "
+                            "item if not a GFX_PIXMAP !";
+            } break;
         }
     }
 }
 
+// DrawingScene::stash_scene
+//
 void DrawingScene::stash_scene() {
     if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::stash_scene...";
 
@@ -939,12 +940,14 @@ void DrawingScene::stash_scene() {
             _stash.stash.insert({id, undo_item});
         }
     }
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::stash_scene... done";
+    if (_verbosity >= VerboseAll)
+        qDebug() << "DrawingScene::stash_scene... done";
 }
 
+// DrawingScene::unstash_scene
+//
 void DrawingScene::unstash_scene() {
-    if (_verbosity >= VerboseAll)
-        qDebug() << "DrawingScene::unstash_scene...";
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::unstash_scene...";
     clear_selection();
 
     slot_clear_background();
@@ -960,6 +963,10 @@ void DrawingScene::unstash_scene() {
         qDebug() << "DrawingScene::unstash_scene... done";
 }
 
+// DrawingScene::slot_set_background
+//
+// set background pixmap
+//
 void DrawingScene::slot_set_background(QPixmap px) {
     if (_verbosity >= VerboseAll)
         qDebug() << "DrawingScene::slot_set_background";
@@ -967,22 +974,31 @@ void DrawingScene::slot_set_background(QPixmap px) {
     if (px.isNull()) return;
     _background_item = addPixmap(px);
     _background_item->setOffset(0, 0);
-    _background_item->setScale(QGuiApplication::primaryScreen()->devicePixelRatio());
+    _background_item->setScale(
+        QGuiApplication::primaryScreen()->devicePixelRatio());
     _background_item->setZValue(-1000.0);
 }
 
+// DrawingScene::slot_clear_background
+//
+// remove background pixmap, if there is any
+//
 void DrawingScene::slot_clear_background() {
     if (_verbosity >= VerboseAll)
         qDebug() << "DrawingScene::slot_clear_background";
     if (_background_item) {
-        removeItem(_background_item);
+        removeItemSafely(_background_item);
         _background_item = nullptr;
     }
 }
-
+// DrawingScene::slot_dynamic_updates
+//
+// periodically called when there are items that request this by
+// returning CAP_DYNAMIC. Stop respective timer when there are no such
+// items remaining.
+//
 void DrawingScene::slot_dynamic_updates() {
     bool any_remaining = false;
-    // bool any_deleted = true;
     bool selected_deleted = false;
     for (auto &it : items()) {
         if (it->type() > GFX_SELECTABLE) {
@@ -991,7 +1007,6 @@ void DrawingScene::slot_dynamic_updates() {
                 any_remaining = true;
                 auto result = kitem->dynamic();
                 if (result == GfxItem::DYN_DELITEM) {
-                    // any_deleted = true;
                     if (_selected_items.contains(kitem))
                         selected_deleted = true;
                     kitem->pgc();
@@ -1004,8 +1019,13 @@ void DrawingScene::slot_dynamic_updates() {
     if (selected_deleted) update_selection_frame();
 }
 
+// DrawingScene::init_tool
+//
+// do stuff needed when a new tool is selected.
+//
 void DrawingScene::init_tool() {
     emit tool_changed(_settings.tool);
+
     switch (_settings.tool) {
         case TOOL_PIXMAP: {
             emit set_transparent();
@@ -1023,6 +1043,10 @@ void DrawingScene::init_tool() {
 // important: the same undo item pointer must not be saved in two
 // places, otherwise this will eventually cause a double deletion!
 
+// DrawingScene::slot_save_scene
+//
+// moves a scene into _saved_scenes, under id 'id'
+//
 void DrawingScene::slot_save_scene(int id) {
     if (_verbosity >= VerboseAll)
         qDebug() << "DrawingScene::slot_save_scene" << id;
@@ -1075,6 +1099,11 @@ void DrawingScene::slot_save_scene(int id) {
     _saved_scenes.insert({id, scene});
 }
 
+// DrawingScene::slot_restore_scene
+//
+// Re-create scene with id 'id', re-creating all GfxItems based on
+// the undo records in _saved_scenes
+//
 void DrawingScene::slot_restore_scene(int id) {
     if (_verbosity >= VerboseAll)
         qDebug() << "DrawingScene::slot_restore_scene" << id;
@@ -1117,13 +1146,12 @@ void DrawingScene::slot_restore_scene(int id) {
 
     // there may be dynamic items that were restored
     _dyn_tick->start();
-
-    // the saved scene is NOT erased here, because we need it as a
-    // placeholder:
-
-    // saved_scenes.erase(it);
 }
 
+// DrawingScene::slot_delete_scene
+//
+// delete a scene, cannot be undone
+//
 void DrawingScene::slot_delete_scene(int id) {
     if (_verbosity >= VerboseAll)
         qDebug() << "DrawingScene::slot_delete_scene" << id;
@@ -1173,6 +1201,10 @@ void DrawingScene::clear_scene() {
     }
 }
 
+// DrawingScene::slot_new
+//
+// start a new scene
+//
 void DrawingScene::slot_new() {
     if (_verbosity >= VerboseAll)
         qDebug() << "DrawingScene::slot_new";
@@ -1183,6 +1215,10 @@ void DrawingScene::slot_new() {
     _dash->select_scene(_current_scene);
 }
 
+// DrawingScene::slot_set_color
+//
+// change the color
+//
 void DrawingScene::slot_set_color(const QColor &color) {
     if (_verbosity >= VerboseAll)
         qDebug() << "DrawingScene::slot_set_color" << color;
@@ -1191,6 +1227,10 @@ void DrawingScene::slot_set_color(const QColor &color) {
     _dash->select_color(color);
 }
 
+// DrawingScene::slot_set_color_from_index
+//
+// change the color, given an index (for example received via dbus command)
+//
 void DrawingScene::slot_set_color_from_index(int index) {
     if (index < 0 || index >= static_cast<int>(_settings.color_table.size())) {
         qDebug()
@@ -1202,6 +1242,11 @@ void DrawingScene::slot_set_color_from_index(int index) {
     _dash->select_color(_settings.color);
 }
 
+// DrawingScene::slot_set_tool
+//
+// set tool type. the grab tool also remembers what tool was set
+// before; it is later reset when the pixmap was obtained
+//
 void DrawingScene::slot_set_tool(ToolType tool) {
     if (tool == TOOL_PIXMAP) {
         if (_settings.tool != TOOL_PIXMAP) _pre_grab_tool = _settings.tool;
@@ -1211,20 +1256,36 @@ void DrawingScene::slot_set_tool(ToolType tool) {
     clear_selection();
 }
 
+// DrawingScene::slot_set_arrow
+//
+// set arrow heads
+//
 void DrawingScene::slot_set_arrow(ArrowType type) {
     _settings.arrow_type = type;
     _dash->select_arrow(type);
 }
 
+// DrawingScene::slot_set_width
+//
+// set line width
+//
 void DrawingScene::slot_set_width(int width) {
     _settings.width = width;
 }
 
+// DrawingScene::new_scene_id
+//
+// return a new, unique scene id
+//
 int DrawingScene::new_scene_id(void) {
     static int id = 0;
     return ++id;
 }
 
+// DrawingScene::slot_setup
+//
+// setup dialog
+//
 void DrawingScene::slot_setup() {
     SettingsDialog settings(_settings);
     if (settings.exec() == QDialog::Accepted) _settings.store(_qset);

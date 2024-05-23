@@ -32,13 +32,23 @@
 #include "gfxfader.h"
 #include "gfxhighlight.h"
 
+#include <cassert>
+
 #include <QSettings>
 
+// Tools::generate_ID
+//
+// create a new unique object id
+//
 int Tools::generate_ID(void) {
     static int id = 0;
     return ++id;
 }
 
+// Tools::create_tool
+//
+// factory function creating a new GfxItem of the correct type
+//
 QGraphicsItem *Tools::create_tool(const Settings& settings) {
     switch (settings.tool) {
         case TOOL_ORTHO: {
@@ -132,7 +142,10 @@ QGraphicsItem *Tools::create_tool(const Settings& settings) {
         }
 
         default:
-            return nullptr;
+            std::cerr << "Tools::create_tool: unknown tool " << settings.tool
+                      << std::endl;
+            assert(false);
+            // return nullptr;
     }
 }
 
@@ -153,6 +166,11 @@ Settings::Settings() {
     maxwidth = 4;
 }
 
+// Settings::reset_defaults
+//
+// Set reasonable tool options. This does not include the fields that
+// are changed on the fly by the user (e.g. tool or color changes)
+//
 void Settings::reset_defaults() {
     // colors
     color_table = {
@@ -236,7 +254,13 @@ void Settings::reset_defaults() {
     grab_delay = 0.25;
 }
 
+// Settings::store
+//
+// store settings in QSettings
+//
 void Settings::store(QSettings &qs) const {
+    // ------------------------ shortcut keys ------------------------
+
     qs.beginGroup("Keys");
 
     qs.setValue("edit-key", Settings::to_string(edit_key));
@@ -261,9 +285,13 @@ void Settings::store(QSettings &qs) const {
     qs.setValue("toggle-key", Settings::to_string(toggle_key));
     qs.setValue("opacity-key", Settings::to_string(opacity_key));
 
-    qs.endGroup();
+    qs.setValue("arrow-beginning", to_string(arrow_start_key));
+    qs.setValue("arrow-end", to_string(arrow_end_key));
+    qs.setValue("arrow-double", to_string(arrow_double_key));
+    qs.setValue("arrow-none", to_string(arrow_none_key));
+    qs.setValue("size", arrow_size);
 
-    // ---------------------------- tools ----------------------------
+    // ------------------------ tool options -------------------------
 
     qs.beginGroup("Tools");
 
@@ -300,6 +328,8 @@ void Settings::store(QSettings &qs) const {
 
     qs.endGroup();
 
+    // ---------------- color and their shortcut keys ----------------
+
     qs.beginGroup("Colors");
     for (int i = 0; i < static_cast<int>(color_table.size()); i++) {
         const Color &col = color_table[i];
@@ -307,10 +337,11 @@ void Settings::store(QSettings &qs) const {
         qs.setValue("color", Color::qcolor_as_hex(color_table[i].color));
         qs.setValue("key1", to_string(col.key1));
         qs.setValue("key2", to_string(col.key2));
-
         qs.endGroup();
     }
     qs.endGroup();
+
+    // ---------------- line widths and shortcut keys ----------------
 
     qs.beginGroup("Linewidths");
     for (int i = 0; i < 9; i++) {
@@ -322,21 +353,22 @@ void Settings::store(QSettings &qs) const {
     }
     qs.endGroup();
 
-    qs.beginGroup("Arrows");
-    qs.setValue("arrow-beginning", to_string(arrow_start_key));
-    qs.setValue("arrow-end", to_string(arrow_end_key));
-    qs.setValue("arrow-double", to_string(arrow_double_key));
-    qs.setValue("arrow-none", to_string(arrow_none_key));
-    qs.setValue("size", arrow_size);
-    qs.endGroup();
+    // ------------------- default save directory --------------------
 
     qs.beginGroup("Directories");
     qs.setValue("save-dir", save_dir);
     qs.endGroup();
 }
 
+// Settings::retrieve
+//
+// retrieve settings from QSettings
+//
 bool Settings::retrieve(QSettings &qs) {
+    // return if settings don't exist
     if (!qs.contains("Keys/edit-key")) return false;
+
+    // ------------------------ shortcut keys ------------------------
 
     qs.beginGroup("Keys");
 
@@ -368,9 +400,20 @@ bool Settings::retrieve(QSettings &qs) {
     opacity_key =
         Settings::keycomb_from_string(qs.value("opacity-key").toString());
 
+    arrow_start_key =
+        Settings::keycomb_from_string(qs.value("arrow-beginning").toString());
+    arrow_end_key =
+        Settings::keycomb_from_string(qs.value("arrow-end").toString());
+    arrow_double_key =
+        Settings::keycomb_from_string(qs.value("arrow-double").toString());
+    arrow_none_key =
+        Settings::keycomb_from_string(qs.value("arrow-none").toString());
+    arrow_size = qs.value("size").toDouble();
+
     qs.endGroup();
 
-    // ---------------------------- tools ----------------------------
+    // ------------------------ tool options -------------------------
+
     qs.beginGroup("Tools");
 
     qs.beginGroup("Rect");
@@ -403,7 +446,10 @@ bool Settings::retrieve(QSettings &qs) {
     qs.beginGroup("Text");
     font.fromString(qs.value("font").toString());
     qs.endGroup();
+
     qs.endGroup();
+
+    // ---------------- color and their shortcut keys ----------------
 
     qs.beginGroup("Colors");
     for (int i = 0; i < static_cast<int>(color_table.size()); i++) {
@@ -416,6 +462,8 @@ bool Settings::retrieve(QSettings &qs) {
     }
     qs.endGroup();
 
+    // ---------------- line widths and shortcut keys ----------------
+
     qs.beginGroup("Linewidths");
     for (int i = 0; i < 9; i++) {
         qs.beginGroup(QString("%1").arg(i, 2, 10, QChar('0')));
@@ -427,24 +475,39 @@ bool Settings::retrieve(QSettings &qs) {
     }
     qs.endGroup();
 
-    qs.beginGroup("Arrows");
-    arrow_start_key = Settings::keycomb_from_string(
-        qs.value("arrow-beginning").toString());
-    arrow_end_key =
-        Settings::keycomb_from_string(qs.value("arrow-end").toString());
-    arrow_double_key = Settings::keycomb_from_string(
-        qs.value("arrow-double").toString());
-    arrow_none_key = Settings::keycomb_from_string(
-        qs.value("arrow-none").toString());
-    arrow_size = qs.value("size").toDouble();
-    qs.endGroup();
+    // ------------------- default save directory --------------------
 
     qs.beginGroup("Directories");
     save_dir = qs.value("save-dir").toString();
     qs.endGroup();
+
     return true;
 }
 
+// Settings::to:string
+// Settings::keycomb_from_string
+//
+// interconvert QKeyCombination and QSring representation for storage in QSettings
+//
+QString Settings::to_string(const QKeyCombination &kc) {
+    return QString("%1,%2").arg(kc.key()).arg(kc.keyboardModifiers());
+}
+
+QKeyCombination Settings::keycomb_from_string(const QString &str) {
+    QStringList parts = str.split(",");
+    if (parts.size() != 2)
+        return QKeyCombination();
+    else
+        return QKeyCombination(
+            static_cast<Qt::KeyboardModifier>(parts.at(1).toUInt()),
+            static_cast<Qt::Key>(parts.at(0).toUInt()));
+}
+
+// Settings::get_color
+//
+// get color based in shortcut key; return illegal color value if
+// there is no match
+//
 QColor Settings::get_color(const QKeyCombination &k) {
     for (const auto &c : color_table) {
         if (c.key1 == k || c.key2 == k) return c.color;
@@ -452,6 +515,10 @@ QColor Settings::get_color(const QKeyCombination &k) {
     return QColor();
 }
 
+// Settings::qcolor_find_index
+//
+// find QColor in table; return -1 if not found
+//
 int Settings::qcolor_find_index(const QColor& color) const {
     const auto it = std::find_if(
         color_table.cbegin(),

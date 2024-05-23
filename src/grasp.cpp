@@ -34,15 +34,17 @@ TransformCaps operator|(const TransformCaps& a, const TransformCaps& b) {
     return static_cast<TransformCaps>(ia | ib);
 }
 
-std::ostream &operator<<(std::ostream &os, const TransformCaps &cap) {
-  if (cap == CAP_NONE) {
+std::ostream& operator<<(std::ostream& os, const TransformCaps& cap) {
+    if (cap == CAP_NONE) {
         os << "--";
-  } else {
-    if (cap & CAP_MOVE) os << "M";
-    if (cap & CAP_ROTATE) os << "R";
-    if (cap & CAP_DELETE) os << "D";
-    if (cap & CAP_ISOSCALE) os << "S";
-    if (cap & CAP_ANISOSCALE) os << "A";
-  }
-  return os;
+    } else {
+        if (cap & CAP_MOVE) os << "M";
+        if (cap & CAP_ROTATE) os << "R";
+        if (cap & CAP_DELETE) os << "D";
+        if (cap & CAP_ISOSCALE) os << "S";
+        if (cap & CAP_ANISOSCALE) os << "A";
+        if (cap & CAP_KEYSTROKES) os << "K";
+        if (cap & CAP_DYNAMIC) os << "T";
+    }
+    return os;
 }

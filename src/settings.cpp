@@ -46,15 +46,10 @@
 #include "selectkey.h"
 #include "tools.h"
 
-// -------------------- settings dialog and tabs ---------------------
-
-// ========================== LinewidthTab ===========================
+// -------------------------- LinewidthTab ---------------------------
 
 LinewidthTab::LinewidthTab(QWidget *parent, Qt::WindowFlags f) :
     QWidget(parent, f) {
-    // arrow heads: < - > =
-    // line widths: keys 1-9
-    // amplification factor for highlight tool
     auto *lay = new QGridLayout;
     int row = 0;
 
@@ -84,8 +79,6 @@ LinewidthTab::LinewidthTab(QWidget *parent, Qt::WindowFlags f) :
     }
 
     QFont fnt = font();
-    //    fnt.setPointSize(fnt.pointSize() * 2);
-    //    fnt.setBold(true);
 
     for (int w = 0; w < 4; w++) {
         _arrow_key[w] = new SelectKey(AllModifiers);
@@ -187,7 +180,7 @@ AuxTab::AuxTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
     row++;
 
     lay->addWidget(new QLabel(tr("Quit shortcut")), row, 0);
-    lay->addWidget(    _quit_key = new SelectKey(AllModifiers), row, 1);
+    lay->addWidget(_quit_key = new SelectKey(AllModifiers), row, 1);
 
     row++;
     lay->addWidget(new QLabel(tr("Undo shortcut")), row, 0);
@@ -267,7 +260,7 @@ void AuxTab::save_options(Settings &settings) const {
     settings.opacity_key = _opacity_key->get_key();
 }
 
-// ============================= ToolTab =============================
+// ----------------------------- ToolTab -----------------------------
 
 enum ParamCols {
     COL_FONT = 2,
@@ -552,7 +545,6 @@ void ToolTab::load_options(const Settings &settings) {
     _grab_partial_key->set_key(settings.grab_partial_key);
 }
 
-
 void ToolTab::save_options(Settings &settings) const {
     settings.radius_rect = _rect_radius->text().toDouble();
 
@@ -596,7 +588,7 @@ void ToolTab::slot_status_message(const QString &msg) {
     _status->showMessage(msg, 4000);
 }
 
-// ============================ ColorTab =============================
+// ---------------------------- ColorTab -----------------------------
 
 ColorTab::ColorTab(int ncolors, QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
     _ncolors = ncolors;
@@ -608,7 +600,6 @@ ColorTab::ColorTab(int ncolors, QWidget *parent, Qt::WindowFlags f) : QWidget(pa
         const auto row = i % nrow;
         const auto col = i / nrow;
         if (row == 0) {
-            // lay->addWidget(new QLabel("#"), 0, colwidth * col);
             lay->addWidget(new QLabel("Color"), 0, colwidth * col + 1);
             lay->addWidget(new QLabel("Key 1"), 0, colwidth * col + 2);
             lay->addWidget(new QLabel("Key 2"), 0, colwidth * col + 3);
@@ -618,7 +609,6 @@ ColorTab::ColorTab(int ncolors, QWidget *parent, Qt::WindowFlags f) : QWidget(pa
             new QLabel(QString("#%1").arg(i + 1)), row + 1, colwidth * col);
 
         auto *btn = new SelectColorButton(nullptr);
-        //        colbtn->set_color(Color::qcolor_from_uint32(color.numeric));
         lay->addWidget(btn, row + 1, colwidth * col + 1);
         _colbtn.emplace_back(btn);
 
@@ -689,7 +679,7 @@ void ColorTab::save_options(Settings &settings) const {
     }
 }
 
-// ========================= SettingsDialog ==========================
+// ------------------------- SettingsDialog --------------------------
 
 SettingsDialog::SettingsDialog(Settings &settings,
                                QWidget *parent,
