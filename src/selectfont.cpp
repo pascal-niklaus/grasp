@@ -38,11 +38,9 @@ void SelectFont::set_font(const QFont &font) {
 }
 
 void SelectFont::slot_chose_font() {
-  bool ok;
-  auto font = QFontDialog::getFont(&ok, _font, nullptr, tr("Chose font"));
-  if (ok) {
-    set_font(font);
-  }
+    bool ok;
+    auto font = QFontDialog::getFont(&ok, _font, nullptr, tr("Chose font"));
+    if (ok) { set_font(font); }
 }
 
 void SelectFont::set_display_size_range(double min, double max) {

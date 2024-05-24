@@ -34,8 +34,8 @@
 #include "utility.h"
 
 Section::Section(int i0, int i1) {
-  istart = i0;
-  iend = i1;
+    istart = i0;
+    iend = i1;
 }
 
 XY Section::center() const {
@@ -95,8 +95,10 @@ std::ostream& operator<<(std::ostream& os, const std::vector<XY>& xyvec) {
     return os;
 }
 
-// ============================== Path ===============================
-
+// Path
+//
+// a path: a vector of XY coordinates
+//
 Path::Path() {}
 
 Path::~Path() {}
@@ -719,7 +721,9 @@ std::ostream& operator<<(std::ostream& os, const Path& p) {
   return os;
 }
 
-// ============================== PathW ==============================
+// PathW
+//
+// A path with variable stroke width
 
 PathW::PathW() {}
 

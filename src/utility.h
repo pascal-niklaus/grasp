@@ -25,24 +25,41 @@
 
 #include <string>
 #include <sstream>
+#include <concepts>
 
-template<typename T>
+template <typename T, typename U>
+concept Multiplicable = requires(T a, U b) {
+    a * b;
+};
+
+// square
+//
+// square of value
+//
+template <typename T>
+requires Multiplicable<T, T>
 T square(T x) { return x*x; };
 
+// max
+//
+// maximum of two values (must be numeric)
+//
 template<typename T>
+requires std::integral<T> || std::floating_point<T>
 T max(T x, T y) { return x > y ? x : y; };
 
-
-template<typename T>
+// cap(x, min, max)
+//
+// restricts x to range [min, max]
+//
+template <typename T>
+requires std::integral<T> || std::floating_point<T>
 T cap(T x, T min, T max) {
-  if (x < min) return min;
-  if (x > max) return max;
-  return x;
+    if (x < min) return min;
+    if (x > max) return max;
+    return x;
 }
 
-
-////////////////////////////////////////////////////////////
-//
 // split
 //
 // split a string at the delimiter specified
@@ -59,6 +76,10 @@ void split(const std::string &s, const char delim, Out result) {
     }
 }
 
+// number of utf8 chars in a std::string
+//
+// no checking of validity is made
+//
 size_t utf8len(const std::string& str);
 
 #endif

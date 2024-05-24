@@ -66,6 +66,7 @@ class XY : public QPointF {
     friend std::ostream &operator<<(std::ostream &os, const XY &p);
 };
 
+
 // XYW
 //
 // A coordinate (x,y) with associated stroke width

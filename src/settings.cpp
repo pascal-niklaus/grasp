@@ -26,13 +26,10 @@
 #include <QDialogButtonBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
-#include <QKeyCombination>
 #include <QKeyEvent>
 #include <QLabel>
-#include <QSettings>
 #include <QStatusBar>
 #include <QTabWidget>
-#include <QVBoxLayout>
 #include <QFileDialog>
 
 #include <iostream>
@@ -68,6 +65,7 @@ LinewidthTab::LinewidthTab(QWidget *parent, Qt::WindowFlags f) :
             Qt::AltModifier | Qt::MetaModifier | Qt::ShiftModifier |
             Qt::ControlModifier);
         lay->addWidget(_width_key[w], row + w, 0);
+        _width_key[w]->setFocusPolicy(Qt::ClickFocus);
 
         _width[w] = new IntEdit(nullptr);
         _width[w]->set_range(0, 30);
@@ -80,15 +78,16 @@ LinewidthTab::LinewidthTab(QWidget *parent, Qt::WindowFlags f) :
 
     QFont fnt = font();
 
-    for (int w = 0; w < 4; w++) {
-        _arrow_key[w] = new SelectKey(AllModifiers);
-        _arrow_key[w]->set_allowed_modifiers(
+    for (int a = 0; a < 4; a++) {
+        _arrow_key[a] = new SelectKey(AllModifiers);
+        _arrow_key[a]->set_allowed_modifiers(
             Qt::AltModifier | Qt::MetaModifier | Qt::ShiftModifier |
             Qt::ControlModifier);
-        lay->addWidget(_arrow_key[w], row + w, 4);
+        lay->addWidget(_arrow_key[a], row + a, 4);
+        _arrow_key[a]->setFocusPolicy(Qt::ClickFocus);
 
         std::string arrow;
-        switch (w) {
+        switch (a) {
             case 0:
                 arrow = "head at start: \u2190";
                 break;
@@ -104,7 +103,7 @@ LinewidthTab::LinewidthTab(QWidget *parent, Qt::WindowFlags f) :
         }
         auto *alabel = new QLabel(QString::fromStdString(arrow));
         alabel->setFont(fnt);
-        lay->addWidget(alabel, row + w, 5);
+        lay->addWidget(alabel, row + a, 5);
     }
 
     _arrowsize = new DoubleEdit;
@@ -181,22 +180,27 @@ AuxTab::AuxTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
 
     lay->addWidget(new QLabel(tr("Quit shortcut")), row, 0);
     lay->addWidget(_quit_key = new SelectKey(AllModifiers), row, 1);
+    _quit_key->setFocusPolicy(Qt::ClickFocus);
 
     row++;
     lay->addWidget(new QLabel(tr("Undo shortcut")), row, 0);
     lay->addWidget(_undo_key = new SelectKey(AllModifiers), row, 1);
+    _undo_key->setFocusPolicy(Qt::ClickFocus);
 
     row++;
     lay->addWidget(new QLabel(tr("Redo shortcut")), row, 0);
     lay->addWidget(_redo_key = new SelectKey(AllModifiers), row, 1);
+    _redo_key->setFocusPolicy(Qt::ClickFocus);
 
     row++;
     lay->addWidget(new QLabel(tr("Opacity shortcut")), row, 0);
     lay->addWidget(_opacity_key = new SelectKey(AllModifiers), row, 1);
+    _opacity_key->setFocusPolicy(Qt::ClickFocus);
 
     row++;
     lay->addWidget(new QLabel(tr("Toggle shortcut")), row, 0);
     lay->addWidget(_toggle_key = new SelectKey(AllModifiers), row, 1);
+    _toggle_key->setFocusPolicy(Qt::ClickFocus);
 
     row++;
     auto *help = new QLabel();
@@ -503,6 +507,35 @@ ToolTab::ToolTab(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {
     lay->setColumnStretch(12, 10);
     // tools -> shortcuts, some defaults (e.g. timings, magnifiers, font)
     setLayout(lay);
+
+    // prevent shortcut widgets to be selected by tab key
+    _edit_key->setFocusPolicy(Qt::ClickFocus);
+    _pen_key->setFocusPolicy(Qt::ClickFocus);
+    _line_key->setFocusPolicy(Qt::ClickFocus);
+    _rect_key->setFocusPolicy(Qt::ClickFocus);
+    _smooth_key->setFocusPolicy(Qt::ClickFocus);
+    _ortho_key->setFocusPolicy(Qt::ClickFocus);
+    _highlight_key->setFocusPolicy(Qt::ClickFocus);
+    _fader_key->setFocusPolicy(Qt::ClickFocus);
+    _text_key->setFocusPolicy(Qt::ClickFocus);
+    _grab_key->setFocusPolicy(Qt::ClickFocus);
+    _grab_partial_key->setFocusPolicy(Qt::ClickFocus);
+    _delete_key->setFocusPolicy(Qt::ClickFocus);
+    _delete_all_key->setFocusPolicy(Qt::ClickFocus);
+    _dash_toggle_key->setFocusPolicy(Qt::ClickFocus);
+
+    setTabOrder(_rect_radius, _smooth_snap);
+    setTabOrder(_smooth_snap, _smooth_simplify);
+    setTabOrder(_smooth_simplify, _ortho_snap);
+    setTabOrder(_ortho_snap, _ortho_simplify);
+    setTabOrder(_ortho_simplify, _ortho_radius);
+    setTabOrder(_ortho_radius, _ortho_minlen);
+    setTabOrder(_ortho_minlen, _ortho_maxangle);
+    setTabOrder(_highlight_sustain,  _highlight_fade);
+    setTabOrder(_highlight_fade,  _fader_sustain);
+    setTabOrder(_fader_sustain, _fader_fade);
+    setTabOrder(_fader_fade, _font);
+    setTabOrder(_font, _grab_delay);
 }
 
 void ToolTab::load_options(const Settings &settings) {
@@ -631,6 +664,8 @@ ColorTab::ColorTab(int ncolors, QWidget *parent, Qt::WindowFlags f) : QWidget(pa
 
         lay->addWidget(ks1, row + 1, colwidth * col + 2);
         lay->addWidget(ks2, row + 1, colwidth * col + 3);
+        ks1->setFocusPolicy(Qt::ClickFocus);
+        ks2->setFocusPolicy(Qt::ClickFocus);
         lay->setColumnMinimumWidth(col * colwidth + 5, 15);
     }
     auto *help = new QLabel();
@@ -665,17 +700,17 @@ void ColorTab::slot_status_message(const QString &msg) {
 
 void ColorTab::load_options(const Settings &settings) {
     for (int i = 0; i < _ncolors; i++) {
-      _colbtn[i]->set_color(settings.color_table[i].color);
-      _keyseq1[i]->set_key(settings.color_table[i].key1);
-      _keyseq2[i]->set_key(settings.color_table[i].key2);
+      _colbtn[i]->set_color(settings.color_table[i].color());
+      _keyseq1[i]->set_key(settings.color_table[i].key1());
+      _keyseq2[i]->set_key(settings.color_table[i].key2());
     }
 }
 
 void ColorTab::save_options(Settings &settings) const {
     for (int i = 0; i < _ncolors; i++) {
-        settings.color_table[i].color = _colbtn[i]->get_color();
-        settings.color_table[i].key1 = _keyseq1[i]->get_key();
-        settings.color_table[i].key2 = _keyseq2[i]->get_key();
+      settings.color_table[i].set_color(_colbtn[i]->get_color());
+      settings.color_table[i].set_key1(_keyseq1[i]->get_key());
+      settings.color_table[i].set_key2(_keyseq2[i]->get_key());
     }
 }
 

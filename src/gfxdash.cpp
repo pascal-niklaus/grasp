@@ -29,12 +29,10 @@
 #include "gfxitem.h"
 #include "tools.h"
 
-// ============================= NUMBER ==============================
-//
 // GfxNumber
 //
 // A marker with a single number indicating the scene
-
+//
 GfxNumber::GfxNumber(QGraphicsItem *parent, int size) : DashIcon(parent) {
     _size = size / 2;
 
@@ -97,12 +95,10 @@ void GfxNumber::set_selected(bool selected) {
     _text->setPos(-r.center());
 }
 
-// ============================== ICON ===============================
-//
 // GfxDashIcon
 //
 // A pixmap
-
+//
 GfxDashIcon::GfxDashIcon(QGraphicsItem *parent,
                          int size,
                          const QPixmap &px,
@@ -126,15 +122,14 @@ void GfxDashIcon::paint(QPainter *painter,
                         QWidget *widget) {}
 
 QRectF GfxDashIcon::selectionBox() const {
-    return _icon->boundingRect().adjusted(-25, -25, 25, 25);
+    return _icon->boundingRect().adjusted(
+        -extra_size, -extra_size, extra_size, extra_size);
 }
 
-// ============================= ARROW ==============================
-//
 // GfxArrowIcon
 //
 // A marker with a single number
-
+//
 GfxArrowIcon::GfxArrowIcon(QGraphicsItem *parent, int size) : DashIcon(parent) {
     size = size / 2;
 
@@ -222,7 +217,7 @@ void GfxArrowIcon::set_selected(bool selected) {
     _box->setPen(QPen(selected ? Qt::white : Qt::gray, selected ? 3 : 1));
 }
 
-// ============================== COLOR ==============================
+// ------------------------------ COLOR ------------------------------
 
 // GfxColor
 //
@@ -276,7 +271,7 @@ void GfxColor::set_selected(bool selected) {
     _poly->setPen(QPen(selected ? Qt::white : Qt::gray, selected ? 3 : 1));
 }
 
-// ============================== DASH ===============================
+// ------------------------------ DASH -------------------------------
 
 // GfxDash
 //
@@ -308,12 +303,12 @@ GfxDash::GfxDash(QGraphicsItem *parent,
         _colors.emplace_back(icon);
         icon->setPos(x, 2.0 + static_cast<double>(height) / 2.0);
         QString txt;
-        if (it->key1.keyboardModifiers() == Qt::ShiftModifier) {
-            txt = QString("\u21e7%1").arg(QChar(it->key1.key()).toUpper());
+        if (it->key1().keyboardModifiers() == Qt::ShiftModifier) {
+          txt = QString("\u21e7%1").arg(QChar(it->key1().key()).toUpper());
         } else {
-            txt = QString("%1").arg(QChar(it->key1.key()).toUpper());
+          txt = QString("%1").arg(QChar(it->key1().key()).toUpper());
         }
-        icon->set_color(it->color, txt);
+        icon->set_color(it->color(), txt);
     }
 
     // arrow icons

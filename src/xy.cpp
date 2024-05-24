@@ -36,13 +36,12 @@ XY::XY(double x, double y) : QPointF(x, y) {}
 
 XY::XY(const QPointF& p) : QPointF(p) {}
 
-
 // XY::midpoint
 //
 // return midpoint between XY and other point
 //
-XY XY::midpoint(const XY &p) const {
-  return XY(0.5 * (x() + p.x()), 0.5 * (y() + p.y()));
+XY XY::midpoint(const XY& p) const {
+    return XY(0.5 * (x() + p.x()), 0.5 * (y() + p.y()));
 };
 
 // XY::vector_to
@@ -65,7 +64,7 @@ double XY::vector_length() const {
 //
 // returns angle to point p
 //
-double XY::angle_to(const XY &p) const {
+double XY::angle_to(const XY& p) const {
     return atan2(p.y() - y(), p.x() - x());
 }
 
@@ -99,7 +98,7 @@ double XY::distance(const XY& p) const {
 // return distance between two points
 //
 double XY::distance(const XY& p1, const XY& p2) {
-  return sqrt(square(p1.x() - p2.x()) + square(p1.y() - p2.y()));
+    return sqrt(square(p1.x() - p2.x()) + square(p1.y() - p2.y()));
 }
 
 // XY::distance_from_line
@@ -126,20 +125,20 @@ double XY::distance_from_line(const XY& start, const XY& end) const {
 // like distance_from_line, but assuming line ends at its endpoints
 //
 double XY::distance_from_segment(const XY &start, const XY &end) const {
-  double dx = end.x() - start.x();
-  double dy = end.y() - start.y();
-  const double dot = (x() - start.x()) * dx + (y() - start.y()) * dy;
-  const double l2  = dx*dx + dy*dy;
+    double dx = end.x() - start.x();
+    double dy = end.y() - start.y();
+    const double dot = (x() - start.x()) * dx + (y() - start.y()) * dy;
+    const double l2 = dx * dx + dy * dy;
 
-  double t = 0.5;
-  if (l2 > 0.001) t = dot / l2;
-  if (t < 0) t = 0;
-  if (t > 1) t = 1;
+    double t = 0.5;
+    if (l2 > 0.001) t = dot / l2;
+    if (t < 0) t = 0;
+    if (t > 1) t = 1;
 
-  dx = start.x() + t*dx - x();
-  dy = start.y() + t*dy - y();
+    dx = start.x() + t * dx - x();
+    dy = start.y() + t * dy - y();
 
-  return sqrt(dx*dx + dy*dy);
+    return sqrt(dx * dx + dy * dy);
 };
 
 // XY:apply2D
@@ -150,17 +149,17 @@ double XY::distance_from_segment(const XY &start, const XY &end) const {
 // not involved a function call, hence faster
 //
 void XY::apply2d(const QTransform &m) {
-  qreal xt, yt;
-  m.map(x(), y(), &xt, &yt);
-  setX(xt);
-  setY(yt);
+    qreal xt, yt;
+    m.map(x(), y(), &xt, &yt);
+    setX(xt);
+    setY(yt);
 }
 
 void XY::apply2d(const QTransform &m, XY& result) const {
-  qreal xt, yt;
-  m.map(x(), y(),&xt, &yt);
-  result.setX(xt);
-  result.setY(yt);
+    qreal xt, yt;
+    m.map(x(), y(), &xt, &yt);
+    result.setX(xt);
+    result.setY(yt);
 }
 
 // XY::transforme2d
@@ -173,13 +172,12 @@ XY XY::transformed2d(const QTransform& m) const {
     return XY(xt, yt);
 }
 
-
 // ------------------------ stream operators -------------------------
 
-std::ostream & operator<<(std::ostream &os, const XY& p) {
-  return os << string_format("(%.1f,%.1f)", p.x(), p.y());
+std::ostream& operator<<(std::ostream& os, const XY& p) {
+    return os << string_format("(%.1f,%.1f)", p.x(), p.y());
 }
 
-std::ostream & operator<<(std::ostream &os, const XYW& p) {
-  return os << string_format("(%.1f,%.1f, w=%.1f)", p.x(), p.y(), p.w());
+std::ostream& operator<<(std::ostream& os, const XYW& p) {
+    return os << string_format("(%.1f,%.1f, w=%.1f)", p.x(), p.y(), p.w());
 }

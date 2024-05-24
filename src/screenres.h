@@ -26,6 +26,10 @@
 #include <QObject>
 #include <QRect>
 
+// ScreenChangeDetector
+//
+// emits signals when screen resolution changed
+//
 class ScreenChangeDetector : public QObject {
     Q_OBJECT
   public:

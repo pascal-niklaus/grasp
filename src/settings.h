@@ -38,6 +38,7 @@ class QStatusBar;
 class QLabel;
 class QLineEdit;
 class QDialogButtonBox;
+
 // ----------------------------- ToolTab -----------------------------
 
 class ToolTab : public QWidget {
@@ -177,7 +178,6 @@ class SettingsDialog : public QDialog {
     LinewidthTab *_linewidthtab;
     AuxTab *_auxtab;
     ColorTab *_colortab;
-  //    decltype(Settings::color_table) _old_color_tab;
 };
 
 #endif

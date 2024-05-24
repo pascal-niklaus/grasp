@@ -22,26 +22,23 @@
 
 #include "drawingscene.h"
 
-#include <QAction>
 #include <QApplication>
-#include <QFileDialog>
-#include <QFileInfo>
-#include <QGraphicsSceneMouseEvent>
+#include <QScreen>
 #include <QMenu>
+#include <QTimer>
+#include <QTabletEvent>
+#include <QGraphicsSceneMouseEvent>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <QPainter>
-#include <QScreen>
-#include <QTabletEvent>
-#include <QTimer>
-
 #include <chrono>
 
 #include "colors.h"
 #include "gfxdash.h"
 #include "gfxpath.h"
 #include "gfxpixmap.h"
-#include "gfxtext.h"
 #include "gfxrect.h"
+#include "gfxtext.h"
 #include "selectkey.h"
 #include "settings.h"
 #include "utility.h"
@@ -1238,7 +1235,7 @@ void DrawingScene::slot_set_color_from_index(int index) {
             << index;
         return;
     }
-    _settings.color = _settings.color_table[index].color;
+    _settings.color = _settings.color_table[index].color();
     _dash->select_color(_settings.color);
 }
 

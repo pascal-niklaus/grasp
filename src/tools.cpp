@@ -22,19 +22,18 @@
 
 #include "tools.h"
 
-#include "gfxline.h"
-#include "gfxpath.h"
-#include "gfxsmooth.h"
-#include "gfxortho.h"
-#include "gfxrect.h"
-#include "gfxtext.h"
-#include "gfxpixmap.h"
-#include "gfxfader.h"
-#include "gfxhighlight.h"
-
+#include <QSettings>
 #include <cassert>
 
-#include <QSettings>
+#include "gfxfader.h"
+#include "gfxhighlight.h"
+#include "gfxline.h"
+#include "gfxortho.h"
+#include "gfxpath.h"
+#include "gfxpixmap.h"
+#include "gfxrect.h"
+#include "gfxsmooth.h"
+#include "gfxtext.h"
 
 // Tools::generate_ID
 //
@@ -49,53 +48,53 @@ int Tools::generate_ID(void) {
 //
 // factory function creating a new GfxItem of the correct type
 //
-QGraphicsItem *Tools::create_tool(const Settings& settings) {
+QGraphicsItem *Tools::create_tool(const Settings &settings) {
     switch (settings.tool) {
         case TOOL_ORTHO: {
-           auto *ortho = new GfxOrtho(nullptr,
-                                         settings.color,
-                                         settings.width,
-                                         settings.arrow_type,
-                                         settings.arrow_size,
-                                         settings.simplify_ortho,
-                                         settings.snapdist_ortho,
-                                         settings.radius_ortho,
-                                         settings.minlen_ortho,
-                                         settings.maxangle_ortho);
+            auto *ortho = new GfxOrtho(nullptr,
+                                       settings.color,
+                                       settings.width,
+                                       settings.arrow_type,
+                                       settings.arrow_size,
+                                       settings.simplify_ortho,
+                                       settings.snapdist_ortho,
+                                       settings.radius_ortho,
+                                       settings.minlen_ortho,
+                                       settings.maxangle_ortho);
             ortho->setData(GfxItem::KeyID, generate_ID());
             return ortho;
         }
 
         case TOOL_SMOOTH: {
-           auto *pen = new GfxSmooth(nullptr,
-                                         settings.color,
-                                         settings.width,
-                                         settings.arrow_type,
-                                         settings.arrow_size,
-                                         settings.simplify_smooth,
-                                         settings.snapdist_smooth);
+            auto *pen = new GfxSmooth(nullptr,
+                                      settings.color,
+                                      settings.width,
+                                      settings.arrow_type,
+                                      settings.arrow_size,
+                                      settings.simplify_smooth,
+                                      settings.snapdist_smooth);
             pen->setData(GfxItem::KeyID, generate_ID());
             return pen;
         }
 
         case TOOL_PEN: {
             auto *pen = new GfxPath(nullptr,
-                                       settings.color,
-                                       settings.width,
-                                       settings.arrow_type,
-                                       settings.arrow_size);
+                                    settings.color,
+                                    settings.width,
+                                    settings.arrow_type,
+                                    settings.arrow_size);
             pen->setData(GfxItem::KeyID, generate_ID());
             return pen;
         }
 
         case TOOL_FADER: {
             auto *fader = new GfxFader(nullptr,
-                                        settings.color,
-                                        settings.width,
-                                        settings.arrow_type,
-                                        settings.arrow_size,
-                                        settings.sustain_fader,
-                                        settings.fade_fader);
+                                       settings.color,
+                                       settings.width,
+                                       settings.arrow_type,
+                                       settings.arrow_size,
+                                       settings.sustain_fader,
+                                       settings.fade_fader);
             fader->setData(GfxItem::KeyID, generate_ID());
             return fader;
         }
@@ -174,18 +173,18 @@ Settings::Settings() {
 void Settings::reset_defaults() {
     // colors
     color_table = {
-        {0xf0f0f0ff, 'W', Qt::NoModifier, 'W', Qt::ShiftModifier},
-        {0x909090ff, 'M', Qt::NoModifier, 'M', Qt::ShiftModifier},
-        {0x2f2f2fff, 'N', Qt::NoModifier, 'N', Qt::ShiftModifier},
-        {0x1e90ffff, 'B', Qt::NoModifier, 'B', Qt::ShiftModifier},
-        {0x00ffffff, 'C', Qt::NoModifier, 'C', Qt::ShiftModifier},
+        {0xf0f0f0ff, 'W', Qt::NoModifier,    'W', Qt::ShiftModifier},
+        {0x909090ff, 'M', Qt::NoModifier,    'M', Qt::ShiftModifier},
+        {0x2f2f2fff, 'N', Qt::NoModifier,    'N', Qt::ShiftModifier},
+        {0x1e90ffff, 'B', Qt::NoModifier,    'B', Qt::ShiftModifier},
+        {0x00ffffff, 'C', Qt::NoModifier,    'C', Qt::ShiftModifier},
         {0xff0000ff, 'R', Qt::ShiftModifier, 'I', Qt::NoModifier},
         {0xffa500ff, 'O', Qt::ShiftModifier, 'A', Qt::NoModifier},
-        {0x32cd32ff, 'G', Qt::NoModifier, 'G', Qt::ShiftModifier},
-        {0x185d27ff, 'F', Qt::ShiftModifier, 0, Qt::NoModifier},
-        {0xff00ffff, 'V', Qt::NoModifier, 'V', Qt::ShiftModifier},
-        {0xffff00ff, 'Y', Qt::NoModifier, 'Y', Qt::ShiftModifier},
-        {0x662c15ff, 'K', Qt::NoModifier, 'K', Qt::ShiftModifier},
+        {0x32cd32ff, 'G', Qt::NoModifier,    'G', Qt::ShiftModifier},
+        {0x185d27ff, 'F', Qt::ShiftModifier,   0, Qt::NoModifier},
+        {0xff00ffff, 'V', Qt::NoModifier,    'V', Qt::ShiftModifier},
+        {0xffff00ff, 'Y', Qt::NoModifier,    'Y', Qt::ShiftModifier},
+        {0x662c15ff, 'K', Qt::NoModifier,    'K', Qt::ShiftModifier},
     };
 
     // line widths
@@ -334,9 +333,9 @@ void Settings::store(QSettings &qs) const {
     for (int i = 0; i < static_cast<int>(color_table.size()); i++) {
         const Color &col = color_table[i];
         qs.beginGroup(QString("%1").arg(i, 2, 10, QChar('0')));
-        qs.setValue("color", Color::qcolor_as_hex(color_table[i].color));
-        qs.setValue("key1", to_string(col.key1));
-        qs.setValue("key2", to_string(col.key2));
+        qs.setValue("color", Color::qcolor_as_hex(color_table[i].color()));
+        qs.setValue("key1", to_string(col.key1()));
+        qs.setValue("key2", to_string(col.key2()));
         qs.endGroup();
     }
     qs.endGroup();
@@ -455,9 +454,9 @@ bool Settings::retrieve(QSettings &qs) {
     for (int i = 0; i < static_cast<int>(color_table.size()); i++) {
         Color &col = color_table[i];
         qs.beginGroup(QString("%1").arg(i, 2, 10, QChar('0')));
-        col.color = Color::qcolor_from_hex(qs.value("color").toString());
-        col.key1 = Settings::keycomb_from_string(qs.value("key1").toString());
-        col.key2 = Settings::keycomb_from_string(qs.value("key2").toString());
+        col.set_color(Color::qcolor_from_hex(qs.value("color").toString()));
+        col.set_key1(Settings::keycomb_from_string(qs.value("key1").toString()));
+        col.set_key2(Settings::keycomb_from_string(qs.value("key2").toString()));
         qs.endGroup();
     }
     qs.endGroup();
@@ -510,7 +509,7 @@ QKeyCombination Settings::keycomb_from_string(const QString &str) {
 //
 QColor Settings::get_color(const QKeyCombination &k) {
     for (const auto &c : color_table) {
-        if (c.key1 == k || c.key2 == k) return c.color;
+      if (c.key1() == k || c.key2() == k) return c.color();
     }
     return QColor();
 }
@@ -523,7 +522,7 @@ int Settings::qcolor_find_index(const QColor& color) const {
     const auto it = std::find_if(
         color_table.cbegin(),
         color_table.cend(),
-        [&color](const Color& item) { return item.color == color; });
+        [&color](const Color& item) { return item.color() == color; });
     if (it == color_table.cend()) return -1;
     return std::distance(color_table.cbegin(), it);
 }

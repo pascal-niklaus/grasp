@@ -43,15 +43,26 @@ class Color {
           Qt::KeyboardModifiers m1,
           char k2,
           Qt::KeyboardModifiers m2);
+
     static QString qcolor_as_hex(const QColor& color);
     static QColor qcolor_from_hex(const QString& color);
+
     static std::uint32_t uint32_from_qcolor(const QColor& color);
     static QColor qcolor_from_uint32(std::uint32_t color);
 
+    QColor color() const { return _color; }
+    QKeyCombination key1() const { return _key1; }
+    QKeyCombination key2() const { return _key2; }
+
+    void set_color(const QColor& color) { _color = color; }
+    void set_key1(const QKeyCombination& kc) { _key1 = kc; }
+    void set_key2(const QKeyCombination& kc) { _key2 = kc; }
+
+  private:
     // members
-    QKeyCombination key1;
-    QKeyCombination key2;
-    QColor color;
+    QKeyCombination _key1;
+    QKeyCombination _key2;
+    QColor _color;
 };
 
 #endif

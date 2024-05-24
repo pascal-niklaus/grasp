@@ -37,7 +37,6 @@ GfxLine::GfxLine(QGraphicsItem* parent,
     prepareGeometryChange();
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
-    //    _arrow_width = arrowsize * width;
     _pen = QPen(color, width, Qt::SolidLine, Qt::RoundCap);
     GfxArrowItem::setPen(_pen);
     _line_item = new QGraphicsLineItem(this);

@@ -39,7 +39,7 @@ class QSettings;
 class Settings {
   public:
     Settings();
-    // settings that change
+    // settings that change while the user draws
     ToolType tool;
     QColor color;
     double width;
@@ -48,7 +48,7 @@ class Settings {
     double maxwidth;
     ArrowType arrow_type;
 
-    // tool parameter
+    // tool parameters that stay constant
     double arrow_size;
     double radius_rect;
     double radius_ortho;
@@ -93,7 +93,7 @@ class Settings {
     QKeyCombination opacity_key;
     QKeyCombination toggle_key;
 
-    // widths
+    // line widths and shortcut keys
     QKeyCombination width_key[9];
     double line_widths[9];
     double highlight_line_width[9];
@@ -101,19 +101,21 @@ class Settings {
     // color table
     std::vector<Color> color_table;
 
-    QColor get_color(const QKeyCombination& key);
-
-    [[deprecated("if used, check return value is non-negative")]]
-    static int qcolor_find_index(std::uint32_t color);
-    QColor qcolor_at_index(int index) const;
-    int qcolor_find_index(const QColor& color) const;
-
     // directories
     QString save_dir;
 
   public:
     static QString to_string(const QKeyCombination& kc);
     static QKeyCombination keycomb_from_string(const QString& str);
+
+  public:
+    QColor get_color(const QKeyCombination& key);
+
+    [[deprecated("if used, check return value is non-negative")]]
+    static int qcolor_find_index(std::uint32_t color);
+
+    QColor qcolor_at_index(int index) const;
+    int qcolor_find_index(const QColor& color) const;
 
     void reset_defaults();
     void store(QSettings& qs) const;

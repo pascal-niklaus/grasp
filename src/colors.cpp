@@ -26,12 +26,19 @@
 #include <iostream>
 #include <QKeyCombination>
 
+// Color
+//
+// Contains QColor value and keyboard shortcuts to select these. Also, QColor
+// values can be expressed as uint_32_t, in the form 0xRRGGBBAA
+
+// Constructors
+
 Color::Color(const QColor& color) {
-    this->color = color;
+    set_color(color);
 }
 
 Color::Color(std::uint32_t value) {
-    this->color = Color::qcolor_from_uint32(value);
+    set_color(Color::qcolor_from_uint32(value));
 }
 
 Color::Color(std::uint32_t value,
@@ -39,9 +46,9 @@ Color::Color(std::uint32_t value,
              Qt::KeyboardModifiers m1,
              Qt::Key k2,
              Qt::KeyboardModifiers m2) {
-    color = Color::qcolor_from_uint32(value);
-    key1 = QKeyCombination(m1, k1);
-    key2 = QKeyCombination(m2, k2);
+    set_color(Color::qcolor_from_uint32(value));
+    set_key1(QKeyCombination(m1, k1));
+    set_key2(QKeyCombination(m2, k2));
 }
 
 Color::Color(std::uint32_t value,
@@ -49,10 +56,12 @@ Color::Color(std::uint32_t value,
              Qt::KeyboardModifiers m1,
              char k2,
              Qt::KeyboardModifiers m2) {
-    color = Color::qcolor_from_uint32(value);
-    key1 = QKeyCombination(m1, static_cast<Qt::Key>(k1));
-    key2 = QKeyCombination(m2, static_cast<Qt::Key>(k2));
+    set_color(Color::qcolor_from_uint32(value));
+    set_key1(QKeyCombination(m1, static_cast<Qt::Key>(k1)));
+    set_key2(QKeyCombination(m2, static_cast<Qt::Key>(k2)));
 }
+
+// interconversion to and from uint32_t
 
 std::uint32_t Color::uint32_from_qcolor(const QColor& color) {
     return (color.red() << 24) + (color.green() << 16) + (color.blue() << 8) +
@@ -63,6 +72,9 @@ QColor Color::qcolor_from_uint32(std::uint32_t color) {
     return QColor(
         color >> 24, (color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
 }
+
+// interconversion to and from QString with hex format "#rrggbbaa",  or
+// "#rrggbb" (QString input only)
 
 QString Color::qcolor_as_hex(const QColor& col) {
   if (col.alpha() != 0xff)

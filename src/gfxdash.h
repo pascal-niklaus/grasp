@@ -23,29 +23,31 @@
 #ifndef GFXDASH_H
 #define GFXDASH_H
 
-#include <set>
+#include "grasp.h"
 
 /*
- * The dashboard contains:
+ * Dashboard and component QGraphicsItems
  *
- * - little numbers in boxes for the different scenes
- * - a new scene is started with Ctrl-Shift-N (continuously  increasing ID)
- * - the CONTENT of the current scene is deleted with Ctrl-Shift-Del
- * - RMB on non-active scene, with menu can be used to delete the stored scene
- * - RMB save ??
-
- * - color icons
- * - arrow icons
- * - tool icons
+ * The dashboard contains (from left to right):
  *
+ * - the 'Grasp' logo to indicate this is grasp and not the actual screen
+ * - little numbers in boxes indicating the different scenes
+ *   [some space]
+ * - arrow icons to select the arrow type
+ * - color icons to show the available colors and their primary shortcut
  * - setup icon (cogwheel)
  *
+ * There for now delibarately is no selector for the tools because
+ * these really should be chosen using the keyboard. Plus, the active
+ * tool is indicated by the mouse cursor.
  */
-
-#include "grasp.h"
 
 class Settings;
 
+// DashIcon
+//
+// Base class for all dash components
+//
 class DashIcon : public QGraphicsItem {
   public:
     DashIcon(QGraphicsItem* parent = nullptr) : QGraphicsItem(parent) {}
@@ -65,17 +67,23 @@ class DashIcon : public QGraphicsItem {
     };
 };
 
-// ============================= NUMBER ==============================
-
+// GfxDashIcon
+//
+// A small icon (a pixmap)
+//
+// The selectionbox is deliberately 'extra_size' pixels larger in each
+// direction than the pixmap to make it very easy to hit.
+//
 class GfxDashIcon : public DashIcon {
   public:
     enum { Type = GFX_DASHICON };
 
+  private:
+    static const int extra_size = 25;
+
   public:
     GfxDashIcon(QGraphicsItem* parent, int size, const QPixmap& px, int id);
     ~GfxDashIcon();
-
-    void set_pixmap(int id, const QPixmap& pixmap);
 
     // ----- QGraphicsItem methods
     virtual void paint(QPainter* painter,
@@ -90,8 +98,10 @@ class GfxDashIcon : public DashIcon {
     QGraphicsPixmapItem* _icon = nullptr;
 };
 
-// ============================= NUMBER ==============================
-
+// GfxNumber
+//
+// A small icon with the number of the scene it represents
+//
 class GfxNumber : public DashIcon {
   public:
     enum { Type = GFX_SCENE };
@@ -119,8 +129,11 @@ class GfxNumber : public DashIcon {
     int _size;
 };
 
-// ============================= COLOR ==============================
-
+// GfxColor
+//
+// A small icon indicating a color, its shortcut, and whether it is
+// currently selected
+//
 class GfxColor : public DashIcon {
   public:
     enum { Type = GFX_COLOR };
@@ -146,8 +159,10 @@ class GfxColor : public DashIcon {
     std::uint32_t _color;
 };
 
-// ============================= ARROW ==============================
-
+// GfxArrowIcon
+//
+// A small icon indicating the line ends (arrow or not)
+//
 class GfxArrowIcon : public DashIcon {
   public:
     enum { Type = GFX_ARROWICON };
@@ -177,8 +192,10 @@ class GfxArrowIcon : public DashIcon {
     bool _is_active;
 };
 
-// ============================== DASH ===============================
-
+// GfxDash
+//
+// The entire dash...
+//
 class GfxDash : public QGraphicsItem {
   public:
     enum { Type = GFX_DASH };
@@ -187,7 +204,10 @@ class GfxDash : public QGraphicsItem {
     GfxDash(QGraphicsItem* parent, int width, int height, Settings& settings);
     ~GfxDash();
 
+    // properly place children, called when there are changes in
+    // e.g. the number of scenes, or screen geometry changes
     void reposition(int width);
+
     void select_color(const QColor& color);
     void select_arrow(ArrowType type);
     void select_tool(ToolType type);
