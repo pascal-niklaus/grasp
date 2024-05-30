@@ -77,7 +77,9 @@ void GfxLine::apply(const QTransform& m) {
 //
 // start a path
 //
-void GfxLine::start(const QPointF& p, double pressure) {
+void GfxLine::start(const QPointF& p,
+                    Qt::KeyboardModifiers mods,
+                    double pressure) {
     prepareGeometryChange();
     _line_item->setLine(QLineF(p, p));
     repos_arrows();
@@ -87,7 +89,9 @@ void GfxLine::start(const QPointF& p, double pressure) {
 //
 // stop a path
 //
-void GfxLine::stop(const QPointF& p, double pressure) {
+void GfxLine::stop(const QPointF& p,
+                   Qt::KeyboardModifiers mods,
+                   double pressure) {
     prepareGeometryChange();
     QLineF line = _line_item->line();
     line.setP2(p);
@@ -102,7 +106,9 @@ void GfxLine::stop(const QPointF& p, double pressure) {
 //
 // move end of path
 //
-void GfxLine::move(const QPointF& p, double pressure) {
+void GfxLine::move(const QPointF& p,
+                   Qt::KeyboardModifiers mods,
+                   double pressure) {
     stop(p);
 }
 

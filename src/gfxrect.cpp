@@ -72,33 +72,48 @@ void GfxRect::apply(const QTransform& m) {
 //
 // start a path
 //
-void GfxRect::start(const QPointF& p, double pressure) {
+void GfxRect::start(const QPointF& p,
+                    Qt::KeyboardModifiers mods,
+                    double pressure) {
     _rect.setTopLeft(p);
-    move(p);
+    move(p, mods);
 }
 
 // GfxRect::stop
 //
 // stop a path
 //
-void GfxRect::stop(const QPointF& p, double pressure) {
-    move(p);
+void GfxRect::stop(const QPointF& p, Qt::KeyboardModifiers mods, double pressure) {
+  move(p, mods);
+  if (mods != Qt::NoModifier) _radius = 0.0;
 }
 
 // GfxRect::move
 //
 // drag rectangle corner
 //
-void GfxRect::move(const QPointF& p, double pressure) {
-    _rect.setBottomRight(p);
-    build_path();
+void GfxRect::move(const QPointF& p, Qt::KeyboardModifiers mods, double pressure) {
+    if (mods & Qt::ShiftModifier) {
+        const auto x0 = _rect.left();
+        const auto y0 = _rect.top();
+        auto w = p.x() - x0;
+        auto h = p.y() - y0;
+        if (fabs(w) > fabs(h))
+            h = sign(h) * fabs(w);
+        else w = sign(w)*fabs(h);
+        _rect.setBottomRight(QPointF(x0 + w, y0 + h));
+    } else {
+        _rect.setBottomRight(p);
+    }
+    build_path(mods);
 }
 
-void GfxRect::build_path() {
+void GfxRect::build_path(Qt::KeyboardModifiers mods) {
     prepareGeometryChange();
     auto nrect = _rect.normalized();
     _path.clear();
-    const double r = nrect.width() > 2 * _radius ? _radius : 0.0;
+    double r = nrect.width() > 2 * _radius ? _radius : 0.0;
+    if (mods & Qt::ControlModifier) r = 0.0;
     _path.addRoundedRect(nrect, r, r, Qt::AbsoluteSize);
 }
 
@@ -154,7 +169,7 @@ void GfxRect::paint(QPainter* painter,
 void GfxRect::set_rect(const QRectF& rect) {
     prepareGeometryChange();
     _rect = rect.normalized();
-    build_path();
+    build_path(Qt::NoModifier);
 }
 
 // GfxRect::dump

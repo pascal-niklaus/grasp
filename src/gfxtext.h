@@ -59,9 +59,15 @@ class GfxText : public GfxItem {
     }
 
     // - build system
-    virtual void start(const QPointF& p, double pressure = 1.0) override;
-    virtual void move(const QPointF& p, double pressure = 1.0) override;
-    virtual void stop(const QPointF& p, double pressure = 1.0) override;
+    virtual void start(const QPointF& p,
+                       Qt::KeyboardModifiers mods = Qt::NoModifier,
+                       double pressure = 1.0) override;
+    virtual void move(const QPointF& p,
+                      Qt::KeyboardModifiers mods = Qt::NoModifier,
+                      double pressure = 1.0) override;
+    virtual void stop(const QPointF& p,
+                      Qt::KeyboardModifiers mods = Qt::NoModifier,
+                      double pressure = 1.0) override;
     virtual KeyResult keystroke(QKeyCombination key,
                                 const QString& text) override;
 

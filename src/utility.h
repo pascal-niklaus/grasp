@@ -60,6 +60,17 @@ T cap(T x, T min, T max) {
     return x;
 }
 
+// sign(x)
+//
+// returns sign (1, 0, -1) of value
+//
+template <typename T>
+requires std::integral<T> || std::floating_point<T> T sign(T x) {
+    if (x < 0) return static_cast<T>(-1);
+    if (x > 0) return static_cast<T>(1);
+    return static_cast<T>(0);
+}
+
 // split
 //
 // split a string at the delimiter specified

@@ -91,9 +91,15 @@ class GfxFrame : public GfxItem {
     virtual void stash() override{};
     virtual void apply(const QTransform& m) override{};
 
-    virtual void start(const QPointF& p, double pressure = 1.0) override;
-    virtual void move(const QPointF& p, double pressure = 1.0) override;
-    virtual void stop(const QPointF& p, double pressure = 1.0) override;
+    virtual void start(const QPointF& p,
+                       Qt::KeyboardModifiers mods = Qt::NoModifier,
+                       double pressure = 1.0) override;
+    virtual void move(const QPointF& p,
+                      Qt::KeyboardModifiers mods = Qt::NoModifier,
+                      double pressure = 1.0) override;
+    virtual void stop(const QPointF& p,
+                      Qt::KeyboardModifiers mods = Qt::NoModifier,
+                      double pressure = 1.0) override;
 
     virtual void paint(QPainter* painter,
                        const QStyleOptionGraphicsItem* option,

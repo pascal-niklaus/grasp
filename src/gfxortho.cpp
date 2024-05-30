@@ -92,7 +92,9 @@ void GfxOrtho::apply(const QTransform& m) {
 //
 // start a path
 //
-void GfxOrtho::start(const QPointF& p, double pressure) {
+void GfxOrtho::start(const QPointF& p,
+                     Qt::KeyboardModifiers mods,
+                     double pressure) {
     _xy_path_raw.clear();
     move_internal(p, true);
 }
@@ -101,7 +103,9 @@ void GfxOrtho::start(const QPointF& p, double pressure) {
 //
 // stop a path
 //
-void GfxOrtho::stop(const QPointF& p, double pressure) {
+void GfxOrtho::stop(const QPointF& p,
+                    Qt::KeyboardModifiers mods,
+                    double pressure) {
     move_internal(p, true);
     _xy_path_raw.clear();
     _raw_path.clear();
@@ -111,7 +115,9 @@ void GfxOrtho::stop(const QPointF& p, double pressure) {
 //
 // extend the path
 //
-void GfxOrtho::move(const QPointF& p, double pressure) {
+void GfxOrtho::move(const QPointF& p,
+                    Qt::KeyboardModifiers mods,
+                    double pressure) {
     move_internal(p, false);
 }
 
@@ -214,9 +220,9 @@ void GfxOrtho::paint(QPainter* painter,
     painter->drawPath(_raw_path);
 }
 
-// GfxOrtho::set_smooth
+// GfxOrtho::set_path
 //
-// Set the path, recreating PainterSmooth
+// Set the path, recreating PainterPath
 //
 void GfxOrtho::set_path(const Path& path) {
     prepareGeometryChange();

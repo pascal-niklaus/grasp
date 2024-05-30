@@ -66,9 +66,15 @@ class GfxItem : public QGraphicsItem {
     virtual TransformCaps caps() const = 0;
 
     // - build system
-    virtual void start(const QPointF& p, double pressure = 1.0) = 0;
-    virtual void move(const QPointF& p, double pressure = 1.0) = 0;
-    virtual void stop(const QPointF& p, double pressure = 1.0) = 0;
+    virtual void start(const QPointF& p,
+                       Qt::KeyboardModifiers mods = Qt::NoModifier,
+                       double pressure = 1.0) = 0;
+    virtual void move(const QPointF& p,
+                      Qt::KeyboardModifiers mods = Qt::NoModifier,
+                      double pressure = 1.0) = 0;
+    virtual void stop(const QPointF& p,
+                      Qt::KeyboardModifiers mods = Qt::NoModifier,
+                      double pressure = 1.0) = 0;
     virtual KeyResult keystroke(QKeyCombination key, const QString& text) {
         return KEY_IGNORED;
     }

@@ -72,21 +72,27 @@ void GfxText::apply(const QTransform& m) {
 
 // GfxText::start
 //
-void GfxText::start(const QPointF& p, double pressure) {
+void GfxText::start(const QPointF& p,
+                    Qt::KeyboardModifiers mods,
+                    double pressure) {
     _location = p;
     build_path(true);
 }
 
 // GfxText::stop
 //
-void GfxText::stop(const QPointF& p, double pressure) {
+void GfxText::stop(const QPointF& p,
+                   Qt::KeyboardModifiers mods,
+                   double pressure) {
     _location = p;
     build_path(true);
 }
 
 // GfxText::move
 //
-void GfxText::move(const QPointF& p, double pressure) {
+void GfxText::move(const QPointF& p,
+                   Qt::KeyboardModifiers mods,
+                   double pressure) {
     _location = p;
     build_path(true);
 }
@@ -218,7 +224,7 @@ QPainterPath GfxText::outline(double dist) const {
     ps.setWidth(dist);
     ps.setCapStyle(Qt::RoundCap);
     ps.setJoinStyle(Qt::RoundJoin);
-    return ps.createStroke(_path);
+    return ps.createStroke(_path).simplified();
 }
 
 // GfxText::shape

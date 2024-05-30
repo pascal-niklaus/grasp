@@ -299,9 +299,9 @@ void DrawingScene::slot_pointerPressed(QPointF p,
     if (_current_item && _current_item->type() == GFX_TEXT) {
         GfxText *textitem = static_cast<GfxText *>(_current_item);
 
+        textitem->pgc();
         if (textitem->text().isEmpty()) {
             textitem->deselect();
-            textitem->pgc();
             removeItemSafely(textitem);
         } else {
             textitem->finalize();
@@ -334,8 +334,8 @@ void DrawingScene::slot_pointerPressed(QPointF p,
         _undo_records.emplace_back(rec);
 
         addItem(_current_item);
-        kitem->start(p);
-        kitem->move(p);
+        kitem->start(p, mods);
+        kitem->move(p, mods);
     }
 }
 
@@ -347,7 +347,7 @@ void DrawingScene::slot_pointerMoved(QPointF p, Qt::KeyboardModifiers mods) {
     } else {
         if (_current_item) {
             GfxItem *kitem = static_cast<GfxItem *>(_current_item);
-            if (kitem->type() != GFX_TEXT) kitem->move(p);
+            if (kitem->type() != GFX_TEXT) kitem->move(p, mods);
         }
     }
 }
@@ -360,7 +360,7 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
     } else {
         if (_current_item) {
             GfxItem *kitem = static_cast<GfxItem *>(_current_item);
-            kitem->stop(p);
+            kitem->stop(p, mods);
             switch (kitem->type()) {
                 case GFX_TEXT:
                     // special case of text item: keep item after mouse released

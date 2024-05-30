@@ -179,19 +179,25 @@ QPointF GfxFrame::opposite_pos(HandlePos pos) const {
 //
 // start a path
 //
-void GfxFrame::start(const QPointF& p, double pressure) {}
+void GfxFrame::start(const QPointF& p,
+                     Qt::KeyboardModifiers mods,
+                     double pressure) {}
 
 // GfxFrame::stop
 //
 // stop a path
 //
-void GfxFrame::stop(const QPointF& p, double pressure) {}
+void GfxFrame::stop(const QPointF& p,
+                    Qt::KeyboardModifiers mods,
+                    double pressure) {}
 
 // GfxFrame::move
 //
 // move end of path
 //
-void GfxFrame::move(const QPointF& p, double pressure) {}
+void GfxFrame::move(const QPointF& p,
+                    Qt::KeyboardModifiers mods,
+                    double pressure) {}
 
 QRectF GfxFrame::boundingRect() const {
     QRectF rect = QRectF(_p1, _p2).normalized();

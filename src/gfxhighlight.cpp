@@ -58,8 +58,10 @@ GfxUndoItem* GfxHighlight::create_undo_item() const {
 //
 // start a path
 //
-void GfxHighlight::start(const QPointF& p, double pressure) {
-    GfxPath::start(p, pressure);
+void GfxHighlight::start(const QPointF& p,
+                         Qt::KeyboardModifiers mods,
+                         double pressure) {
+    GfxPath::start(p, mods, pressure);
     update_time();
 }
 
@@ -67,8 +69,10 @@ void GfxHighlight::start(const QPointF& p, double pressure) {
 //
 // stop a path
 //
-void GfxHighlight::stop(const QPointF& p, double pressure) {
-    GfxPath::stop(p, pressure);
+void GfxHighlight::stop(const QPointF& p,
+                        Qt::KeyboardModifiers mods,
+                        double pressure) {
+    GfxPath::stop(p, mods, pressure);
     update_time();
 }
 
@@ -76,8 +80,10 @@ void GfxHighlight::stop(const QPointF& p, double pressure) {
 //
 // extend the path
 //
-void GfxHighlight::move(const QPointF& p, double pressure) {
-    GfxPath::move(p, pressure);
+void GfxHighlight::move(const QPointF& p,
+                        Qt::KeyboardModifiers mods,
+                        double pressure) {
+    GfxPath::move(p, mods, pressure);
     update_time();
 }
 

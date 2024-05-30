@@ -83,7 +83,9 @@ void GfxPath::apply(const QTransform& m) {
 //
 // start a path
 //
-void GfxPath::start(const QPointF& p, double pressure) {
+void GfxPath::start(const QPointF& p,
+                    Qt::KeyboardModifiers mods,
+                    double pressure) {
     prepareGeometryChange();
     _path.clear();
     _xy_path.clear();
@@ -96,7 +98,9 @@ void GfxPath::start(const QPointF& p, double pressure) {
 //
 // stop a path
 //
-void GfxPath::stop(const QPointF& p, double pressure) {
+void GfxPath::stop(const QPointF& p,
+                   Qt::KeyboardModifiers mods,
+                   double pressure) {
     prepareGeometryChange();
     _path.lineTo(p);
     _xy_path.append(p);
@@ -118,8 +122,11 @@ void GfxPath::stop(const QPointF& p, double pressure) {
 //
 // extend the path
 //
-void GfxPath::move(const QPointF& p, double pressure) {
-  if (XY(_path.currentPosition()).distance(XY(p)) > cap<double>(sqrt(_pen.widthF()), .9, 5.0)) {
+void GfxPath::move(const QPointF& p,
+                   Qt::KeyboardModifiers mods,
+                   double pressure) {
+    if (XY(_path.currentPosition()).distance(XY(p)) >
+        cap<double>(sqrt(_pen.widthF()), .9, 5.0)) {
         prepareGeometryChange();
         _path.lineTo(p);
         _xy_path.append(p);

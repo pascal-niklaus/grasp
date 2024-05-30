@@ -86,7 +86,9 @@ void GfxSmooth::apply(const QTransform& m) {
 //
 // start a path
 //
-void GfxSmooth::start(const QPointF& p, double pressure) {
+void GfxSmooth::start(const QPointF& p,
+                      Qt::KeyboardModifiers mods,
+                      double pressure) {
     _xy_path_raw.clear();
     move_internal(p, true);
 }
@@ -95,7 +97,9 @@ void GfxSmooth::start(const QPointF& p, double pressure) {
 //
 // stop a path
 //
-void GfxSmooth::stop(const QPointF& p, double pressure) {
+void GfxSmooth::stop(const QPointF& p,
+                     Qt::KeyboardModifiers mods,
+                     double pressure) {
     move_internal(p, true);
 }
 
@@ -103,7 +107,9 @@ void GfxSmooth::stop(const QPointF& p, double pressure) {
 //
 // extend the path
 //
-void GfxSmooth::move(const QPointF& p, double pressure) {
+void GfxSmooth::move(const QPointF& p,
+                     Qt::KeyboardModifiers mods,
+                     double pressure) {
     move_internal(p, false);
 }
 

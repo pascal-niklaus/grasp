@@ -70,7 +70,9 @@ void GfxPixmap::apply(const QTransform& m) {
 //
 // start a path
 //
-void GfxPixmap::start(const QPointF& p, double pressure) {
+void GfxPixmap::start(const QPointF& p,
+                      Qt::KeyboardModifiers mods,
+                      double pressure) {
     _sel_rect.setTopLeft(p);
     drag_frame = true;
     move(p);
@@ -80,7 +82,9 @@ void GfxPixmap::start(const QPointF& p, double pressure) {
 //
 // stop a path
 //
-void GfxPixmap::stop(const QPointF& p, double pressure) {
+void GfxPixmap::stop(const QPointF& p,
+                     Qt::KeyboardModifiers mods,
+                     double pressure) {
     drag_frame = false;
     move(p);
 }
@@ -89,7 +93,9 @@ void GfxPixmap::stop(const QPointF& p, double pressure) {
 //
 // drag rectangle corner
 //
-void GfxPixmap::move(const QPointF& p, double pressure) {
+void GfxPixmap::move(const QPointF& p,
+                     Qt::KeyboardModifiers mods,
+                     double pressure) {
     prepareGeometryChange();
     _sel_rect.setBottomRight(p);
 }
