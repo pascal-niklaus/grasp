@@ -29,6 +29,10 @@
 #include <QGraphicsPolygonItem>
 #include <QGraphicsRectItem>
 
+GfxItem::GfxItem(QGraphicsItem* parent) : QGraphicsItem(parent) {
+    _verbosity = 0;
+}
+
 GfxItem::~GfxItem() {}
 
 bool GfxItem::select() {
@@ -140,6 +144,7 @@ std::ostream& operator<<(std::ostream& os, const GfxItem& item) {
 
 GfxUndoItem::GfxUndoItem(const GfxItem * item) {
     type = item->type();
+    verbosity = item->_verbosity;
     id = item->data(GfxItem::KeyID).toInt();
 }
 

@@ -37,11 +37,12 @@ class GfxLine : public GfxArrowItem {
     enum { Type = GFX_LINE };
 
   public:
-    GfxLine(QGraphicsItem* parent = nullptr,
-               const QColor& color = Qt::yellow,
-               double width = 1,
-               ArrowType atype = ARROW_NONE,
-               double arrowsize = 0.0);
+    GfxLine(QGraphicsItem* parent,
+            const QColor& color,
+            double width,
+            ArrowType atype,
+            double arrowsize,
+            int verbosity);
     ~GfxLine();
 
     virtual GfxUndoItem* create_undo_item() const override;

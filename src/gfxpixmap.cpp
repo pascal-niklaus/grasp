@@ -31,16 +31,21 @@
 // GfxPixmap::GfxPixmap
 //
 GfxPixmap::GfxPixmap(QGraphicsItem* parent,
-                           const QColor& color,
-                           double width) :
+                     const QColor& color,
+                     double width,
+                     int verbosity) :
     GfxItem(parent) {
     _pen = QPen(color, width, Qt::DashLine, Qt::RoundCap);
     setFlag(QGraphicsItem::ItemIsSelectable);
+    set_verbosity(verbosity);
     drag_frame = false;
     setZValue(-10.0);
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxPixmap created @" << this; }
 }
 
-GfxPixmap::~GfxPixmap() {}
+GfxPixmap::~GfxPixmap() {
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxPixmap deleted @" << this; }
+}
 
 // GfxPixmap::create_undo_item
 //
@@ -162,7 +167,7 @@ GfxUndoPixmap::GfxUndoPixmap(const GfxPixmap* kpixmap) :
 // GfxUndoPixmap::create_from_undo_item
 //
 GfxItem* GfxUndoPixmap::create_from_undo_item() const {
-    GfxPixmap* krect = new GfxPixmap(nullptr);
+    GfxPixmap* krect = new GfxPixmap(nullptr, Qt::yellow, 1, verbosity);
     krect->setData(GfxPixmap::KeyID, id);
     krect->set_pixmap(_pixmap, _rect);
     krect->setZValue(-10.0);

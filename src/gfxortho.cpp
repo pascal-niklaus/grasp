@@ -30,15 +30,16 @@
 // GfxOrtho::GfxOrtho
 //
 GfxOrtho::GfxOrtho(QGraphicsItem* parent,
-                         const QColor& color,
-                         double width,
-                         ArrowType arrowtype,
-                         double arrowsize,
-                         double simplify,
-                         double snap,
-                         double radius,
-                         double minlen,
-                         double maxangle) :
+                   const QColor& color,
+                   double width,
+                   ArrowType arrowtype,
+                   double arrowsize,
+                   double simplify,
+                   double snap,
+                   double radius,
+                   double minlen,
+                   double maxangle,
+                   int verbosity) :
     GfxArrowItem(parent) {
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
@@ -51,10 +52,13 @@ GfxOrtho::GfxOrtho(QGraphicsItem* parent,
     _maxangle = maxangle;
 
     setFlag(QGraphicsItem::ItemIsSelectable);
+    set_verbosity(verbosity);
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxOrtho created @" << this; }
 }
 
-GfxOrtho::~GfxOrtho() {}
-
+GfxOrtho::~GfxOrtho() {
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxOrtho deleted @" << this; }
+}
 
 // GfxOrtho::create_undo_item
 //
@@ -68,7 +72,7 @@ GfxUndoItem* GfxOrtho::create_undo_item() const {
 // store pre-transformation state
 //
 void GfxOrtho::stash() {
-  _stashed_xy_path = _xy_path;
+    _stashed_xy_path = _xy_path;
 }
 
 // GfxOrtho::apply
@@ -146,7 +150,8 @@ void GfxOrtho::move_internal(const QPointF& p, bool force) {
 
         _raw_path.clear();
         _raw_path.moveTo(_xy_path_raw.first());
-        for (int i = 1; i < _xy_path_raw.size(); i++) _raw_path.lineTo(_xy_path_raw[i]);
+        for (int i = 1; i < _xy_path_raw.size(); i++)
+            _raw_path.lineTo(_xy_path_raw[i]);
     }
 }
 
@@ -206,8 +211,8 @@ QRectF GfxOrtho::boundingRect() const {
 // GfxOrtho::paint
 //
 void GfxOrtho::paint(QPainter* painter,
-                        const QStyleOptionGraphicsItem* option,
-                        QWidget* widget) {
+                     const QStyleOptionGraphicsItem* option,
+                     QWidget* widget) {
     painter->setRenderHint(QPainter::Antialiasing);
     if (isSelected()) {
         painter->setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap));
@@ -216,7 +221,7 @@ void GfxOrtho::paint(QPainter* painter,
     painter->setPen(_pen);
     painter->drawPath(_path);
 
-    painter->setPen(QPen(_pen.color(),1, Qt::DashLine));
+    painter->setPen(QPen(_pen.color(), 1, Qt::DashLine));
     painter->drawPath(_raw_path);
 }
 
@@ -264,15 +269,16 @@ GfxUndoOrtho::~GfxUndoOrtho() {}
 GfxItem* GfxUndoOrtho::create_from_undo_item() const {
     GfxOrtho* kortho =
         new GfxOrtho(nullptr,
-                        pen.color(),
-                        pen.widthF(),
-                        xy_path.end_distance() < snap ? ARROW_NONE : arrow_type,
-                        arrow_size,
-                        10,
-                        0,
-                        10,
-                        10,
-                        10);
+                     pen.color(),
+                     pen.widthF(),
+                     xy_path.end_distance() < snap ? ARROW_NONE : arrow_type,
+                     arrow_size,
+                     10,
+                     0,
+                     10,
+                     10,
+                     10,
+                     verbosity);
     kortho->setData(GfxOrtho::KeyID, id);
     kortho->set_path(xy_path);
     return kortho;

@@ -38,8 +38,9 @@ class GfxText : public GfxItem {
 
   public:
     GfxText(QGraphicsItem* parent,
-               const QColor& color,
-               QFont font);
+            const QColor& color,
+            QFont font,
+            int verbosity);
     ~GfxText();
 
     // ----- GfxItem methods

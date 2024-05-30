@@ -53,7 +53,7 @@ class GfxItem : public QGraphicsItem {
         DYN_CONTINUE,  // continue calling
     };
 
-    GfxItem(QGraphicsItem* parent) : QGraphicsItem(parent) {}
+    GfxItem(QGraphicsItem* parent);
     virtual ~GfxItem() = 0;
 
     // - undo system
@@ -92,7 +92,11 @@ class GfxItem : public QGraphicsItem {
 
     void set_new_ID() { setData(GfxItem::KeyID, Tools::generate_ID()); }
 
+    void set_verbosity(int verbosity) { _verbosity = verbosity; }
+
     static QString type_txt(int item);
+
+    int _verbosity;
 
     friend std::ostream& operator<<(std::ostream& os, const GfxItem& item);
     friend std::ostream& operator<<(std::ostream& os, const GfxItem* item);
@@ -110,11 +114,12 @@ class GfxUndoItem {
     virtual GfxItem* create_from_undo_item() const = 0;
     virtual void dump(std::ostream& os) const {};
 
-    friend std::ostream& operator<<(std::ostream& os,
-                                    const GfxUndoItem& item);
+    friend std::ostream& operator<<(std::ostream& os, const GfxUndoItem& item);
+
   public:
     int type;
     int id;
+    int verbosity;
 };
 
 #endif

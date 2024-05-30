@@ -37,10 +37,11 @@ class GfxRect : public GfxItem {
     enum { Type = GFX_RECT };
 
   public:
-    GfxRect(QGraphicsItem* parent = nullptr,
-               const QColor& color = Qt::yellow,
-               double width = 1,
-               double radius = 0);
+    GfxRect(QGraphicsItem* parent,
+            const QColor& color,
+            double width,
+            double radius,
+            int verbosity);
     ~GfxRect();
 
     // ----- GfxItem methods

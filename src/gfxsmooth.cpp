@@ -30,12 +30,13 @@
 // GfxSmooth::GfxSmooth
 //
 GfxSmooth::GfxSmooth(QGraphicsItem* parent,
-                           const QColor& color,
-                           double width,
-                           ArrowType arrowtype,
-                           double arrowsize,
-                           double simplify,
-                           double snap) :
+                     const QColor& color,
+                     double width,
+                     ArrowType arrowtype,
+                     double arrowsize,
+                     double simplify,
+                     double snap,
+                     int verbosity) :
     GfxArrowItem(parent) {
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
@@ -45,9 +46,14 @@ GfxSmooth::GfxSmooth(QGraphicsItem* parent,
     _simplify = simplify;
 
     setFlag(QGraphicsItem::ItemIsSelectable);
+    set_verbosity(verbosity);
+
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxSmooth created @" << this; }
 }
 
-GfxSmooth::~GfxSmooth() {}
+GfxSmooth::~GfxSmooth() {
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxSmooth deleted @" << this; }
+}
 
 
 // GfxSmooth::create_undo_item
@@ -246,11 +252,15 @@ GfxUndoSmooth::~GfxUndoSmooth() {}
 // GfxUndoSmooth::create_from_undo_item
 //
 GfxItem* GfxUndoSmooth::create_from_undo_item() const {
-    GfxSmooth* ksmooth = new GfxSmooth(nullptr,
-                                             pen.color(),
-                                             pen.widthF(),
-                                             xy_path.end_distance() < snap ? ARROW_NONE: arrow_type,
-                                             arrow_size);
+    GfxSmooth* ksmooth =
+        new GfxSmooth(nullptr,
+                      pen.color(),
+                      pen.widthF(),
+                      xy_path.end_distance() < snap ? ARROW_NONE : arrow_type,
+                      arrow_size,
+                      10,
+                      10,
+                      verbosity);
     ksmooth->setData(GfxSmooth::KeyID, id);
     ksmooth->set_path(xy_path);
     return ksmooth;

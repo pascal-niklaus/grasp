@@ -38,11 +38,12 @@ class GfxPath : public GfxArrowItem {
     enum { Type = GFX_PATH };
 
   public:
-    GfxPath(QGraphicsItem* parent = nullptr,
-               const QColor& color = Qt::yellow,
-               double width = 1,
-               ArrowType atype = ARROW_NONE,
-               double arrowsize = 0.0);
+    GfxPath(QGraphicsItem* parent,
+            const QColor& color,
+            double width,
+            ArrowType atype,
+            double arrowsize,
+            int verbosity);
     ~GfxPath();
 
     // ----- GfxItem methods

@@ -48,7 +48,7 @@ int Tools::generate_ID(void) {
 //
 // factory function creating a new GfxItem of the correct type
 //
-QGraphicsItem *Tools::create_tool(const Settings &settings) {
+QGraphicsItem *Tools::create_tool(const Settings &settings, int verbosity) {
     switch (settings.tool) {
         case TOOL_ORTHO: {
             auto *ortho = new GfxOrtho(nullptr,
@@ -60,7 +60,8 @@ QGraphicsItem *Tools::create_tool(const Settings &settings) {
                                        settings.snapdist_ortho,
                                        settings.radius_ortho,
                                        settings.minlen_ortho,
-                                       settings.maxangle_ortho);
+                                       settings.maxangle_ortho,
+                                       verbosity);
             ortho->setData(GfxItem::KeyID, generate_ID());
             return ortho;
         }
@@ -72,7 +73,8 @@ QGraphicsItem *Tools::create_tool(const Settings &settings) {
                                       settings.arrow_type,
                                       settings.arrow_size,
                                       settings.simplify_smooth,
-                                      settings.snapdist_smooth);
+                                      settings.snapdist_smooth,
+                                      verbosity);
             pen->setData(GfxItem::KeyID, generate_ID());
             return pen;
         }
@@ -82,7 +84,8 @@ QGraphicsItem *Tools::create_tool(const Settings &settings) {
                                     settings.color,
                                     settings.width,
                                     settings.arrow_type,
-                                    settings.arrow_size);
+                                    settings.arrow_size,
+                                    verbosity);
             pen->setData(GfxItem::KeyID, generate_ID());
             return pen;
         }
@@ -94,7 +97,8 @@ QGraphicsItem *Tools::create_tool(const Settings &settings) {
                                        settings.arrow_type,
                                        settings.arrow_size,
                                        settings.sustain_fader,
-                                       settings.fade_fader);
+                                       settings.fade_fader,
+                                       verbosity);
             fader->setData(GfxItem::KeyID, generate_ID());
             return fader;
         }
@@ -106,7 +110,8 @@ QGraphicsItem *Tools::create_tool(const Settings &settings) {
                                                settings.arrow_type,
                                                settings.arrow_size,
                                                settings.sustain_highlight,
-                                               settings.fade_highlight);
+                                               settings.fade_highlight,
+                                               verbosity);
             highlight->setData(GfxItem::KeyID, generate_ID());
             return highlight;
         }
@@ -116,26 +121,31 @@ QGraphicsItem *Tools::create_tool(const Settings &settings) {
                                      settings.color,
                                      settings.width,
                                      settings.arrow_type,
-                                     settings.arrow_size);
+                                     settings.arrow_size,
+                                     verbosity);
             line->setData(GfxItem::KeyID, generate_ID());
             return line;
         }
 
         case TOOL_RECT: {
-            auto *rect = new GfxRect(
-                nullptr, settings.color, settings.width, settings.radius_rect);
+            auto *rect = new GfxRect(nullptr,
+                                     settings.color,
+                                     settings.width,
+                                     settings.radius_rect,
+                                     verbosity);
             rect->setData(GfxItem::KeyID, generate_ID());
             return rect;
         }
 
         case TOOL_TEXT: {
-            auto *text = new GfxText(nullptr, settings.color, settings.font);
+            auto *text =
+                new GfxText(nullptr, settings.color, settings.font, verbosity);
             text->setData(GfxItem::KeyID, generate_ID());
             return text;
         }
 
         case TOOL_PIXMAP: {
-            auto *image = new GfxPixmap(nullptr, settings.color, 2);
+            auto *image = new GfxPixmap(nullptr, settings.color, 2, verbosity);
             image->setData(GfxItem::KeyID, generate_ID());
             return image;
         }

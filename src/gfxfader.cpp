@@ -33,19 +33,25 @@
 // GfxFader::GfxFader
 //
 GfxFader::GfxFader(QGraphicsItem* parent,
-                         const QColor& color,
-                         double width,
-                         ArrowType arrowtype,
-                         double arrowsize,
-                         double sustain,
-                         double fade) :
-  GfxPath(parent, color, width, arrowtype, arrowsize) {
+                   const QColor& color,
+                   double width,
+                   ArrowType arrowtype,
+                   double arrowsize,
+                   double sustain,
+                   double fade,
+                   int verbosity) :
+  GfxPath(parent, color, width, arrowtype, arrowsize,verbosity) {
     _sustain_secs = sustain;
     _fading_secs = fade;
     update_time();
+    if (_verbosity >= VerboseAll) {
+        qDebug() << "GfxFader created @" << this;
+    }
 }
 
-GfxFader::~GfxFader() {}
+GfxFader::~GfxFader() {
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxFader deleted @" << this; }
+}
 
 // GfxFader::create_undo_item
 //
@@ -131,8 +137,14 @@ GfxUndoFader::GfxUndoFader(const GfxFader* kpath) :
 // GfxUndoFader::create_from_undo_item
 //
 GfxItem* GfxUndoFader::create_from_undo_item() const {
-    GfxFader* kfader = new GfxFader(
-        nullptr, pen.color(), pen.widthF(), arrow_type, arrow_size);
+    GfxFader* kfader = new GfxFader(nullptr,
+                                    pen.color(),
+                                    pen.widthF(),
+                                    arrow_type,
+                                    arrow_size,
+                                    1,
+                                    1,
+                                    verbosity);
     kfader->setData(GfxFader::KeyID, id);
     kfader->set_path(xy_path);
     kfader->set_faded(faded);

@@ -39,15 +39,16 @@ class GfxOrtho : public GfxArrowItem {
 
   public:
     explicit GfxOrtho(QGraphicsItem* parent,
-                         const QColor& color,
-                         double width,
-                         ArrowType atype,
-                         double arrowsize,
-                         double simplify,
-                         double snap,
-                         double radius,
-                         double minlen,
-                         double maxangle);
+                      const QColor& color,
+                      double width,
+                      ArrowType atype,
+                      double arrowsize,
+                      double simplify,
+                      double snap,
+                      double radius,
+                      double minlen,
+                      double maxangle,
+                      int verbosity);
     ~GfxOrtho();
 
     // ----- GfxItem methods

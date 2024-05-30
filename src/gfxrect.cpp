@@ -31,18 +31,22 @@
 // GfxRect::GfxRect
 //
 GfxRect::GfxRect(QGraphicsItem* parent,
-                       const QColor& color,
-                       double width,
-                       double radius) :
+                 const QColor& color,
+                 double width,
+                 double radius,
+                 int verbosity) :
     GfxItem(parent) {
     _radius = radius;
     _pen = QPen(color, width, Qt::SolidLine, Qt::RoundCap);
 
     setFlag(QGraphicsItem::ItemIsSelectable);
+    set_verbosity(verbosity);
+    if (verbosity >= VerboseAll) { qDebug() << "GfxRect created @" << this; }
 }
 
-GfxRect::~GfxRect() {}
-
+GfxRect::~GfxRect() {
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxRect deleted @" << this; }
+}
 
 // GfxRect::create_undo_item
 //
@@ -199,7 +203,7 @@ GfxUndoRect::~GfxUndoRect() {}
 //
 GfxItem* GfxUndoRect::create_from_undo_item() const {
     GfxRect* krect =
-        new GfxRect(nullptr, pen.color(), pen.widthF(), radius);
+        new GfxRect(nullptr, pen.color(), pen.widthF(), radius, verbosity);
     krect->setData(GfxRect::KeyID, id);
     krect->set_rect(rect);
     return krect;

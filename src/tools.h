@@ -26,8 +26,8 @@
 #include <QColor>
 #include <QFont>
 
-#include "grasp.h"
 #include "colors.h"
+#include "grasp.h"
 
 class QGraphicsItem;
 class QSettings;
@@ -111,8 +111,8 @@ class Settings {
   public:
     QColor get_color(const QKeyCombination& key);
 
-    [[deprecated("if used, check return value is non-negative")]]
-    static int qcolor_find_index(std::uint32_t color);
+    [[deprecated("if used, check return value is non-negative")]] static int
+    qcolor_find_index(std::uint32_t color);
 
     QColor qcolor_at_index(int index) const;
     int qcolor_find_index(const QColor& color) const;
@@ -129,7 +129,7 @@ namespace Tools {
 // factory function
 //
 [[nodiscard("the returned item needs to be deleted later")]]
-QGraphicsItem* create_tool(const Settings& settings);
+    QGraphicsItem* create_tool(const Settings& settings, int _verbosity);
 
 int generate_ID(void);
 

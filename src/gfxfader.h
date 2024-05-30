@@ -38,13 +38,14 @@ class GfxFader : public GfxPath {
     enum { Type = GFX_FADER };
 
   public:
-    GfxFader(QGraphicsItem* parent = nullptr,
-                const QColor& color = Qt::yellow,
-                double width = 1,
-                ArrowType atype = ARROW_NONE,
-                double arrowsize = 0.0,
-                double sustain = 5.0,
-                double fade = 5.0);
+    GfxFader(QGraphicsItem* parent,
+             const QColor& color,
+             double width,
+             ArrowType atype,
+             double arrowsize,
+             double sustain,
+             double fade,
+             int verbosity);
     ~GfxFader();
 
     // ----- GfxItem methods

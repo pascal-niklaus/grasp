@@ -33,16 +33,20 @@
 //
 GfxText::GfxText(QGraphicsItem* parent,
                        const QColor& color,
-                       QFont font) :
+                 QFont font, int verbosity) :
     GfxItem(parent) {
     _size = font.pointSizeF();
     _color = color;
     _crsr_pos = 0;
     _font = font;
+    set_verbosity(verbosity);
     setFlag(QGraphicsItem::ItemIsSelectable);
+    if (verbosity >= VerboseAll) { qDebug() << "GfxText created @" << this; }
 }
 
-GfxText::~GfxText() {}
+GfxText::~GfxText() {
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxText deleted @" << this; }
+}
 
 
 // GfxText::create_undo_item
@@ -291,8 +295,7 @@ GfxUndoText::~GfxUndoText() {}
 // GfxUndoText::create_from_undo_item
 //
 GfxItem* GfxUndoText::create_from_undo_item() const {
-    GfxText* ktext =
-        new GfxText(nullptr, color, font);
+    GfxText* ktext = new GfxText(nullptr, color, font, verbosity);
     ktext->setData(GfxText::KeyID, id);
     ktext->set_path(path);
     return ktext;

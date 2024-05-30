@@ -319,7 +319,7 @@ void DrawingScene::slot_pointerPressed(QPointF p,
             sel = SEL_ADD;
         if (!handle_transformation_clicks(p)) handle_selection_clicks(p, sel);
     } else if (!(buttons & Qt::RightButton)) {
-        _current_item = Tools::create_tool(_settings);
+        _current_item = Tools::create_tool(_settings, _verbosity);
         GfxItem *kitem = static_cast<GfxItem *>(_current_item);
 
         _feed_keystrokes = (kitem->caps() & CAP_KEYSTROKES);
@@ -859,7 +859,6 @@ void DrawingScene::garbage_collect() {
     }
 }
 
-
 // DrawingScene::removeItemSafely
 //
 // remove an item from the scene, first deleting all childs, and
@@ -1174,8 +1173,7 @@ void DrawingScene::slot_delete_scene(int id) {
 // remove everything, cannot be undone
 //
 void DrawingScene::clear_scene() {
-    if (_verbosity >= VerboseAll)
-        qDebug() << "DrawingScene::slot_clear_scene";
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::slot_clear_scene";
 
     clearSelection();
 
@@ -1203,8 +1201,7 @@ void DrawingScene::clear_scene() {
 // start a new scene
 //
 void DrawingScene::slot_new() {
-    if (_verbosity >= VerboseAll)
-        qDebug() << "DrawingScene::slot_new";
+    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::slot_new";
 
     slot_save_scene(_current_scene);
     _current_scene = new_scene_id();
@@ -1298,7 +1295,7 @@ void DrawingScene::slot_add_rect(const QRectF &rect, int radius) {
     if (_verbosity >= VerboseAll)
         qDebug() << "DrawingScene::slot_add_rect" << rect;
     auto *rectitem = new GfxRect(
-        nullptr, _settings.color, _settings.width, radius);
+        nullptr, _settings.color, _settings.width, radius, _verbosity);
     addItem(rectitem);
     rectitem->setData(GfxItem::KeyID, Tools::generate_ID());
     rectitem->start(rect.topLeft());

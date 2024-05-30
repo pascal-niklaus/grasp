@@ -31,10 +31,11 @@
 // GfxPath::GfxPath
 //
 GfxPath::GfxPath(QGraphicsItem* parent,
-                       const QColor& color,
-                       double width,
-                       ArrowType arrowtype,
-                       double arrowsize) :
+                 const QColor& color,
+                 double width,
+                 ArrowType arrowtype,
+                 double arrowsize,
+                 int verbosity) :
     GfxArrowItem(parent) {
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
@@ -42,9 +43,13 @@ GfxPath::GfxPath(QGraphicsItem* parent,
     GfxArrowItem::setPen(_pen);
 
     setFlag(QGraphicsItem::ItemIsSelectable);
+
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxPath created @" << this; }
 }
 
-GfxPath::~GfxPath() {}
+GfxPath::~GfxPath() {
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxPath deleted @" << this; }
+}
 
 
 // GfxPath::create_undo_item
@@ -244,7 +249,7 @@ GfxUndoPath::~GfxUndoPath() {}
 //
 GfxItem* GfxUndoPath::create_from_undo_item() const {
     GfxPath* kpath = new GfxPath(
-        nullptr, pen.color(), pen.widthF(), arrow_type, arrow_size);
+        nullptr, pen.color(), pen.widthF(), arrow_type, arrow_size, verbosity);
     kpath->setData(GfxPath::KeyID, id);
     kpath->set_path(xy_path);
     return kpath;

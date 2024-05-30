@@ -37,9 +37,10 @@ class GfxPixmap : public GfxItem {
     enum { Type = GFX_PIXMAP };
 
   public:
-    GfxPixmap(QGraphicsItem* parent = nullptr,
-               const QColor& color = Qt::yellow,
-               double width = 1);
+    GfxPixmap(QGraphicsItem* parent,
+              const QColor& color,
+              double width,
+              int verbosity);
     ~GfxPixmap();
 
     // ----- GfxItem methods

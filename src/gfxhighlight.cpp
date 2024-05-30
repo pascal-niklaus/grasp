@@ -32,20 +32,27 @@
 // GfxHighlight::GfxHighlight
 //
 GfxHighlight::GfxHighlight(QGraphicsItem* parent,
-                         const QColor& color,
-                         double width,
-                         ArrowType arrowtype,
-                         double arrowsize,
-                         double sustain,
-                         double fade) :
-  GfxPath(parent, color, width, ARROW_NONE, 0.0) {
+                           const QColor& color,
+                           double width,
+                           ArrowType arrowtype,
+                           double arrowsize,
+                           double sustain,
+                           double fade,
+                           int verbosity) :
+    GfxPath(parent, color, width, ARROW_NONE, arrowsize, 0.0) {
     _sustain_secs = sustain;
     _fading_secs = fade;
     update_time();
     setOpacity(0.5);
+    set_verbosity(verbosity);
+    if (_verbosity >= VerboseAll) { qDebug() << "GfxHighlight created @" << this; }
 }
 
-GfxHighlight::~GfxHighlight() {}
+GfxHighlight::~GfxHighlight() {
+    if (_verbosity >= VerboseAll) {
+        qDebug() << "GfxHighlight deleted @" << this;
+    }
+}
 
 // GfxHighlight::create_undo_item
 //
@@ -131,8 +138,14 @@ GfxUndoHighlight::GfxUndoHighlight(const GfxHighlight* kpath) :
 // GfxUndoHighlight::create_from_undo_item
 //
 GfxItem* GfxUndoHighlight::create_from_undo_item() const {
-    GfxHighlight* kfader = new GfxHighlight(
-        nullptr, pen.color(), pen.widthF(), arrow_type, arrow_size);
+    GfxHighlight* kfader = new GfxHighlight(nullptr,
+                                            pen.color(),
+                                            pen.widthF(),
+                                            arrow_type,
+                                            arrow_size,
+                                            1,
+                                            1,
+                                            verbosity);
     kfader->setData(GfxHighlight::KeyID, id);
     kfader->set_path(xy_path);
     kfader->set_faded(faded);
