@@ -37,10 +37,7 @@ class GfxText : public GfxItem {
     enum { Type = GFX_TEXT };
 
   public:
-    GfxText(QGraphicsItem* parent,
-            const QColor& color,
-            QFont font,
-            int verbosity);
+    GfxText(QGraphicsItem* parent, const QColor& color, QFont font);
     ~GfxText();
 
     // ----- GfxItem methods

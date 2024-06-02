@@ -304,9 +304,9 @@ GfxDash::GfxDash(QGraphicsItem *parent,
         icon->setPos(x, 2.0 + static_cast<double>(height) / 2.0);
         QString txt;
         if (it->key1().keyboardModifiers() == Qt::ShiftModifier) {
-          txt = QString("\u21e7%1").arg(QChar(it->key1().key()).toUpper());
+            txt = QString("\u21e7%1").arg(QChar(it->key1().key()).toUpper());
         } else {
-          txt = QString("%1").arg(QChar(it->key1().key()).toUpper());
+            txt = QString("%1").arg(QChar(it->key1().key()).toUpper());
         }
         icon->set_color(it->color(), txt);
     }

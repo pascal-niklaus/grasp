@@ -23,6 +23,7 @@
 #include "gfxortho.h"
 #include "string_format.h"
 #include "utility.h"
+#include "verbosity.h"
 
 #include <QDebug>
 #include <QPainter>
@@ -38,8 +39,7 @@ GfxOrtho::GfxOrtho(QGraphicsItem* parent,
                    double snap,
                    double radius,
                    double minlen,
-                   double maxangle,
-                   int verbosity) :
+                   double maxangle) :
     GfxArrowItem(parent) {
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
@@ -52,12 +52,15 @@ GfxOrtho::GfxOrtho(QGraphicsItem* parent,
     _maxangle = maxangle;
 
     setFlag(QGraphicsItem::ItemIsSelectable);
-    set_verbosity(verbosity);
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxOrtho created @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxOrtho created @" << this;
+    }
 }
 
 GfxOrtho::~GfxOrtho() {
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxOrtho deleted @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxOrtho deleted @" << this;
+    }
 }
 
 // GfxOrtho::create_undo_item
@@ -277,8 +280,7 @@ GfxItem* GfxUndoOrtho::create_from_undo_item() const {
                      0,
                      10,
                      10,
-                     10,
-                     verbosity);
+                     10);
     kortho->setData(GfxOrtho::KeyID, id);
     kortho->set_path(xy_path);
     return kortho;

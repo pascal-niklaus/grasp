@@ -42,8 +42,7 @@ class GfxPath : public GfxArrowItem {
             const QColor& color,
             double width,
             ArrowType atype,
-            double arrowsize,
-            int verbosity);
+            double arrowsize);
     ~GfxPath();
 
     // ----- GfxItem methods

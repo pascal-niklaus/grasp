@@ -39,8 +39,7 @@ class GfxPixmap : public GfxItem {
   public:
     GfxPixmap(QGraphicsItem* parent,
               const QColor& color,
-              double width,
-              int verbosity);
+              double width);
     ~GfxPixmap();
 
     // ----- GfxItem methods

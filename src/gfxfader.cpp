@@ -23,6 +23,7 @@
 #include "gfxfader.h"
 #include "string_format.h"
 #include "utility.h"
+#include "verbosity.h"
 
 #include <chrono>
 
@@ -38,19 +39,20 @@ GfxFader::GfxFader(QGraphicsItem* parent,
                    ArrowType arrowtype,
                    double arrowsize,
                    double sustain,
-                   double fade,
-                   int verbosity) :
-  GfxPath(parent, color, width, arrowtype, arrowsize,verbosity) {
+                   double fade) :
+    GfxPath(parent, color, width, arrowtype, arrowsize) {
     _sustain_secs = sustain;
     _fading_secs = fade;
     update_time();
-    if (_verbosity >= VerboseAll) {
+    if (Verbosity::get() >= VerboseAll) {
         qDebug() << "GfxFader created @" << this;
     }
 }
 
 GfxFader::~GfxFader() {
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxFader deleted @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxFader deleted @" << this;
+    }
 }
 
 // GfxFader::create_undo_item
@@ -143,8 +145,7 @@ GfxItem* GfxUndoFader::create_from_undo_item() const {
                                     arrow_type,
                                     arrow_size,
                                     1,
-                                    1,
-                                    verbosity);
+                                    1);
     kfader->setData(GfxFader::KeyID, id);
     kfader->set_path(xy_path);
     kfader->set_faded(faded);

@@ -21,12 +21,13 @@
  *
  */
 
+#include "grasp.h"
 #include "dbus.h"
+#include "string_format.h"
+#include "verbosity.h"
 
 #include <QDBusConnection>
 #include <QRectF>
-
-#include "string_format.h"
 
 Message::Message(QObject* parent) : QObject(parent) {
     QDBusConnection::sessionBus().registerService(service_name());
@@ -41,7 +42,8 @@ void Message::quit() {
 }
 
 void Message::log(const std::string& msg) const {
-    std::cerr << "DBus:" << msg << "\n";
+    if (Verbosity::get() >= VerboseLow)
+        qDebug() << "D-Bus:" << QString::fromStdString(msg);
 }
 
 // ---------------------------- show/hide ----------------------------

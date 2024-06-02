@@ -46,7 +46,6 @@ class DrawingView : public QGraphicsView {
     virtual void resizeEvent(QResizeEvent *event);
 
   private:
-    int _verbosity;
     DrawingScene *_scene;
     ScreenChangeDetector *_screen_watcher;
 

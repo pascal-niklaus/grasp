@@ -31,7 +31,6 @@
 
 DrawingView::DrawingView(DrawingScene *scene, int verbosity, QWidget *parent) :
   QGraphicsView(scene, parent) , _scene(scene) {
-    _verbosity = verbosity;
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 

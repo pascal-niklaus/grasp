@@ -92,11 +92,7 @@ class GfxItem : public QGraphicsItem {
 
     void set_new_ID() { setData(GfxItem::KeyID, Tools::generate_ID()); }
 
-    void set_verbosity(int verbosity) { _verbosity = verbosity; }
-
     static QString type_txt(int item);
-
-    int _verbosity;
 
     friend std::ostream& operator<<(std::ostream& os, const GfxItem& item);
     friend std::ostream& operator<<(std::ostream& os, const GfxItem* item);
@@ -119,7 +115,6 @@ class GfxUndoItem {
   public:
     int type;
     int id;
-    int verbosity;
 };
 
 #endif

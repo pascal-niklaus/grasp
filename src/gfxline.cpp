@@ -21,10 +21,10 @@
  */
 
 #include "gfxline.h"
-
 #include "string_format.h"
 #include "tools.h"
 #include "utility.h"
+#include "verbosity.h"
 
 #include <QPainter>
 
@@ -32,8 +32,7 @@ GfxLine::GfxLine(QGraphicsItem* parent,
                  const QColor& color,
                  double width,
                  ArrowType arrowtype,
-                 double arrowsize,
-                 int verbosity) :
+                 double arrowsize) :
     GfxArrowItem(parent) {
     prepareGeometryChange();
     _arrow_type = arrowtype;
@@ -43,14 +42,15 @@ GfxLine::GfxLine(QGraphicsItem* parent,
     _line_item = new QGraphicsLineItem(this);
     _line_item->setPen(_pen);
     setFlag(QGraphicsItem::ItemIsSelectable);
-    set_verbosity(verbosity);
-    if (_verbosity >= VerboseAll) {
+    if (Verbosity::get() >= VerboseAll) {
         qDebug() << "GfxLine created @" << this;
     }
 }
 
 GfxLine::~GfxLine() {
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxLine deleted @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxLine deleted @" << this;
+    }
 }
 
 // GfxLine::create_undo_item
@@ -219,7 +219,7 @@ GfxUndoLine::~GfxUndoLine() {
 //
 GfxItem* GfxUndoLine::create_from_undo_item() const {
     GfxLine* kline = new GfxLine(
-        nullptr, pen.color(), pen.widthF(), arrow_type, arrow_size, verbosity);
+        nullptr, pen.color(), pen.widthF(), arrow_type, arrow_size);
     kline->setData(GfxLine::KeyID, id);
     kline->start(line.p1());
     kline->stop(line.p2());

@@ -23,6 +23,7 @@
 #include "gfxsmooth.h"
 #include "string_format.h"
 #include "utility.h"
+#include "verbosity.h"
 
 #include <QDebug>
 #include <QPainter>
@@ -35,8 +36,7 @@ GfxSmooth::GfxSmooth(QGraphicsItem* parent,
                      ArrowType arrowtype,
                      double arrowsize,
                      double simplify,
-                     double snap,
-                     int verbosity) :
+                     double snap) :
     GfxArrowItem(parent) {
     _arrow_type = arrowtype;
     _arrow_size = arrowsize;
@@ -46,13 +46,15 @@ GfxSmooth::GfxSmooth(QGraphicsItem* parent,
     _simplify = simplify;
 
     setFlag(QGraphicsItem::ItemIsSelectable);
-    set_verbosity(verbosity);
-
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxSmooth created @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxSmooth created @" << this;
+    }
 }
 
 GfxSmooth::~GfxSmooth() {
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxSmooth deleted @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxSmooth deleted @" << this;
+    }
 }
 
 
@@ -259,8 +261,7 @@ GfxItem* GfxUndoSmooth::create_from_undo_item() const {
                       xy_path.end_distance() < snap ? ARROW_NONE : arrow_type,
                       arrow_size,
                       10,
-                      10,
-                      verbosity);
+                      10);
     ksmooth->setData(GfxSmooth::KeyID, id);
     ksmooth->set_path(xy_path);
     return ksmooth;

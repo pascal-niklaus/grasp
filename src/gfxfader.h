@@ -44,8 +44,7 @@ class GfxFader : public GfxPath {
              ArrowType atype,
              double arrowsize,
              double sustain,
-             double fade,
-             int verbosity);
+             double fade);
     ~GfxFader();
 
     // ----- GfxItem methods

@@ -252,25 +252,26 @@ void Path::douglas_peucker(double epsilon) {
         }
     }
 
-    std::sort(to_delete.begin(), to_delete.end());
-
-    auto index_it = to_delete.cbegin();
-    int src_idx = 0;
-    int trg_idx = 0;
-    for (;;) {
-        if (src_idx == *index_it) {
+    if (to_delete.size()) {
+        std::sort(to_delete.begin(), to_delete.end());
+        auto index_it = to_delete.cbegin();
+        int src_idx = 0;
+        int trg_idx = 0;
+        for (;;) {
+            if (src_idx == *index_it) {
+                src_idx++;
+                index_it++;
+                if (index_it == to_delete.cend()) break;
+                continue;
+            }
+            _path[trg_idx] = _path[src_idx];
+            trg_idx++;
             src_idx++;
-            index_it++;
-            if (index_it == to_delete.cend()) break;
-            continue;
         }
-        _path[trg_idx] = _path[src_idx];
-        trg_idx++;
-        src_idx++;
+        while (static_cast<size_t>(src_idx) < _path.size())
+            _path[trg_idx++] = _path[src_idx++];
+        _path.resize(trg_idx);
     }
-    while (static_cast<size_t>(src_idx) < _path.size())
-        _path[trg_idx++] = _path[src_idx++];
-    _path.resize(trg_idx);
 }
 
 // Path::catmull_rom//

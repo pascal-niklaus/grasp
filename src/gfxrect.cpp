@@ -23,6 +23,7 @@
 #include "gfxrect.h"
 #include "string_format.h"
 #include "utility.h"
+#include "verbosity.h"
 
 #include <QDebug>
 #include <QPainter>
@@ -33,19 +34,21 @@
 GfxRect::GfxRect(QGraphicsItem* parent,
                  const QColor& color,
                  double width,
-                 double radius,
-                 int verbosity) :
+                 double radius) :
     GfxItem(parent) {
     _radius = radius;
     _pen = QPen(color, width, Qt::SolidLine, Qt::RoundCap);
 
     setFlag(QGraphicsItem::ItemIsSelectable);
-    set_verbosity(verbosity);
-    if (verbosity >= VerboseAll) { qDebug() << "GfxRect created @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxRect created @" << this;
+    }
 }
 
 GfxRect::~GfxRect() {
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxRect deleted @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxRect deleted @" << this;
+    }
 }
 
 // GfxRect::create_undo_item
@@ -203,7 +206,7 @@ GfxUndoRect::~GfxUndoRect() {}
 //
 GfxItem* GfxUndoRect::create_from_undo_item() const {
     GfxRect* krect =
-        new GfxRect(nullptr, pen.color(), pen.widthF(), radius, verbosity);
+        new GfxRect(nullptr, pen.color(), pen.widthF(), radius);
     krect->setData(GfxRect::KeyID, id);
     krect->set_rect(rect);
     return krect;

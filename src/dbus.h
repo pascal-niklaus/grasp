@@ -39,8 +39,6 @@ class Message : public QObject {
     Message(QObject* parent);
     ~Message();
 
-    void set_verbose(bool v) { _verbose = v; }
-    bool verbose() const { return _verbose; }
     void log(const std::string& msg) const;
 
     static QString service_name() { return "org.pascalniklaus.grasp"; }
@@ -79,9 +77,6 @@ class Message : public QObject {
     Q_SCRIPTABLE void width(int width);
 
     Q_SCRIPTABLE void rect(int x0, int y0, int x1, int y1, int r = 0);
-
-  private:
-    bool _verbose = false;
 };
 
 #endif

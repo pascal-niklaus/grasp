@@ -44,8 +44,7 @@ class GfxSmooth : public GfxArrowItem {
               ArrowType atype,
               double arrowsize,
               double simplify,
-              double snap,
-              int verbosity);
+              double snap);
     ~GfxSmooth();
 
     // ----- GfxItem methods

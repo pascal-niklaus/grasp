@@ -27,6 +27,7 @@ find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Widgets)
 qt_add_executable(grasp WIN32 MACOSX_BUNDLE
   grasp.cpp grasp.h
   singletonapplication.h
+  verbosity.cpp verbosity.h
   dbus.cpp dbus.h
   signalblocker.h
   screenres.cpp screenres.h

@@ -21,6 +21,7 @@
  */
 
 #include "drawingscene.h"
+#include "verbosity.h"
 
 #include <QApplication>
 #include <QScreen>
@@ -47,7 +48,6 @@
 //
 DrawingScene::DrawingScene(QSettings &qset, int verbosity, QObject *parent) :
     QGraphicsScene{parent}, _qset(qset) {
-    _verbosity = verbosity;
     // fix geometry, otherwise scene moves around when items are added
     QRectF r = QGuiApplication::primaryScreen()->geometry();
     const double k = QGuiApplication::primaryScreen()->devicePixelRatio();
@@ -148,8 +148,9 @@ DrawingScene::~DrawingScene() {
 }
 
 void DrawingScene::slot_reposition_dash(int width) {
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll) {
         qDebug() << "DrawingScene::slot_reposition_dash" << width;
+    }
     _dash->reposition(width);
 }
 
@@ -319,7 +320,7 @@ void DrawingScene::slot_pointerPressed(QPointF p,
             sel = SEL_ADD;
         if (!handle_transformation_clicks(p)) handle_selection_clicks(p, sel);
     } else if (!(buttons & Qt::RightButton)) {
-        _current_item = Tools::create_tool(_settings, _verbosity);
+        _current_item = Tools::create_tool(_settings);
         GfxItem *kitem = static_cast<GfxItem *>(_current_item);
 
         _feed_keystrokes = (kitem->caps() & CAP_KEYSTROKES);
@@ -495,7 +496,7 @@ void DrawingScene::update_selection_frame() {
 // delete all items selected (and create an undo record)
 //
 void DrawingScene::delete_selection() {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::delete_selection";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::delete_selection";
     if (_selection_frame) {
         UndoRecord rec;
         for (auto &item : _selected_items) {
@@ -729,7 +730,7 @@ void DrawingScene::handle_transformation_release(const QPointF &p) {
 // execute last undo record and place it in redo
 //
 void DrawingScene::undo() {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::undo";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::undo";
     clearSelection();
     if (_undo_records.empty()) return;
     UndoRecord &rec = _undo_records.back();
@@ -742,7 +743,7 @@ void DrawingScene::undo() {
             removeItemSafely(ptr);
             _undo_store.insert({id, undo_item});
         } else {
-            if (_verbosity >= VerboseLow)
+            if (Verbosity::get() >= VerboseLow)
                 qDebug() << "undo: Could not find item" << id << "ptr=" << ptr;
         }
     }
@@ -754,7 +755,7 @@ void DrawingScene::undo() {
             delete it->second;
             _undo_store.erase(it);
         } else {
-            if (_verbosity >= VerboseLow)
+            if (Verbosity::get() >= VerboseLow)
                 qDebug() << "undo: Could not find item" << id;
         }
     }
@@ -769,7 +770,7 @@ void DrawingScene::undo() {
 // execute last redo record and place it in undo
 //
 void DrawingScene::redo() {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::redo";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::redo";
     clearSelection();
     if (_redo_records.empty()) return;
     UndoRecord &rec = _redo_records.back();
@@ -782,7 +783,7 @@ void DrawingScene::redo() {
             removeItemSafely(ptr);
             _undo_store.insert({id, redo_item});
         } else {
-            if (_verbosity >= VerboseLow)
+            if (Verbosity::get() >= VerboseLow)
                 qDebug() << "redo: Could not find item" << id << "ptr=" << ptr;
         }
     }
@@ -794,7 +795,7 @@ void DrawingScene::redo() {
             delete it->second;
             _undo_store.erase(it);
         } else {
-            if (_verbosity >= VerboseLow)
+            if (Verbosity::get() >= VerboseLow)
                 qDebug() << "redo: Could not find item" << id;
         }
     }
@@ -814,7 +815,7 @@ void DrawingScene::redo() {
 // the implementation is not really efficient, but this should not be important
 //
 void DrawingScene::garbage_collect() {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::garbage_collect";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::garbage_collect";
     int last_n = 0;
     return;
     for (;;) {
@@ -868,7 +869,7 @@ void DrawingScene::garbage_collect() {
 void DrawingScene::removeItemSafely(QGraphicsItem *item) {
     static int rem_level = 0;
     rem_level++;
-    if (_verbosity >= VerboseAll) {
+    if (Verbosity::get() >= VerboseAll) {
         qDebug() << "DrawingScene::removeItemSafely..."
                  << "level =" << rem_level << item;
 
@@ -881,7 +882,7 @@ void DrawingScene::removeItemSafely(QGraphicsItem *item) {
 
     removeItem(item);
     delete item;
-    if (_verbosity >= VerboseAll) {
+    if (Verbosity::get() >= VerboseAll) {
         qDebug() << "DrawingScene::removeItemSafely level =" << rem_level
                  << "done ";
     }
@@ -891,7 +892,7 @@ void DrawingScene::removeItemSafely(QGraphicsItem *item) {
 // DrawingScene::slot_pixmap
 //
 void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::slot_pixmap";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::slot_pixmap";
 
     if (_current_item) {
         switch (_current_item->type()) {
@@ -914,7 +915,7 @@ void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
 // DrawingScene::stash_scene
 //
 void DrawingScene::stash_scene() {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::stash_scene...";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::stash_scene...";
 
     clearSelection();
 
@@ -936,14 +937,14 @@ void DrawingScene::stash_scene() {
             _stash.stash.insert({id, undo_item});
         }
     }
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::stash_scene... done";
 }
 
 // DrawingScene::unstash_scene
 //
 void DrawingScene::unstash_scene() {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::unstash_scene...";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::unstash_scene...";
     clear_selection();
 
     slot_clear_background();
@@ -955,7 +956,7 @@ void DrawingScene::unstash_scene() {
         addItem(item);
     }
     _stash.stash.clear();
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::unstash_scene... done";
 }
 
@@ -964,7 +965,7 @@ void DrawingScene::unstash_scene() {
 // set background pixmap
 //
 void DrawingScene::slot_set_background(QPixmap px) {
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_set_background";
     slot_clear_background();
     if (px.isNull()) return;
@@ -980,7 +981,7 @@ void DrawingScene::slot_set_background(QPixmap px) {
 // remove background pixmap, if there is any
 //
 void DrawingScene::slot_clear_background() {
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_clear_background";
     if (_background_item) {
         removeItemSafely(_background_item);
@@ -1044,7 +1045,7 @@ void DrawingScene::init_tool() {
 // moves a scene into _saved_scenes, under id 'id'
 //
 void DrawingScene::slot_save_scene(int id) {
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_save_scene" << id;
 
     clear_selection();
@@ -1101,14 +1102,14 @@ void DrawingScene::slot_save_scene(int id) {
 // the undo records in _saved_scenes
 //
 void DrawingScene::slot_restore_scene(int id) {
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_restore_scene" << id;
 
     clear_selection();
     // find the stored scene, and return if it does not exist
     auto it = _saved_scenes.find(id);
     if (it == _saved_scenes.end()) {
-        if (_verbosity >= VerboseLow) std::cerr << "- scene not found !\n";
+        if (Verbosity::get() >= VerboseLow) std::cerr << "- scene not found !\n";
         return;
     }
 
@@ -1149,13 +1150,13 @@ void DrawingScene::slot_restore_scene(int id) {
 // delete a scene, cannot be undone
 //
 void DrawingScene::slot_delete_scene(int id) {
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_delete_scene" << id;
 
     // find the stored scene, and return if it does not exist
     auto it = _saved_scenes.find(id);
     if (it == _saved_scenes.end()) {
-        if (_verbosity >= VerboseLow) std::cerr << "ERROR: scene not found !\n";
+        if (Verbosity::get() >= VerboseLow) std::cerr << "ERROR: scene not found !\n";
         return;
     }
 
@@ -1173,7 +1174,7 @@ void DrawingScene::slot_delete_scene(int id) {
 // remove everything, cannot be undone
 //
 void DrawingScene::clear_scene() {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::slot_clear_scene";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::slot_clear_scene";
 
     clearSelection();
 
@@ -1201,7 +1202,7 @@ void DrawingScene::clear_scene() {
 // start a new scene
 //
 void DrawingScene::slot_new() {
-    if (_verbosity >= VerboseAll) qDebug() << "DrawingScene::slot_new";
+    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::slot_new";
 
     slot_save_scene(_current_scene);
     _current_scene = new_scene_id();
@@ -1214,7 +1215,7 @@ void DrawingScene::slot_new() {
 // change the color
 //
 void DrawingScene::slot_set_color(const QColor &color) {
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_set_color" << color;
 
     _settings.color = color;
@@ -1292,10 +1293,10 @@ void DrawingScene::slot_setup() {
 // undoable.
 
 void DrawingScene::slot_add_rect(const QRectF &rect, int radius) {
-    if (_verbosity >= VerboseAll)
+    if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_add_rect" << rect;
     auto *rectitem = new GfxRect(
-        nullptr, _settings.color, _settings.width, radius, _verbosity);
+        nullptr, _settings.color, _settings.width, radius);
     addItem(rectitem);
     rectitem->setData(GfxItem::KeyID, Tools::generate_ID());
     rectitem->start(rect.topLeft());

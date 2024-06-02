@@ -23,6 +23,7 @@
 #include "gfxtext.h"
 #include "string_format.h"
 #include "utility.h"
+#include "verbosity.h"
 
 #include <QDebug>
 #include <QPainter>
@@ -31,21 +32,22 @@
 
 // GfxText::GfxText
 //
-GfxText::GfxText(QGraphicsItem* parent,
-                       const QColor& color,
-                 QFont font, int verbosity) :
+GfxText::GfxText(QGraphicsItem* parent, const QColor& color, QFont font) :
     GfxItem(parent) {
     _size = font.pointSizeF();
     _color = color;
     _crsr_pos = 0;
     _font = font;
-    set_verbosity(verbosity);
     setFlag(QGraphicsItem::ItemIsSelectable);
-    if (verbosity >= VerboseAll) { qDebug() << "GfxText created @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxText created @" << this;
+    }
 }
 
 GfxText::~GfxText() {
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxText deleted @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxText deleted @" << this;
+    }
 }
 
 
@@ -295,7 +297,7 @@ GfxUndoText::~GfxUndoText() {}
 // GfxUndoText::create_from_undo_item
 //
 GfxItem* GfxUndoText::create_from_undo_item() const {
-    GfxText* ktext = new GfxText(nullptr, color, font, verbosity);
+    GfxText* ktext = new GfxText(nullptr, color, font);
     ktext->setData(GfxText::KeyID, id);
     ktext->set_path(path);
     return ktext;

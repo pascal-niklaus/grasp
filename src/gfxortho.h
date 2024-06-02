@@ -47,8 +47,7 @@ class GfxOrtho : public GfxArrowItem {
                       double snap,
                       double radius,
                       double minlen,
-                      double maxangle,
-                      int verbosity);
+                      double maxangle);
     ~GfxOrtho();
 
     // ----- GfxItem methods

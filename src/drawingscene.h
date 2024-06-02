@@ -208,7 +208,6 @@ class DrawingScene : public QGraphicsScene {
     int new_scene_id(void);
 
   private:
-    int _verbosity;
     QSettings &_qset;
     Settings _settings;
     GfxDash *_dash;

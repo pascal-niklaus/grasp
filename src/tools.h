@@ -129,7 +129,7 @@ namespace Tools {
 // factory function
 //
 [[nodiscard("the returned item needs to be deleted later")]]
-    QGraphicsItem* create_tool(const Settings& settings, int _verbosity);
+    QGraphicsItem* create_tool(const Settings& settings);
 
 int generate_ID(void);
 

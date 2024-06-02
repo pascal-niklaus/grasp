@@ -23,14 +23,15 @@
 #include "mainwindow.h"
 #include "singletonapplication.h"
 #include "dbus.h"
+#include "settings.h"
+#include "verbosity.h"
+#include "utility.h"
 
 #include <QCryptographicHash>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QCommandLineParser>
 #include <QSettings>
-
-#include "settings.h"
 
 #include <iostream>
 #include <memory>
@@ -157,9 +158,10 @@ int main(int argc, char* argv[]) {
     } else {
         bool ok;
         int verbosity = parser.value(verboseOption).toInt(&ok);
-        if (!ok) {
+        if (ok) {
+          Verbosity::set(cap<int>(verbosity,0,10));
+        } else {
             std::cerr << "Illegal verbosity value, turning off\n";
-            verbosity = 0;
         }
 
         QSettings* qs;
@@ -170,8 +172,7 @@ int main(int argc, char* argv[]) {
         }
 
         Message msg(&a);
-        msg.set_verbose(verbosity > 0);
-        MainWindow w(*qs, verbosity);
+        MainWindow w(*qs);
 
         // ------------ connect DBus messages to signales ------------
 

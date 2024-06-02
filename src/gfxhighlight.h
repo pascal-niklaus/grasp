@@ -44,8 +44,7 @@ class GfxHighlight : public GfxPath {
                  ArrowType atype,
                  double arrowsize,
                  double sustain,
-                 double fade,
-                 int verbosity);
+                 double fade);
     ~GfxHighlight();
 
     // ----- GfxItem methods

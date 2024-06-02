@@ -22,6 +22,7 @@
 
 #include "gfxhighlight.h"
 #include "utility.h"
+#include "verbosity.h"
 
 #include <chrono>
 
@@ -37,19 +38,18 @@ GfxHighlight::GfxHighlight(QGraphicsItem* parent,
                            ArrowType arrowtype,
                            double arrowsize,
                            double sustain,
-                           double fade,
-                           int verbosity) :
-    GfxPath(parent, color, width, ARROW_NONE, arrowsize, 0.0) {
+                           double fade) :
+    GfxPath(parent, color, width, ARROW_NONE, arrowsize) {
     _sustain_secs = sustain;
     _fading_secs = fade;
     update_time();
     setOpacity(0.5);
-    set_verbosity(verbosity);
-    if (_verbosity >= VerboseAll) { qDebug() << "GfxHighlight created @" << this; }
+    if (Verbosity::get() >= VerboseAll) {
+        qDebug() << "GfxHighlight created @" << this;
+    }
 }
-
 GfxHighlight::~GfxHighlight() {
-    if (_verbosity >= VerboseAll) {
+    if (Verbosity::get() >= VerboseAll) {
         qDebug() << "GfxHighlight deleted @" << this;
     }
 }
@@ -144,8 +144,7 @@ GfxItem* GfxUndoHighlight::create_from_undo_item() const {
                                             arrow_type,
                                             arrow_size,
                                             1,
-                                            1,
-                                            verbosity);
+                                            1);
     kfader->setData(GfxHighlight::KeyID, id);
     kfader->set_path(xy_path);
     kfader->set_faded(faded);

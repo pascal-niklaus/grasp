@@ -40,8 +40,7 @@ class GfxRect : public GfxItem {
     GfxRect(QGraphicsItem* parent,
             const QColor& color,
             double width,
-            double radius,
-            int verbosity);
+            double radius);
     ~GfxRect();
 
     // ----- GfxItem methods
