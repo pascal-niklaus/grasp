@@ -188,39 +188,39 @@ bool DrawingScene::event(QEvent *event) {
     switch (event->type()) {
             // ------------- tablet press, move, release -------------
 
-        case QEvent::TabletPress: {
-            QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-            QPointF p = ev->scenePosition();
-            double pressure = ev->pressure();
-            Q_UNUSED(pressure);
-            const auto mods = ev->modifiers();
-            const auto buttons = ev->buttons();
-            emit pointerPressed(p, buttons, mods);
-            ev->accept();
-            return true;
-        }
+        // case QEvent::TabletPress: {
+        //     QTabletEvent *ev = static_cast<QTabletEvent *>(event);
+        //     QPointF p = ev->scenePosition();
+        //     double pressure = ev->pressure();
+        //     Q_UNUSED(pressure);
+        //     const auto mods = ev->modifiers();
+        //     const auto buttons = ev->buttons();
+        //     emit pointerPressed(p, buttons, mods);
+        //     ev->accept();
+        //     return true;
+        // }
 
-        case QEvent::TabletMove: {
-            QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-            QPointF p = ev->scenePosition();
-            double pressure = ev->pressure();
-            Q_UNUSED(pressure);
-            const auto mods = ev->modifiers();
-            emit pointerMoved(p, mods);
-            ev->accept();
-            return true;
-        }
+        // case QEvent::TabletMove: {
+        //     QTabletEvent *ev = static_cast<QTabletEvent *>(event);
+        //     QPointF p = ev->scenePosition();
+        //     double pressure = ev->pressure();
+        //     Q_UNUSED(pressure);
+        //     const auto mods = ev->modifiers();
+        //     emit pointerMoved(p, mods);
+        //     ev->accept();
+        //     return true;
+        // }
 
-        case QEvent::TabletRelease: {
-            QTabletEvent *ev = static_cast<QTabletEvent *>(event);
-            QPointF p = ev->scenePosition();
-            double pressure = ev->pressure();
-            Q_UNUSED(pressure);
-            const auto mods = ev->modifiers();
-            emit pointerReleased(p, mods);
-            ev->accept();
-            return true;
-        }
+        // case QEvent::TabletRelease: {
+        //     QTabletEvent *ev = static_cast<QTabletEvent *>(event);
+        //     QPointF p = ev->scenePosition();
+        //     double pressure = ev->pressure();
+        //     Q_UNUSED(pressure);
+        //     const auto mods = ev->modifiers();
+        //     emit pointerReleased(p, mods);
+        //     ev->accept();
+        //     return true;
+        // }
 
             // ---------------- key press and release ----------------
 
