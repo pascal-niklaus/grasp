@@ -23,6 +23,7 @@
 #include "tools.h"
 
 #include <QSettings>
+#include <QDebug>
 #include <cassert>
 
 #include "gfxfader.h"
@@ -293,6 +294,8 @@ void Settings::store(QSettings &qs) const {
     qs.setValue("arrow-none", to_string(arrow_none_key));
     qs.setValue("size", arrow_size);
 
+    qs.endGroup();
+
     // ------------------------ tool options -------------------------
 
     qs.beginGroup("Tools");
@@ -454,6 +457,7 @@ bool Settings::retrieve(QSettings &qs) {
     // ---------------- color and their shortcut keys ----------------
 
     qs.beginGroup("Colors");
+
     for (int i = 0; i < static_cast<int>(color_table.size()); i++) {
         Color &col = color_table[i];
         qs.beginGroup(QString("%1").arg(i, 2, 10, QChar('0')));

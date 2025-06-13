@@ -794,4 +794,3 @@ void SettingsDialog::slot_clicked(QAbstractButton *button) {
 void SettingsDialog::slot_reject() {
     reject();
 }
-

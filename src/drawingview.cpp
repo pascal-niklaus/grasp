@@ -38,6 +38,9 @@ DrawingView::DrawingView(DrawingScene *scene, int verbosity, QWidget *parent) :
     // setCacheMode(QGraphicsView::CacheBackground);
     // setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
 
+    // PAN: Hack hoping to fix issues:
+    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+
     setAlignment(Qt::AlignLeft | Qt::AlignTop);
 
     QPixmap px;

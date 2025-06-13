@@ -46,6 +46,7 @@
 //
 MainWindow::MainWindow(QSettings &qset, int verbosity, QWidget *parent) :
     QMainWindow(parent) {
+
     // graphics scene
     _scene = new DrawingScene(qset, verbosity);
     _view = new DrawingView(_scene, verbosity);
