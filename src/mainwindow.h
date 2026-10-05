@@ -35,6 +35,7 @@ class QGraphicsView;
 class QGraphicsOpacityEffect;
 class QTimer;
 class PipewireScreenshot;
+class GlobalShortcutPortal;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -96,6 +97,7 @@ class MainWindow : public QMainWindow {
     QTimer *_snapshot_timer = nullptr;
     bool _use_portal = false;
     PipewireScreenshot *_portal = nullptr;
+    GlobalShortcutPortal *_global_shortcuts = nullptr;
     GrabKind _pending_grab = GrabKind::None;
 
     QGraphicsOpacityEffect *_transparency_effect = nullptr;

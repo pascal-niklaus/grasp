@@ -33,6 +33,7 @@ DrawingView::DrawingView(DrawingScene *scene, int verbosity, QWidget *parent) :
   QGraphicsView(scene, parent) , _scene(scene) {
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setFocusPolicy(Qt::StrongFocus);
 
     connect(scene, &DrawingScene::tool_changed, this, &DrawingView::slot_tool_changed);
     // setCacheMode(QGraphicsView::CacheBackground);

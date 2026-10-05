@@ -31,6 +31,7 @@
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QCommandLineParser>
+#include <QDebug>
 #include <QSettings>
 
 #include <iostream>
@@ -89,6 +90,8 @@ Another alternative is to use 'dbus-send':
 // ------------------------------ main -------------------------------
 
 int main(int argc, char* argv[]) {
+    QGuiApplication::setDesktopFileName("grasp");
+
     QString key =
         QCryptographicHash::hash(argv[0], QCryptographicHash::Md5).toHex();
     SingletonApplication a(argc, argv, key);
@@ -131,6 +134,12 @@ int main(int argc, char* argv[]) {
     QCommandLineOption dbusOption(
         "help-dbus", "show detailed help about using the dbus interface");
     parser.addOption(dbusOption);
+
+    QCommandLineOption portalOnlyOption(
+        "portal-only",
+        "for testing: ignores D-Bus toggle/grabnew so only the "
+        "GlobalShortcuts-portal-assigned shortcut can trigger them");
+    parser.addOption(portalOnlyOption);
 
     parser.process(a);
 
@@ -183,12 +192,24 @@ int main(int argc, char* argv[]) {
                          &w, &MainWindow::slot_show);
         QObject::connect(&msg, &Message::hide_received,
                          &w, &MainWindow::slot_hide);
-        QObject::connect(&msg, &Message::toggle_received,
-                         &w, &MainWindow::slot_toggle);
+        if (parser.isSet(portalOnlyOption)) {
+            if (QGuiApplication::platformName() == "wayland") {
+                qWarning() << "--portal-only: D-Bus toggle/grabnew disabled; use "
+                              "the GlobalShortcuts-portal-assigned shortcut instead";
+            } else {
+                qWarning() << "--portal-only: D-Bus toggle/grabnew disabled, but "
+                              "GlobalShortcuts is Wayland-only -- there is no "
+                              "replacement trigger on this platform ("
+                           << QGuiApplication::platformName() << ")";
+            }
+        } else {
+            QObject::connect(&msg, &Message::toggle_received,
+                             &w, &MainWindow::slot_toggle);
+            QObject::connect(&msg,&Message::grabnew_received,
+                             &w, &MainWindow::slot_grab_and_new);
+        }
         QObject::connect(&msg, &Message::grab_received,
                          &w, &MainWindow::slot_grab);
-        QObject::connect(&msg,&Message::grabnew_received,
-                         &w, &MainWindow::slot_grab_and_new);
         QObject::connect(&msg, &Message::color_received,
                          &w, &MainWindow::slot_change_color);
         QObject::connect(&msg, &Message::tool_received,

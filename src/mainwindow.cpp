@@ -23,6 +23,8 @@
 #include "drawingscene.h"
 #include "drawingview.h"
 #include "mainwindow.h"
+#include <qlogging.h>
+#include "globalshortcutportal.h"
 #include "pipewirescreenshot.h"
 #include "screenres.h"
 #include "verbosity.h"
@@ -71,6 +73,23 @@ MainWindow::MainWindow(QSettings &qset, int verbosity, QWidget *parent) :
                 &MainWindow::slot_portal_grab_finished);
         connect(_portal, &PipewireScreenshot::failed, this,
                 &MainWindow::slot_portal_grab_failed);
+
+        _global_shortcuts = new GlobalShortcutPortal(qset, this);
+        connect(_global_shortcuts, &GlobalShortcutPortal::activated, this,
+                [this](const QString &id) {
+                    if (id == "toggle") slot_toggle();
+                    else if (id == "grabnew") slot_grab_and_new();
+                });
+        connect(_global_shortcuts, &GlobalShortcutPortal::bind_failed, this,
+                [](const QString &reason) {
+                    qWarning() << "global shortcut portal unavailable, "
+                                  "D-Bus toggle/grabnew remain the only triggers:"
+                               << reason;
+                });
+        _global_shortcuts->bind({
+            {QStringLiteral("toggle"), tr("Show/hide Grasp")},
+            {QStringLiteral("grabnew"), tr("Grasp: new scene and grab screen")},
+        });
     } else {
         qDebug() << "we are on X11";
     }
@@ -291,6 +310,9 @@ void MainWindow::slot_toggle() {
                        Qt::WindowStaysOnTopHint);
         setWindowState(Qt::WindowMaximized | Qt::WindowFullScreen);
         show();
+        raise();
+        activateWindow();
+        _view->setFocus(Qt::ActiveWindowFocusReason);
     }
     _on_top = !_on_top;
 }
