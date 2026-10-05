@@ -81,7 +81,7 @@ class MainWindow : public QMainWindow {
     DrawingView *_view = nullptr;
 
     bool _on_top = true;
-    double _opacity;
+    double _opacity = 1.0;
     QRect _screen_rect;
     QRect _shot_rect;
     double _pixel_ratio = 1.0;

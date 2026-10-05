@@ -44,6 +44,6 @@ void SelectFont::slot_chose_font() {
 }
 
 void SelectFont::set_display_size_range(double min, double max) {
-    _max_display_size = min;
+    _min_display_size = min;
     _max_display_size = max;
 }

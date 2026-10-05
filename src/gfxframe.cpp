@@ -70,12 +70,13 @@ GfxFrame::GfxFrame(QGraphicsItem* parent,
 }
 
 GfxFrame::~GfxFrame() {
-    delete _move_handle;
-    for (int i = 0; i < 4; i++) {
-        delete _rot_handle[i];
-        delete _iso_handle[i];
-        delete _aniso_handle[i];
-    }
+    // _move_handle, _rot_handle[], _iso_handle[] and _aniso_handle[] are
+    // all QGraphicsItem children of this item (using this as parent)
+
+    // the QGraphicsItem destructor removes them from the scene and
+    // deletes them. Deleting them here would free them twice in case
+    // they would have been already removed by
+    // DrawingScene::removeItemSafely().
 }
 
 // GfxFrame::setCaps

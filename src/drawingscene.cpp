@@ -579,7 +579,7 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
                                                 tr("PNG images (*.png)"));
                                         if (!filename.isEmpty()) {
                                             QFileInfo fi(filename);
-                                            if (fi.suffix().toLower() != ".png")
+                                            if (fi.suffix().toLower() != "png")
                                                 filename += ".png";
                                             bool visibility =
                                                 _dash->isVisible();
@@ -680,6 +680,10 @@ bool DrawingScene::handle_transformation_clicks(const QPointF &p) {
     return false;
 }
 
+auto safe_ratio = [](double num, double denom) {
+    return denom != 0.0 ? num / denom : 1.0;
+};
+
 void DrawingScene::handle_transformation_move(const QPointF &p,
                                               Qt::KeyboardModifiers mods) {
     QPointF delta = p - _trans.pos_start;
@@ -690,14 +694,18 @@ void DrawingScene::handle_transformation_move(const QPointF &p,
         _trans.m.translate(delta.x(), delta.y());
     } else if (_trans.handle & GfxFrame::POS_ISOSCALE) {
         delta += (_trans.pos_cur - _trans.pos_ref);
-        double kx = (delta.x() / (_trans.pos_cur.x() - _trans.pos_ref.x()));
-        double ky = (delta.y() / (_trans.pos_cur.y() - _trans.pos_ref.y()));
+        double kx =
+            safe_ratio(delta.x(), _trans.pos_cur.x() - _trans.pos_ref.x());
+        double ky =
+            safe_ratio(delta.y(), (_trans.pos_cur.y() - _trans.pos_ref.y()));
         if (mods & Qt::ShiftModifier) { kx = ky = max<double>(kx, ky); }
         _trans.m.scale(kx, ky);
     } else if (_trans.handle & GfxFrame::POS_ANISOSCALE) {
         delta += (_trans.pos_cur - _trans.pos_ref);
-        double kx = delta.x() / (_trans.pos_cur.x() - _trans.pos_ref.x());
-        double ky = delta.y() / (_trans.pos_cur.y() - _trans.pos_ref.y());
+        double kx =
+            safe_ratio(delta.x(), _trans.pos_cur.x() - _trans.pos_ref.x());
+        double ky =
+            safe_ratio(delta.y(), _trans.pos_cur.y() - _trans.pos_ref.y());
         auto which = _trans.handle & GfxFrame::POS_WHICHMASK;
         if (which == GfxFrame::POS_LEFT || which == GfxFrame::POS_RIGHT)
             ky = 1.0;
@@ -817,7 +825,6 @@ void DrawingScene::redo() {
 void DrawingScene::garbage_collect() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::garbage_collect";
     int last_n = 0;
-    return;
     for (;;) {
         int new_n =
             _undo_store.size() + _undo_records.size() + _redo_records.size();
@@ -862,31 +869,20 @@ void DrawingScene::garbage_collect() {
 
 // DrawingScene::removeItemSafely
 //
-// remove an item from the scene, first deleting all childs, and
-// finally the item itself. Removing the item directly caused crashes,
-// not sure why, but this works.
+// item->childItems() must not be deleted, because QGraphicsItem's
+// destructor already removes all children
 //
 void DrawingScene::removeItemSafely(QGraphicsItem *item) {
-    static int rem_level = 0;
-    rem_level++;
     if (Verbosity::get() >= VerboseAll) {
-        qDebug() << "DrawingScene::removeItemSafely..."
-                 << "level =" << rem_level << item;
-
-        if (item->childItems().size())
-            qDebug() << "- removing" << item->childItems().size() << "children";
+        qDebug() << "DrawingScene::removeItemSafely..." << item;
     }
-
-    while (item->childItems().size() > 0)
-        removeItemSafely(item->childItems().first());
 
     removeItem(item);
     delete item;
+
     if (Verbosity::get() >= VerboseAll) {
-        qDebug() << "DrawingScene::removeItemSafely level =" << rem_level
-                 << "done ";
+        qDebug() << "DrawingScene::removeItemSafely done";
     }
-    rem_level--;
 }
 
 // DrawingScene::slot_pixmap

@@ -106,8 +106,9 @@ void GfxRect::move(const QPointF& p, Qt::KeyboardModifiers mods, double pressure
         auto w = p.x() - x0;
         auto h = p.y() - y0;
         if (fabs(w) > fabs(h))
-            h = sign(h) * fabs(w);
-        else w = sign(w)*fabs(h);
+            h = (h < 0 ? -1.0 : 1.0) * fabs(w);
+        else
+            w = (w < 0 ? -1.0 : 1.0) * fabs(h);
         _rect.setBottomRight(QPointF(x0 + w, y0 + h));
     } else {
         _rect.setBottomRight(p);
