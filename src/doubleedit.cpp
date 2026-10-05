@@ -26,6 +26,7 @@
 
 DoubleEdit::DoubleEdit(QWidget *parent) : QLineEdit(parent) {
     _validator = new QDoubleValidator(this);
+    setValidator(_validator);
 }
 
 void DoubleEdit::set_range(double low, double high, int decimals) {

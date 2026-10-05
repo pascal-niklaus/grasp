@@ -27,6 +27,7 @@
 
 IntEdit::IntEdit(QWidget *parent) : QLineEdit(parent) {
     _validator = new QIntValidator(this);
+    setValidator(_validator);
 }
 
 void IntEdit::set_range(int low, int high) {
