@@ -141,6 +141,7 @@ QGraphicsItem *Tools::create_tool(const Settings &settings) {
         case TOOL_PIXMAP: {
             auto *image = new GfxPixmap(nullptr, settings.color, 2);
             image->setData(GfxItem::KeyID, generate_ID());
+            image->setZValue(501.0);  // above the partial-grab overlay (z=500) while dragging
             return image;
         }
 
@@ -148,7 +149,7 @@ QGraphicsItem *Tools::create_tool(const Settings &settings) {
             std::cerr << "Tools::create_tool: unknown tool " << settings.tool
                       << std::endl;
             assert(false);
-            // return nullptr;
+            return nullptr;
     }
 }
 

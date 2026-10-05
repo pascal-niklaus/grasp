@@ -522,6 +522,22 @@ void DrawingScene::clear_selection() {
     update_selection_frame();
 }
 
+// DrawingScene::abort_current_item
+//
+// removes/deletes _current_item if an item creation/edit is in
+// progress, and clears the pointer
+//
+// must be called before any item removal (e.g. clear_scene), because
+// an event arriving afterwards (e.g. mouse button release) would
+// dereference an already freed item.
+//
+void DrawingScene::abort_current_item() {
+    if (_current_item) {
+        removeItemSafely(_current_item);
+        _current_item = nullptr;
+    }
+}
+
 // DrawingScene::handle_selection_clicks
 //
 // handle item selection / deselection
@@ -923,15 +939,20 @@ void DrawingScene::stash_scene() {
         _stash.background = QPixmap();
     }
 
+    // collect the items to remove first: removeItemSafely() deletes items
+    // (and their children), so we must not delete while still iterating
+    // the items() snapshot, since it also contains those children as
+    // separate entries and would leave dangling pointers in the list.
+    QList<GfxItem *> to_remove;
     for (auto &it : items()) {
-        if (it->type() > GFX_SELECTABLE) {
-            GfxItem *kitem = static_cast<GfxItem *>(it);
-            auto id = kitem->data(GfxItem::KeyID).toInt();
-            GfxUndoItem *undo_item = kitem->create_undo_item();
-            kitem->pgc();
-            removeItemSafely(kitem);
-            _stash.stash.insert({id, undo_item});
-        }
+        if (it->type() > GFX_SELECTABLE) to_remove.append(static_cast<GfxItem *>(it));
+    }
+    for (auto *kitem : to_remove) {
+        auto id = kitem->data(GfxItem::KeyID).toInt();
+        GfxUndoItem *undo_item = kitem->create_undo_item();
+        kitem->pgc();
+        removeItemSafely(kitem);
+        _stash.stash.insert({id, undo_item});
     }
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::stash_scene... done";
@@ -993,20 +1014,26 @@ void DrawingScene::slot_clear_background() {
 void DrawingScene::slot_dynamic_updates() {
     bool any_remaining = false;
     bool selected_deleted = false;
+
+    // collect all items to remove before deleting because otherwise
+    // children would be removed while iterating.
+    QList<GfxItem *> to_remove;
     for (auto &it : items()) {
         if (it->type() > GFX_SELECTABLE) {
             GfxItem *kitem = static_cast<GfxItem *>(it);
             if (kitem->caps() & CAP_DYNAMIC) {
                 any_remaining = true;
                 auto result = kitem->dynamic();
-                if (result == GfxItem::DYN_DELITEM) {
-                    if (_selected_items.contains(kitem))
-                        selected_deleted = true;
-                    kitem->pgc();
-                    removeItemSafely(kitem);
-                }
+                // never delete item currently being drawn:
+                if (result == GfxItem::DYN_DELITEM && kitem != _current_item)
+                    to_remove.append(kitem);
             }
         }
+    }
+    for (auto *kitem : to_remove) {
+        if (_selected_items.contains(kitem)) selected_deleted = true;
+        kitem->pgc();
+        removeItemSafely(kitem);
     }
     if (any_remaining == false) _dyn_tick->stop();
     if (selected_deleted) update_selection_frame();
@@ -1044,6 +1071,7 @@ void DrawingScene::slot_save_scene(int id) {
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_save_scene" << id;
 
+    abort_current_item();
     clear_selection();
 
     {  // delete saved scene if it already exists
@@ -1077,15 +1105,19 @@ void DrawingScene::slot_save_scene(int id) {
     _undo_store.clear();
 
     // construct records in gfxitems
+    //
+    // collect all items to remove before deleting because otherwise
+    // children would be removed while iterating.
+    QList<GfxItem *> to_remove;
     for (auto &it : items()) {
-        if (it->type() > GFX_SELECTABLE) {
-            GfxItem *kitem = static_cast<GfxItem *>(it);
-            auto id = kitem->data(GfxItem::KeyID).toInt();
-            GfxUndoItem *undo_item = kitem->create_undo_item();
-            kitem->pgc();
-            removeItemSafely(kitem);
-            scene.gfxitems.insert({id, undo_item});
-        }
+        if (it->type() > GFX_SELECTABLE) to_remove.append(static_cast<GfxItem *>(it));
+    }
+    for (auto *kitem : to_remove) {
+        auto id = kitem->data(GfxItem::KeyID).toInt();
+        GfxUndoItem *undo_item = kitem->create_undo_item();
+        kitem->pgc();
+        removeItemSafely(kitem);
+        scene.gfxitems.insert({id, undo_item});
     }
 
     // insert everything into map with saved scenes
@@ -1172,7 +1204,9 @@ void DrawingScene::slot_delete_scene(int id) {
 void DrawingScene::clear_scene() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::slot_clear_scene";
 
+    abort_current_item();
     clearSelection();
+    update_selection_frame();  // clears _selected_items to match
 
     // remove background, if any
     if (_background_item) slot_clear_background();
@@ -1184,12 +1218,16 @@ void DrawingScene::clear_scene() {
     _undo_records.clear();
 
     // remove all items
+    //
+    // collect all items to remove before deleting because otherwise
+    // children would be removed while iterating.
+    QList<GfxItem *> to_remove;
     for (auto &it : items()) {
-        if (it->type() > GFX_SELECTABLE) {
-            GfxItem *kitem = static_cast<GfxItem *>(it);
-            kitem->pgc();
-            removeItemSafely(kitem);
-        }
+        if (it->type() > GFX_SELECTABLE) to_remove.append(static_cast<GfxItem *>(it));
+    }
+    for (auto *kitem : to_remove) {
+        kitem->pgc();
+        removeItemSafely(kitem);
     }
 }
 

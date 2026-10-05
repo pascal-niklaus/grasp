@@ -192,6 +192,8 @@ class DrawingScene : public QGraphicsScene {
     void garbage_collect();
     void init_tool();
 
+    void abort_current_item();
+
     GfxItem *find_item(int id) const;
 
     bool handle_dash_clicks(const QPointF &p,
@@ -215,7 +217,7 @@ class DrawingScene : public QGraphicsScene {
 
     QGraphicsItem *_current_item = nullptr;
     QGraphicsPixmapItem *_background_item = nullptr;
-    ToolType _pre_grab_tool;
+    ToolType _pre_grab_tool = TOOL_PEN;
 
     bool _feed_keystrokes = false;
     QTimer *_dyn_tick = nullptr;

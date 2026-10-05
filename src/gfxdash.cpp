@@ -416,10 +416,10 @@ void GfxDash::remove_scene(int id) {
 }
 
 void GfxDash::clear_scenes() {
-    while (_scenes.size()) {
-        prepareGeometryChange();
-        delete _scenes.begin()->second;
-    }
+      if (_scenes.empty()) return;
+      prepareGeometryChange();
+      for (auto &item : _scenes) delete item.second;
+      _scenes.clear();
 }
 
 void GfxDash::reposition_scenes() {
