@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Grasp
+GenericName=Screen Annotation Tool
+Comment=Grab the screen and sketch on top during presentations
+Exec=grasp
+Icon=grasp
+Terminal=false
+Categories=Graphics;Utility;
+StartupNotify=true

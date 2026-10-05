@@ -21,6 +21,7 @@
  */
 
 #include "drawingscene.h"
+#include <qlogging.h>
 #include "verbosity.h"
 
 #include <QApplication>
@@ -81,10 +82,16 @@ DrawingScene::DrawingScene(QSettings &qset, int verbosity, QObject *parent) :
     _dyn_tick = new QTimer();
     _dyn_tick->setInterval(100);  // 100 milliseconds
 
+    // partial-grab timeout
+    _partial_grab_timer = new QTimer();
+    _partial_grab_timer->setSingleShot(true);
+
     // clang-format off
     connect(_dyn_tick, &QTimer::timeout,
             this, &DrawingScene::slot_dynamic_updates,
             Qt::QueuedConnection);
+    connect(_partial_grab_timer, &QTimer::timeout,
+            this, &DrawingScene::slot_grab_failed);
     connect(this, &DrawingScene::pointerPressed,
             this, &DrawingScene::slot_pointerPressed,
             Qt::QueuedConnection);
@@ -145,6 +152,7 @@ DrawingScene::~DrawingScene() {
 
     delete _rmb_menu;
     delete _dyn_tick;
+    delete _partial_grab_timer;
 }
 
 void DrawingScene::slot_reposition_dash(int width) {
@@ -367,9 +375,30 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
                     // special case of text item: keep item after mouse released
                     break;
                 case GFX_PIXMAP: {
+                    // crop selected from full-screen overlay
                     GfxPixmap *kpixmap = static_cast<GfxPixmap *>(kitem);
-                    const QRect rect = kpixmap->sel_rect().toRect();
-                    emit take_partial_screenshot(rect);
+                    QPixmap cropped;
+                    // the selection must be cropped to the scene
+                    // dimensions since the mouse movement can reach
+                    // e.g. onto a 2nd screen
+                    const QRectF placement =
+                        kpixmap->sel_rect().normalized().intersected(sceneRect());
+                    if (_grab_overlay) {
+                        const QPixmap &src = _grab_overlay->pixmap();
+                        const qreal raw_scale = sceneRect().width() > 0
+                                                     ? src.width() / sceneRect().width()
+                                                     : 1.0;
+                        const QRect raw_rect =
+                            QRectF(placement.x() * raw_scale, placement.y() * raw_scale,
+                                   placement.width() * raw_scale,
+                                   placement.height() * raw_scale)
+                                .toRect();
+                        cropped = src.copy(raw_rect);
+                    }
+                    kpixmap->set_pixmap(cropped, placement);
+                    _current_item = nullptr;
+                    abort_partial_grab();
+                    slot_set_tool(_pre_grab_tool);
                 } break;
 
                 default:
@@ -383,6 +412,12 @@ void DrawingScene::slot_pointerReleased(QPointF p, Qt::KeyboardModifiers mods) {
 //
 void DrawingScene::slot_keyPressed(QKeyCombination kc, QString text) {
     kc = SelectKey::canonicalize(kc);
+
+    if (_partial_grab_active && kc != _settings.grab_partial_key) {
+        abort_partial_grab();
+        slot_set_tool(_pre_grab_tool);
+    }
+
     if (kc == _settings.grab_key) {
         emit take_screenshot();
     } else if (kc == _settings.quit_key) {
@@ -404,9 +439,7 @@ void DrawingScene::slot_keyPressed(QKeyCombination kc, QString text) {
     } else if (kc == _settings.arrow_none_key) {
         emit set_arrow(ARROW_NONE);
     } else if (kc == _settings.grab_partial_key) {
-        slot_set_tool(TOOL_PIXMAP);
-        emit set_transparent();
-        stash_scene();
+        start_partial_grab();
     } else if (kc == _settings.dash_key) {
         if (_dash->isVisible())
             _dash->hide();
@@ -574,6 +607,7 @@ bool DrawingScene::handle_dash_clicks(const QPointF &p,
             if (itype > GFX_DASH_MIN && itype < GFX_DASH_MAX) {
                 auto *ditem = static_cast<DashIcon *>(item);
                 if (ditem->contains(ditem->mapFromScene(p))) {
+                    abort_partial_grab();
                     const auto type = ditem->data(GfxItem::KeyDash).toInt() &
                                       DashIcon::DashMask;
                     const auto data = ditem->data(GfxItem::KeyDashAux).toInt();
@@ -901,80 +935,65 @@ void DrawingScene::removeItemSafely(QGraphicsItem *item) {
     }
 }
 
-// DrawingScene::slot_pixmap
+// DrawingScene::slot_grab_failed
 //
-void DrawingScene::slot_pixmap(const QPixmap &pixmap) {
-    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::slot_pixmap";
-
-    if (_current_item) {
-        switch (_current_item->type()) {
-            case GFX_PIXMAP: {
-                GfxPixmap *kpixmap = static_cast<GfxPixmap *>(_current_item);
-                kpixmap->set_pixmap(pixmap, kpixmap->sel_rect());
-                _current_item = nullptr;
-                unstash_scene();
-                slot_set_tool(_pre_grab_tool);
-            } break;
-
-            default: {
-                qDebug() << "DrawingScene::slot_pixmap called, but current "
-                            "item if not a GFX_PIXMAP !";
-            } break;
-        }
-    }
+void DrawingScene::slot_grab_failed() {
+    if (!_partial_grab_active) return;
+    abort_partial_grab();
+    slot_set_tool(_pre_grab_tool);
 }
 
-// DrawingScene::stash_scene
+// DrawingScene::start_partial_grab
 //
-void DrawingScene::stash_scene() {
-    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::stash_scene...";
-
-    clearSelection();
-
-    _stash.stash.clear();
-    if (_background_item) {
-        _stash.background = _background_item->pixmap();
-        slot_clear_background();
-    } else {
-        _stash.background = QPixmap();
-    }
-
-    // collect the items to remove first: removeItemSafely() deletes items
-    // (and their children), so we must not delete while still iterating
-    // the items() snapshot, since it also contains those children as
-    // separate entries and would leave dangling pointers in the list.
-    QList<GfxItem *> to_remove;
-    for (auto &it : items()) {
-        if (it->type() > GFX_SELECTABLE) to_remove.append(static_cast<GfxItem *>(it));
-    }
-    for (auto *kitem : to_remove) {
-        auto id = kitem->data(GfxItem::KeyID).toInt();
-        GfxUndoItem *undo_item = kitem->create_undo_item();
-        kitem->pgc();
-        removeItemSafely(kitem);
-        _stash.stash.insert({id, undo_item});
-    }
-    if (Verbosity::get() >= VerboseAll)
-        qDebug() << "DrawingScene::stash_scene... done";
+// switch to the pixmap tool and grab the full screen, then place it
+// as temporary, high-z overlay. This overlay is later cropped and
+// placed in the background.
+//
+void DrawingScene::start_partial_grab() {
+    if (_partial_grab_active) abort_partial_grab();
+    slot_set_tool(TOOL_PIXMAP);
+    // hide dash so that it can't accidentally be clicked when
+    // selecting the crop regionentirely (rather than just drawing the
+    // overlay under
+    _dash_was_visible = _dash->isVisible();
+    _dash->hide();
+    emit take_screenshot();
+    _partial_grab_active = true;
+    _partial_grab_timer->start(20000);
 }
 
-// DrawingScene::unstash_scene
+// DrawingScene::abort_partial_grab
 //
-void DrawingScene::unstash_scene() {
-    if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::unstash_scene...";
-    clear_selection();
-
-    slot_clear_background();
-    if (!_stash.background.isNull()) slot_set_background(_stash.background);
-
-    for (auto &it : _stash.stash) {
-        GfxItem *item = it.second->create_from_undo_item();
-        delete it.second;
-        addItem(item);
+// cancels a pending partial grab by removing the selection rectangle,
+// if any, and the temporary overlay. Also restore dash.
+//
+void DrawingScene::abort_partial_grab() {
+    if (!_partial_grab_active) return;
+    abort_current_item();
+    if (_grab_overlay) {
+        removeItemSafely(_grab_overlay);
+        _grab_overlay = nullptr;
     }
-    _stash.stash.clear();
-    if (Verbosity::get() >= VerboseAll)
-        qDebug() << "DrawingScene::unstash_scene... done";
+    _partial_grab_timer->stop();
+    _dash->setVisible(_dash_was_visible);
+    _partial_grab_active = false;
+}
+
+// DrawingScene::show_grab_overlay
+//
+// Shows grabbed QPixmap as a temporary full-scene overlay
+//
+void DrawingScene::show_grab_overlay(const QPixmap &px) {
+    if (_grab_overlay) {
+        removeItemSafely(_grab_overlay);
+        _grab_overlay = nullptr;
+    }
+    if (px.isNull()) return;
+    _grab_overlay = addPixmap(px);
+    _grab_overlay->setOffset(0, 0);
+    if (px.width() > 0)
+        _grab_overlay->setScale(sceneRect().width() / px.width());
+    _grab_overlay->setZValue(500.0);
 }
 
 // DrawingScene::slot_set_background
@@ -982,14 +1001,25 @@ void DrawingScene::unstash_scene() {
 // set background pixmap
 //
 void DrawingScene::slot_set_background(QPixmap px) {
+    if (_partial_grab_active) {
+        show_grab_overlay(px);
+        return;
+    }
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "DrawingScene::slot_set_background";
     slot_clear_background();
     if (px.isNull()) return;
     _background_item = addPixmap(px);
     _background_item->setOffset(0, 0);
-    _background_item->setScale(
-        QGuiApplication::primaryScreen()->devicePixelRatio());
+    if (px.width() > 0) {
+        double ratio = sceneRect().width() / px.width();
+        _background_item->setScale(ratio);
+        if (ratio < 0.95 || ratio > 1.05) {
+            qWarning() << "Setting pixmap scale to" << ratio
+                       << "; sceneRect.width =" << sceneRect().width()
+                       << "; QPixmap.width =" << px.width();
+        }
+    }
     _background_item->setZValue(-1000.0);
 }
 
@@ -1037,25 +1067,6 @@ void DrawingScene::slot_dynamic_updates() {
     }
     if (any_remaining == false) _dyn_tick->stop();
     if (selected_deleted) update_selection_frame();
-}
-
-// DrawingScene::init_tool
-//
-// do stuff needed when a new tool is selected.
-//
-void DrawingScene::init_tool() {
-    emit tool_changed(_settings.tool);
-
-    switch (_settings.tool) {
-        case TOOL_PIXMAP: {
-            emit set_transparent();
-            break;
-        }
-        default: {
-            emit set_opaque();
-            break;
-        }
-    }
 }
 
 // ----------------------- save / load scenes ------------------------
@@ -1277,11 +1288,12 @@ void DrawingScene::slot_set_color_from_index(int index) {
 // before; it is later reset when the pixmap was obtained
 //
 void DrawingScene::slot_set_tool(ToolType tool) {
+    if (_partial_grab_active && tool != TOOL_PIXMAP) abort_partial_grab();
     if (tool == TOOL_PIXMAP) {
         if (_settings.tool != TOOL_PIXMAP) _pre_grab_tool = _settings.tool;
     }
     _settings.tool = tool;
-    init_tool();
+    emit tool_changed(_settings.tool);
     clear_selection();
 }
 

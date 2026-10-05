@@ -203,12 +203,11 @@ int main(int argc, char* argv[]) {
 
         // -------------------- set window params --------------------
 
-        w.setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
+        w.setWindowFlags(w.windowFlags() | Qt::FramelessWindowHint |
+                         Qt::WindowStaysOnTopHint);
         w.setStyleSheet("background:transparent;");
-        w.setWindowFlags(Qt::FramelessWindowHint);
+        w.setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
         w.show();
-        // w.setWindowOpacity(1.0);
-        w.setWindowOpacity(0.5);
 
         return a.exec();
     }

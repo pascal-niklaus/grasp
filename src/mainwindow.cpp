@@ -23,11 +23,13 @@
 #include "drawingscene.h"
 #include "drawingview.h"
 #include "mainwindow.h"
+#include "pipewirescreenshot.h"
 #include "screenres.h"
 #include "verbosity.h"
 
 #include <QAction>
 #include <QFile>
+#include <QGraphicsOpacityEffect>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QKeyEvent>
@@ -52,11 +54,27 @@ MainWindow::MainWindow(QSettings &qset, int verbosity, QWidget *parent) :
     _view = new DrawingView(_scene, verbosity);
     setCentralWidget(_view);
 
+    setAttribute(Qt::WA_TranslucentBackground);
+    _transparency_effect = new QGraphicsOpacityEffect(_view);
+    _transparency_effect->setOpacity(1.0);
+    _view->setGraphicsEffect(_transparency_effect);
+
     new ScreenChangeDetector(this);
 
     slot_screen_changed();
 
-    // setup timer for snapshot delay
+    _use_portal = (QGuiApplication::platformName() == "wayland");
+    if (_use_portal) {
+        qDebug() << "we are on Wayland";
+        _portal = new PipewireScreenshot(qset, this);
+        connect(_portal, &PipewireScreenshot::finished, this,
+                &MainWindow::slot_portal_grab_finished);
+        connect(_portal, &PipewireScreenshot::failed, this,
+                &MainWindow::slot_portal_grab_failed);
+    } else {
+        qDebug() << "we are on X11";
+    }
+
     _snapshot_timer = new QTimer(this);
     _snapshot_timer->setSingleShot(true);
     _snapshot_timer->setInterval(10);
@@ -65,20 +83,7 @@ MainWindow::MainWindow(QSettings &qset, int verbosity, QWidget *parent) :
             this,
             &MainWindow::slot_screenshot_step1);
 
-    // setup timer for pixmap grabbing
-    _partial_snapshot_timer = new QTimer(this);
-    _partial_snapshot_timer->setSingleShot(true);
-    _partial_snapshot_timer->setInterval(10);
-
     // clang-format off
-
-    connect(_partial_snapshot_timer, &QTimer::timeout,
-            this, &MainWindow::slot_partial_screenshot_step1);
-    connect(this, &MainWindow::send_pixmap, _scene, &DrawingScene::slot_pixmap);
-
-    connect(_scene, &DrawingScene::take_partial_screenshot,
-            this, &MainWindow::slot_grab_partial);
-
     connect(_scene, &DrawingScene::take_screenshot,
             this, &MainWindow::slot_grab);
 
@@ -87,15 +92,6 @@ MainWindow::MainWindow(QSettings &qset, int verbosity, QWidget *parent) :
 
     connect(_scene, &DrawingScene::toggle,
             this, &MainWindow::slot_toggle);
-
-    connect(_scene, &DrawingScene::set_transparent,
-            [this]() { this->setWindowOpacity(.3); });
-
-    connect(_scene, &DrawingScene::set_opaque,
-            [this]() { this->setWindowOpacity(1); });
-
-    connect(_scene, &DrawingScene::take_screenshot,
-            [this]() { this->slot_grab(); });
 
     connect(_scene, &DrawingScene::quit,
             this, &MainWindow::slot_quit);
@@ -107,7 +103,6 @@ MainWindow::~MainWindow() {
     delete _view;
     delete _scene;
     delete _snapshot_timer;
-    delete _partial_snapshot_timer;
 }
 
 void MainWindow::slot_screen_changed() {
@@ -120,10 +115,12 @@ void MainWindow::slot_screen_changed() {
 }
 
 void MainWindow::slot_quit() {
+    _scene->abort_partial_grab();
     close();
 }
 
 void MainWindow::slot_cycle_opacity() {
+    _scene->abort_partial_grab();
     if (_opacity < 0.5) {
         _opacity = 1.0;
         setStyleSheet("background:black;");
@@ -133,16 +130,22 @@ void MainWindow::slot_cycle_opacity() {
     }
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "MainWindow::slot_cycle_opacity: setting to" << _opacity;
-    setWindowOpacity(_opacity);
+    slot_set_see_through(_opacity);
+}
+
+void MainWindow::slot_set_see_through(double opacity) {
+    if (_transparency_effect) _transparency_effect->setOpacity(opacity);
 }
 
 void MainWindow::slot_undo() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "MainWindow::slot_undo";
+    _scene->abort_partial_grab();
     _scene->undo();
 }
 
 void MainWindow::slot_redo() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "MainWindow::slot_redo";
+    _scene->abort_partial_grab();
     _scene->redo();
 }
 
@@ -152,6 +155,7 @@ void MainWindow::slot_change_color(int index) {
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "MainWindow::slot_chance_color" << index;
 
+    _scene->abort_partial_grab();
     _scene->slot_set_color_from_index(index);
 }
 
@@ -178,7 +182,7 @@ void MainWindow::slot_change_tool(const QString &tool) {
     } else if (tool == "select") {
         _scene->slot_set_tool(TOOL_SELECT);
     } else if (tool == "grab") {
-        _scene->slot_set_tool(TOOL_PIXMAP);
+        _scene->start_partial_grab();
     } else {
         std::cerr << "Unknown tool: " << tool.toStdString();
     }
@@ -188,6 +192,7 @@ void MainWindow::slot_change_arrow(const QString &arrow) {
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "MainWindow::slot_chance_arrow" << arrow;
 
+    _scene->abort_partial_grab();
     if (arrow == "->") {
         _scene->slot_set_arrow(ARROW_END);
     } else if (arrow == "<-") {
@@ -202,24 +207,28 @@ void MainWindow::slot_change_arrow(const QString &arrow) {
 void MainWindow::slot_change_width(int width) {
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "MainWindow::slot_chance_width" << width;
+    _scene->abort_partial_grab();
     if (width > 0 && width < 80) _scene->slot_set_width(width);
 }
 
 void MainWindow::slot_rect(const QRectF& rect, int radius) {
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "MainWindow::slot_rect" << rect;
+    _scene->abort_partial_grab();
     if (_screen_rect.contains(rect.toRect()) && radius >= 0 && radius <= 100)
         _scene->slot_add_rect(rect, radius);
 }
 
 void MainWindow::slot_grab_and_new() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "MainWindow::slot_grab_and_new";
+    _scene->abort_partial_grab();
     _scene->slot_new();
     slot_grab();
 }
 
 void MainWindow::slot_grab() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "MainWindow::slot_grab";
+    _scene->abort_partial_grab();
     hide();
     // 10 ms is too short
     // 50 ms seems to work
@@ -227,36 +236,48 @@ void MainWindow::slot_grab() {
     _snapshot_timer->start(1000 * _scene->grab_delay());
 }
 
-void MainWindow::slot_grab_partial(const QRect &geometry) {
-    if (Verbosity::get() >= VerboseAll)
-        qDebug() << "MainWindow::slot_grab_partial" << geometry;
-    hide();
-    // 10 ms is too short
-    // 50 ms seems to work
-    // we use 100ms for safety
-    _shot_rect = geometry;
-    _partial_snapshot_timer->start(1000 * _scene->grab_delay());
-}
-
 void MainWindow::slot_screenshot_step1() {
-    QPixmap px = screen()->grabWindow();
-    _scene->slot_set_background(px);
-    setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
-    slot_show();
+    if (_use_portal) {
+        _pending_grab = GrabKind::Full;
+        _portal->grab();
+    } else {
+        // grabWindow() takes size in logical pixels, not physical
+        // pixels. Therefore, the device pixel ratio info is reset
+        const QRect logical = screen()->geometry();
+        QPixmap px = screen()->grabWindow(0, 0, 0, logical.width(), logical.height());
+        px.setDevicePixelRatio(1.0);
+        _scene->slot_set_background(px);
+        setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
+        slot_show();
+    }
 }
 
-void MainWindow::slot_partial_screenshot_step1() {
-    QPixmap px = screen()->grabWindow().copy(_shot_rect);
-    qDebug() << "partial " << px.rect();
-    show();
-    setWindowOpacity(1.0);
-    setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
-    emit send_pixmap(px);
+// called when the async portal request in slot_screenshot_step1() has
+// delivered a screenshot
+//
+void MainWindow::slot_portal_grab_finished(const QPixmap &pixmap) {
+    if (_pending_grab == GrabKind::Full) {
+        _scene->slot_set_background(pixmap);
+        setWindowState(Qt::WindowFullScreen | Qt::WindowMaximized);
+        slot_show();
+    }
+    _pending_grab = GrabKind::None;
+}
+
+void MainWindow::slot_portal_grab_failed(const QString &reason) {
+    qWarning() << "screenshot portal request failed:" << reason;
+    _pending_grab = GrabKind::None;
+    _scene->slot_grab_failed();
+    slot_show();
 }
 
 void MainWindow::slot_toggle() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "MainWindow::slot_toggle";
 
+    // no abort_partial_grab() here, since this does not change any
+    // state. Also, this would interfere with the grabbing, during
+    // which the application window is hidden and has to be shown
+    // afterwarde.
     if (_on_top) {
         // ------------------------ hide window ------------------------
         setWindowState(Qt::WindowMinimized);
@@ -292,7 +313,8 @@ void MainWindow::slot_save(const QString &filename) {
     if (Verbosity::get() >= VerboseAll)
         qDebug() << "MainWindow::slot_save" << filename;
 
-    setWindowOpacity(1.0);
+    _scene->abort_partial_grab();
+    slot_set_see_through(1.0);
     setStyleSheet("background:black;");
     QPixmap px(size());
     render(&px);

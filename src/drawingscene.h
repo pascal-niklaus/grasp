@@ -54,16 +54,6 @@ class Transformation {
     QTransform m;
 };
 
-// Stash
-//
-// items temporarily removed during screen grabbing
-//
-class Stash {
-  public:
-    QPixmap background;
-    std::unordered_map<int, GfxUndoItem *> stash;
-};
-
 // SavedScene
 //
 // contains the entire scene including undo/redo history
@@ -116,9 +106,12 @@ class DrawingScene : public QGraphicsScene {
     void undo();
     void tab();
 
-    // stash/unstash during grabbing
-    void stash_scene();
-    void unstash_scene();
+    // begin/abort a partial screen grab: see slot_keyPressed() for the
+    // full explanation. Public so both DrawingScene's own event
+    // handling and MainWindow (D-Bus-triggered commands) can call
+    // abort_partial_grab() uniformly whenever some other action starts.
+    void start_partial_grab();
+    void abort_partial_grab();
 
     // save/restore entire scenes and context
     void clear_scene();
@@ -140,9 +133,6 @@ class DrawingScene : public QGraphicsScene {
     void pointerPressed(QPointF, Qt::MouseButtons, Qt::KeyboardModifiers);
     void pointerMoved(QPointF, Qt::KeyboardModifiers);
     void pointerReleased(QPointF, Qt::KeyboardModifiers);
-    void take_partial_screenshot(const QRect &rect);
-    void set_transparent();
-    void set_opaque();
     void tool_changed(ToolType);
     void save_scene(int id);
     void restore_scene(int id);
@@ -159,7 +149,7 @@ class DrawingScene : public QGraphicsScene {
     void slot_new();
     void slot_set_background(QPixmap px);
     void slot_clear_background();
-    void slot_pixmap(const QPixmap &pixmap);
+    void slot_grab_failed();  // abort a pending partial grab if one was outstanding
     void slot_set_color(const QColor &color);
     void slot_set_color_from_index(int index);
 
@@ -191,8 +181,12 @@ class DrawingScene : public QGraphicsScene {
     void clear_selection();
     void garbage_collect();
     void init_tool();
-
     void abort_current_item();
+
+    // shows px as a temporary, full-scene, high-z overlay for partial
+    // grab's region selection (see start_partial_grab()); only called
+    // from slot_set_background() when _partial_grab_active.
+    void show_grab_overlay(const QPixmap &px);
 
     GfxItem *find_item(int id) const;
 
@@ -232,8 +226,18 @@ class DrawingScene : public QGraphicsScene {
     std::vector<UndoRecord> _undo_records;
     std::vector<UndoRecord> _redo_records;
 
-    // temporarily stash entire scene here during grabbing
-    Stash _stash;
+    // partial grab: a temporary full-screen overlay the user selects a
+    // region from; the real scene is never touched, so there's nothing
+    // to restore if this is interrupted -- see start_partial_grab(). The
+    // dash is hidden rather than just drawn-under, so the grabbed region
+    // can include the dash's own screen area too; _dash_was_visible
+    // remembers whether to show it again on abort. _partial_grab_timer
+    // is a safety net that auto-aborts if the user never completes or
+    // cancels the selection (e.g. forgets, confused by the missing dash).
+    QGraphicsPixmapItem *_grab_overlay = nullptr;
+    bool _partial_grab_active = false;
+    bool _dash_was_visible = true;
+    QTimer *_partial_grab_timer = nullptr;
 
     // scenes
     int _current_scene = 0;

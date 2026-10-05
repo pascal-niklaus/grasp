@@ -145,6 +145,7 @@ void GfxPixmap::set_pixmap(const QPixmap& image, const QRectF& place) {
     prepareGeometryChange();
     _sel_rect = place;
     _pixmap = image;
+    setZValue(-10.0);
 }
 
 // GfxPixmap::dump

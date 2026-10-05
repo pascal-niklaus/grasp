@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(Grasp VERSION 0.9 LANGUAGES C CXX)
+project(Grasp VERSION 1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_FLAGS  " ${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -std=c++20")
 
@@ -7,15 +7,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-# Set up AUTOMOC and some sensible defaults for runtime execution
-# When using Qt 6.3, you can replace the code block below with
-# qt_standard_project_setup()
 set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
 add_definitions(-DAPP_VERSION="${CMAKE_PROJECT_VERSION}" -DAPP_NAME="${CMAKE_PROJECT_NAME}")
 
-# --- keep this
 add_compile_options(-fsanitize=address -fsanitize=undefined -fsanitize=leak)
 add_link_options(-fsanitize=address -fsanitize=undefined -fsanitize=leak)
 
@@ -23,6 +19,9 @@ find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS DBus)
 find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Widgets)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PIPEWIRE REQUIRED IMPORTED_TARGET libpipewire-0.3)
 
 qt_add_executable(grasp WIN32 MACOSX_BUNDLE
   grasp.cpp grasp.h
@@ -32,7 +31,11 @@ qt_add_executable(grasp WIN32 MACOSX_BUNDLE
   signalblocker.h
   screenres.cpp screenres.h
   main.cpp
+  lsan_suppressions.cpp
   mainwindow.cpp mainwindow.h
+  portalscreenshot.cpp portalscreenshot.h
+  pipewirescreenshot.cpp pipewirescreenshot.h
+  globalshortcutportal.cpp globalshortcutportal.h
   drawingscene.cpp drawingscene.h
   drawingview.cpp drawingscene.h
   xy.cpp xy.h
@@ -89,6 +92,7 @@ target_link_libraries(grasp PRIVATE
     Qt::Core
     Qt::Gui
     Qt::DBus
+    PkgConfig::PIPEWIRE
 )
 
 if((QT_VERSION_MAJOR GREATER 4))
@@ -102,6 +106,10 @@ install(TARGETS grasp
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-# Consider using qt_generate_deploy_app_script() for app deployment if
-# the project can use Qt 6.3. In that case rerun qmake2cmake with
-# --min-qt-version=6.3.
+install(FILES grasp.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+)
+
+install(FILES ../icons/grasp.png
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/pixmaps
+)
