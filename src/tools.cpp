@@ -496,7 +496,9 @@ bool Settings::retrieve(QSettings &qs) {
 // interconvert QKeyCombination and QSring representation for storage in QSettings
 //
 QString Settings::to_string(const QKeyCombination &kc) {
-    return QString("%1,%2").arg(kc.key()).arg(kc.keyboardModifiers());
+    return QString("%1,%2")
+        .arg(kc.key())
+        .arg(static_cast<int>(kc.keyboardModifiers()));
 }
 
 QKeyCombination Settings::keycomb_from_string(const QString &str) {
