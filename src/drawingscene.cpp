@@ -305,18 +305,7 @@ void DrawingScene::keyPressEvent(QKeyEvent *keyEvent) {
 void DrawingScene::slot_pointerPressed(QPointF p,
                                        Qt::MouseButtons buttons,
                                        Qt::KeyboardModifiers mods) {
-    if (_current_item && _current_item->type() == GFX_TEXT) {
-        GfxText *textitem = static_cast<GfxText *>(_current_item);
-
-        textitem->pgc();
-        if (textitem->text().isEmpty()) {
-            textitem->deselect();
-            removeItemSafely(textitem);
-        } else {
-            textitem->finalize();
-        }
-        _current_item = nullptr;
-    }
+    finish_text_edit();
 
     if (handle_dash_clicks(p, buttons, mods)) {
         // event is processed by handle_dash_clicks, do nothing here...
@@ -571,6 +560,28 @@ void DrawingScene::abort_current_item() {
     }
 }
 
+// DrawingScene::finish_text_edit
+//
+// ends an ongoing text edit: an empty text item is removed, otherwise
+// it is finalized. Must be called before undo/redo, because otherwise
+// and item still being edited would be removed, causing a crash.
+//
+void DrawingScene::finish_text_edit() {
+    if (_current_item && _current_item->type() == GFX_TEXT) {
+        GfxText *textitem = static_cast<GfxText *>(_current_item);
+
+        textitem->pgc();
+        if (textitem->text().isEmpty()) {
+            textitem->deselect();
+            removeItemSafely(textitem);
+        } else {
+            textitem->finalize();
+        }
+        _current_item = nullptr;
+        _feed_keystrokes = false;
+    }
+}
+
 // DrawingScene::handle_selection_clicks
 //
 // handle item selection / deselection
@@ -789,6 +800,7 @@ void DrawingScene::handle_transformation_release(const QPointF &p) {
 //
 void DrawingScene::undo() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::undo";
+    finish_text_edit();
     clearSelection();
     if (_undo_records.empty()) return;
     UndoRecord &rec = _undo_records.back();
@@ -829,6 +841,7 @@ void DrawingScene::undo() {
 //
 void DrawingScene::redo() {
     if (Verbosity::get() >= VerboseAll) qDebug() << "DrawingScene::redo";
+    finish_text_edit();
     clearSelection();
     if (_redo_records.empty()) return;
     UndoRecord &rec = _redo_records.back();
@@ -922,9 +935,17 @@ void DrawingScene::garbage_collect() {
 // item->childItems() must not be deleted, because QGraphicsItem's
 // destructor already removes all children
 //
+// if the item is the one currently drawn/edited, _current_item is
+// cleared so that later key or pointer events do not use a freed item
+//
 void DrawingScene::removeItemSafely(QGraphicsItem *item) {
     if (Verbosity::get() >= VerboseAll) {
         qDebug() << "DrawingScene::removeItemSafely..." << item;
+    }
+
+    if (item == _current_item) {
+        _current_item = nullptr;
+        _feed_keystrokes = false;
     }
 
     removeItem(item);

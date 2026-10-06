@@ -182,6 +182,7 @@ class DrawingScene : public QGraphicsScene {
     void garbage_collect();
     void init_tool();
     void abort_current_item();
+    void finish_text_edit();
 
     // shows px as a temporary, full-scene, high-z overlay for partial
     // grab's region selection (see start_partial_grab()); only called
