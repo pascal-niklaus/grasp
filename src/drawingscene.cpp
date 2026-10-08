@@ -49,6 +49,9 @@
 //
 DrawingScene::DrawingScene(QSettings &qset, int verbosity, QObject *parent) :
     QGraphicsScene{parent}, _qset(qset) {
+
+    // setItemIndexMethod(QGraphicsScene::NoIndex);
+
     // fix geometry, otherwise scene moves around when items are added
     QRectF r = QGuiApplication::primaryScreen()->geometry();
     const double k = QGuiApplication::primaryScreen()->devicePixelRatio();
