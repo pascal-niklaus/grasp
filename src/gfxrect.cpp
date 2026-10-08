@@ -82,6 +82,7 @@ void GfxRect::apply(const QTransform& m) {
 void GfxRect::start(const QPointF& p,
                     Qt::KeyboardModifiers mods,
                     double pressure) {
+    prepareGeometryChange();
     _rect.setTopLeft(p);
     move(p, mods);
 }
@@ -100,6 +101,7 @@ void GfxRect::stop(const QPointF& p, Qt::KeyboardModifiers mods, double pressure
 // drag rectangle corner
 //
 void GfxRect::move(const QPointF& p, Qt::KeyboardModifiers mods, double pressure) {
+    prepareGeometryChange();
     if (mods & Qt::ShiftModifier) {
         const auto x0 = _rect.left();
         const auto y0 = _rect.top();

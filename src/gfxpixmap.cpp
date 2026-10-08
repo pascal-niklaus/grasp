@@ -81,6 +81,7 @@ void GfxPixmap::apply(const QTransform& m) {
 void GfxPixmap::start(const QPointF& p,
                       Qt::KeyboardModifiers mods,
                       double pressure) {
+    prepareGeometryChange();
     _sel_rect.setTopLeft(p);
     drag_frame = true;
     move(p);

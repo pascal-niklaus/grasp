@@ -114,6 +114,7 @@ void GfxOrtho::stop(const QPointF& p,
                     Qt::KeyboardModifiers mods,
                     double pressure) {
     move_internal(p, true);
+    prepareGeometryChange();
     _xy_path_raw.clear();
     _raw_path.clear();
 }
